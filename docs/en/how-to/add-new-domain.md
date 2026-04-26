@@ -106,15 +106,18 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from asgiref.sync import sync_to_async
-from django.db import transaction
+from diwire import Injected
 
 from fastdjango.core.product.exceptions import ProductNotFoundError
 from fastdjango.foundation.services import BaseService
+from fastdjango.foundation.transactions import TransactionFactory
 from fastdjango.core.product.models import Product
 
 
 @dataclass(kw_only=True)
 class ProductService(BaseService):
+    _transaction_factory: Injected[TransactionFactory]
+
     async def get_product_by_id(self, product_id: int) -> Product:
         try:
             return await Product.objects.aget(id=product_id)
@@ -146,7 +149,7 @@ class ProductService(BaseService):
         description: str = "",
         price: Decimal,
     ) -> Product:
-        with transaction.atomic():
+        with self._transaction_factory("create product"):
             return Product.objects.create(
                 name=name,
                 description=description,

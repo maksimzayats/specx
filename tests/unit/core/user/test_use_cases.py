@@ -4,6 +4,7 @@ from asgiref.sync import sync_to_async
 from fastdjango.core.user.dtos import CreateUserDTO
 from fastdjango.core.user.models import User
 from fastdjango.core.user.use_cases import UserUseCase
+from fastdjango.infrastructure.django.transactions import DjangoTransactionFactory
 
 _STRONG_PASSWORD = "S3cure-test-password-123!"  # noqa: S105
 _WEAK_PASSWORD = "123"  # noqa: S105
@@ -11,7 +12,7 @@ _WEAK_PASSWORD = "123"  # noqa: S105
 
 @pytest.mark.anyio
 async def test_create_user_rejects_weak_password() -> None:
-    use_case = UserUseCase()
+    use_case = UserUseCase(_transaction_factory=DjangoTransactionFactory())
 
     with pytest.raises(UserUseCase.WEAK_PASSWORD_ERROR):
         await use_case.create_user(data=_create_user_dto(password=_WEAK_PASSWORD))
@@ -30,7 +31,7 @@ async def test_create_user_rejects_existing_username_or_email(
     username: str,
     email: str,
 ) -> None:
-    use_case = UserUseCase()
+    use_case = UserUseCase(_transaction_factory=DjangoTransactionFactory())
     await sync_to_async(
         User.objects.create_user,
         thread_sensitive=True,

@@ -83,7 +83,7 @@ ownership:
 foundation/
 ├── configurators.py        # BaseConfigurator
 ├── delivery/
-│   ├── controllers.py      # BaseController, BaseAsyncController
+│   ├── controllers.py      # BaseAsyncController
 │   ├── celery/
 │   │   └── schemas.py      # BaseCelerySchema
 │   └── fastapi/
@@ -136,8 +136,7 @@ Infrastructure code that supports all layers.
 infrastructure/
 ├── anyio/                  # Thread pool configuration
 ├── celery/                 # Celery registry primitives
-├── django/                 # Django setup, settings, transaction controllers
-│   └── controllers.py      # BaseTransactionController
+├── django/                 # Django setup, settings, middleware, transactions
 ├── logfire/                # OpenTelemetry/Logfire
 ├── logging/                # Logging configuration
 ├── throttled/              # Rate limiting
@@ -146,8 +145,8 @@ infrastructure/
 
 Key files:
 
-- **`django/controllers.py`**: Defines the sync transaction controller base class
 - **`django/settings.py`**: Adapts Pydantic settings to Django's settings format
+- **`django/transactions.py`**: Provides the injectable Django transaction factory
 - **`logging/configurator.py`**: Configures application logging
 
 ### `src/fastdjango/ioc/` - Dependency Injection

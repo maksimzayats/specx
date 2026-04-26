@@ -34,6 +34,7 @@
 - FastAPI and Celery delivery are async-first.
 - Celery's sync task execution stays hidden inside the infrastructure task bridge.
 - Keep Django transactions short, synchronous, and inside use-case/service methods.
+- Use the injected `TransactionFactory` for transaction boundaries; do not call `transaction.atomic()` directly from core behavior.
 - Do async, network, or expensive CPU work before or after Django transactions.
 - Admin, migrations, and tests may touch models directly.
 - Delivery folders are infrastructure-specific: `fastapi`, `django`, `celery`.
@@ -46,8 +47,6 @@
 - Use `BaseService`, `BaseUseCase`, `BaseFactory`, and `BaseConfigurator`.
 - Use `BaseAsyncController` for FastAPI controllers.
 - Use `BaseCeleryTaskController` for Celery task controllers.
-- Use `BaseController` only for explicitly sync delivery adapters.
-- Use `BaseTransactionController` only for sync delivery that intentionally wraps every handler in a Django transaction.
 - Use `BaseDTO`, `BaseFastAPISchema`, and `BaseCelerySchema`.
 - Use `BaseTasksRegistry` for task registries.
 - Use `BaseThrottler` for FastAPI throttlers.
@@ -71,6 +70,7 @@
 - Prefer explicit readable code over clever typing workarounds.
 - Use casts only at real third-party or protocol typing boundaries.
 - Name sync methods that open Django transactions with `_transactionally`.
+- Inject `TransactionFactory` into services/use cases that open transactions.
 - Do not use `sync_to_async` in FastAPI delivery modules.
 - Do not use `async_to_sync` outside the Celery task bridge.
 - Use `.adelay()` when enqueueing Celery tasks from async code; `.delay()` is for sync callers.

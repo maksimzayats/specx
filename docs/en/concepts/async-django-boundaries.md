@@ -15,25 +15,31 @@ async def get_user_by_id(self, user_id: int) -> User | None:
     return await User.objects.filter(id=user_id).afirst()
 ```
 
-Django transactions stay sync. If a workflow needs `transaction.atomic()`, keep
-the transaction in a small sync method and call it from async orchestration with
-`sync_to_async(..., thread_sensitive=True)`:
+Django transactions stay sync and go through the injected `TransactionFactory`.
+If a workflow needs a transaction, keep it in a small sync method and call it
+from async orchestration with `sync_to_async(..., thread_sensitive=True)`:
 
 ```python
 from django.contrib.auth.hashers import make_password
+from diwire import Injected
+
+from fastdjango.foundation.transactions import TransactionFactory
 
 
-async def create_user(self, data: CreateUserDTO) -> User:
-    return await sync_to_async(
-        self._create_user_transactionally,
-        thread_sensitive=True,
-    )(data=data)
+class UserUseCase(BaseUseCase):
+    _transaction_factory: Injected[TransactionFactory]
 
-def _create_user_transactionally(self, data: CreateUserDTO) -> User:
-    password = make_password(data.password)
+    async def create_user(self, data: CreateUserDTO) -> User:
+        return await sync_to_async(
+            self._create_user_transactionally,
+            thread_sensitive=True,
+        )(data=data)
 
-    with transaction.atomic():
-        return User.objects.create(..., password=password)
+    def _create_user_transactionally(self, data: CreateUserDTO) -> User:
+        password = make_password(data.password)
+
+        with self._transaction_factory("create user"):
+            return User.objects.create(..., password=password)
 ```
 
 Never put `await` inside a Django transaction. Do async/network work before or
@@ -43,8 +49,8 @@ reliable external side effects.
 Django password hashing, password validation, and `check_password()` are sync
 CPU work. Keep them in a sync use-case/service method and call that method with
 `sync_to_async(..., thread_sensitive=True)` instead of running them on the event
-loop. Also do password hashing and validation before opening `transaction.atomic()`
-so transactions do not sit idle while CPU work runs.
+loop. Also do password hashing and validation before opening the transaction so
+the database transaction does not sit idle while CPU work runs.
 
 ## Connection Handling
 

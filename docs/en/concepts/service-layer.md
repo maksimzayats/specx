@@ -60,10 +60,11 @@ Services are dataclasses with injected dependencies:
 # src/fastdjango/core/todo/services.py
 from dataclasses import dataclass
 
-from django.db import transaction
+from diwire import Injected
 
 from fastdjango.core.todo.exceptions import TodoNotFoundError
 from fastdjango.foundation.services import BaseService
+from fastdjango.foundation.transactions import TransactionFactory
 from fastdjango.core.todo.models import Todo
 from fastdjango.core.user.models import User
 
@@ -71,6 +72,8 @@ from fastdjango.core.user.models import User
 @dataclass(kw_only=True)
 class TodoService(BaseService):
     """Service for todo operations."""
+
+    _transaction_factory: Injected[TransactionFactory]
 
     async def get_todo_by_id(self, todo_id: int) -> Todo:
         try:
@@ -88,7 +91,7 @@ class TodoService(BaseService):
         )(user=user, title=title)
 
     def _create_todo_transactionally(self, user: User, title: str) -> Todo:
-        with transaction.atomic():
+        with self._transaction_factory("create todo"):
             return Todo.objects.create(user=user, title=title)
 ```
 
@@ -195,12 +198,15 @@ def handle_exception(self, exception: Exception) -> Any:
 Use a short sync transaction island for database writes:
 
 ```python
-from django.db import transaction
+from diwire import Injected
 
 from fastdjango.foundation.services import BaseService
+from fastdjango.foundation.transactions import TransactionFactory
 
 @dataclass(kw_only=True)
 class TodoService(BaseService):
+    _transaction_factory: Injected[TransactionFactory]
+
     async def create_todo(self, user: User, title: str) -> Todo:
         return await sync_to_async(
             self._create_todo_transactionally,
@@ -208,7 +214,7 @@ class TodoService(BaseService):
         )(user=user, title=title)
 
     def _create_todo_transactionally(self, user: User, title: str) -> Todo:
-        with transaction.atomic():
+        with self._transaction_factory("create todo"):
             todo = Todo.objects.create(user=user, title=title)
             # If anything fails here, the transaction rolls back
             self._audit_service.log_creation(todo)
@@ -274,17 +280,24 @@ from fastdjango.foundation.services import BaseService
 
 @dataclass(kw_only=True)
 class OrderService(BaseService):
-    _user_use_case: UserUseCase
-    _payment_service: PaymentService
-    _notification_service: NotificationService
+    _user_use_case: Injected[UserUseCase]
+    _payment_service: Injected[PaymentService]
+    _notification_service: Injected[NotificationService]
+    _transaction_factory: Injected[TransactionFactory]
 
-    @transaction.atomic
-    def create_order(self, user_id: int, items: list[Item]) -> Order:
-        user = self._user_use_case.get_user_by_id(user_id)
-        order = Order.objects.create(user=user)
-        self._payment_service.charge(user, order.total)
-        self._notification_service.send_confirmation(user, order)
-        return order
+    async def create_order(self, user_id: int, items: list[Item]) -> Order:
+        return await sync_to_async(
+            self._create_order_transactionally,
+            thread_sensitive=True,
+        )(user_id=user_id, items=items)
+
+    def _create_order_transactionally(self, user_id: int, items: list[Item]) -> Order:
+        with self._transaction_factory("create order"):
+            user = self._user_use_case.get_user_by_id(user_id)
+            order = Order.objects.create(user=user)
+            self._payment_service.charge(user, order.total)
+            self._notification_service.send_confirmation(user, order)
+            return order
 ```
 
 The IoC container resolves the entire dependency graph automatically.

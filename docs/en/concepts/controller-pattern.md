@@ -1,6 +1,7 @@
 # Controller Pattern
 
-Controllers provide a unified pattern for handling requests from any source: HTTP, Celery, CLI, etc.
+Controllers provide a unified async-first pattern for handling HTTP routes and
+Celery tasks.
 
 ## The Core Abstraction
 
@@ -19,22 +20,12 @@ from celery import Celery, Task
 
 
 @dataclass(kw_only=True)
-class BaseController(ABC):
-    def __post_init__(self) -> None:
-        self._wrap_methods()
-
+class BaseAsyncController(ABC):
     @abstractmethod
     def register(self, registry: Any) -> None:
         """Register this controller with the appropriate registry."""
         ...
 
-    def handle_exception(self, exception: Exception) -> Any:
-        """Handle exceptions raised by controller methods."""
-        raise exception
-
-
-@dataclass(kw_only=True)
-class BaseAsyncController(ABC):
     async def handle_exception(self, exception: Exception) -> Any:
         """Handle exceptions raised by async controller methods."""
         raise exception
@@ -76,9 +67,9 @@ def _wrap_methods(self) -> None:
 
         if (
             callable(attr)
-            and not hasattr(BaseController, attr_name)
+            and not hasattr(BaseAsyncController, attr_name)
             and not attr_name.startswith("_")
-            and attr_name not in dir(BaseController)
+            and attr_name not in dir(BaseAsyncController)
         ):
             setattr(self, attr_name, self._wrap_route(attr))
 
@@ -86,7 +77,8 @@ def _wrap_route(self, method: Callable[..., Any]) -> Callable[..., Any]:
     return self._add_exception_handler(method)
 ```
 
-This means every public method automatically goes through `handle_exception()` if it raises.
+This means every public async endpoint automatically goes through
+`handle_exception()` if it raises.
 Use `BaseAsyncController` for FastAPI route methods and `BaseCeleryTaskController`
 for Celery task handlers. The base classes fail fast when the handler style does
 not match.
@@ -104,51 +96,32 @@ def handle_exception(self, exception: Exception) -> Any:
     return super().handle_exception(exception)
 ```
 
-## BaseTransactionController
+## Transaction Boundaries
 
-For sync delivery that intentionally wraps every handler in one transaction, use
-`BaseTransactionController`. FastAPI route methods should use
-`BaseAsyncController` and keep Django transaction management inside small
-synchronous service or use-case methods.
+Controllers do not own database transactions. Keep transaction boundaries inside
+small synchronous use-case or service methods, and inject `TransactionFactory`
+there. FastAPI and Celery controllers stay async-first and delegate to the
+application layer.
 
 ```python
-# src/fastdjango/infrastructure/django/controllers.py
-from inspect import iscoroutinefunction
-
-from fastdjango.foundation.delivery.controllers import BaseController
-from fastdjango.infrastructure.django.traced_atomic import traced_atomic
-
-
 @dataclass(kw_only=True)
-class BaseTransactionController(BaseController, ABC):
-    def _wrap_route(self, method: Callable[..., Any]) -> Callable[..., Any]:
-        method = self._add_transaction(method)
-        return super()._wrap_route(method)
+class UserUseCase(BaseUseCase):
+    _transaction_factory: Injected[TransactionFactory]
 
-    def _add_transaction(self, method: Callable[..., Any]) -> Callable[..., Any]:
-        method_name = getattr(method, "__name__", type(method).__name__)
+    async def create_user(self, data: CreateUserDTO) -> User:
+        return await sync_to_async(
+            self._create_user_transactionally,
+            thread_sensitive=True,
+        )(data=data)
 
-        if iscoroutinefunction(method):
-            msg = f"Async route '{method_name}' cannot use BaseTransactionController."
-            raise TypeError(msg)
-
-        @wraps(method)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            with traced_atomic(
-                "controller transaction",
-                controller=type(self).__name__,
-                method=method_name,
-            ):
-                return method(*args, **kwargs)
-
-        return wrapper
+    def _create_user_transactionally(self, data: CreateUserDTO) -> User:
+        with self._transaction_factory(
+            "create user",
+            use_case=type(self).__name__,
+            method="_create_user_transactionally",
+        ):
+            return User.objects.create(...)
 ```
-
-This wraps methods with:
-
-- `traced_atomic` - Combined database transaction and Logfire tracing
-- Controller and method names as span attributes
-- A sync-only guard so async routes use `BaseAsyncController`
 
 ## HTTP Controller Example
 
@@ -297,9 +270,9 @@ Same structure for HTTP and Celery:
 # - handle_exception() for errors
 ```
 
-### 2. Automatic Tracing
+### 2. Transaction Tracing
 
-`BaseTransactionController` adds Logfire spans automatically.
+`TransactionFactory` adds Logfire spans around explicit database transactions.
 
 ### 3. Exception Isolation
 
@@ -322,5 +295,5 @@ The controller pattern:
 - **Unifies** request handling across HTTP and Celery
 - **Enforces** consistent structure via `register()`
 - **Wraps** methods with exception handling
-- **Provides** `BaseTransactionController` for database operations
+- **Keeps** database transactions inside use cases and services
 - **Enables** easy testing through dependency injection

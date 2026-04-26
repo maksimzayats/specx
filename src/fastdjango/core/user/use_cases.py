@@ -2,14 +2,15 @@ from dataclasses import dataclass
 from typing import ClassVar
 
 from asgiref.sync import sync_to_async
+from diwire import Injected
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-from django.db import transaction
 
 from fastdjango.core.user.dtos import CreateUserDTO
 from fastdjango.core.user.exceptions import UserAlreadyExistsError, WeakPasswordError
 from fastdjango.core.user.models import User
+from fastdjango.foundation.transactions import TransactionFactory
 from fastdjango.foundation.use_cases import BaseUseCase
 
 
@@ -19,6 +20,8 @@ class UserUseCase(BaseUseCase):
     PASSWORD_VALIDATION_ERROR: ClassVar = ValidationError
     WEAK_PASSWORD_ERROR: ClassVar = WeakPasswordError
     USER_ALREADY_EXISTS_ERROR: ClassVar = UserAlreadyExistsError
+
+    _transaction_factory: Injected[TransactionFactory]
 
     async def get_user_by_id(self, user_id: int) -> User | None:
         return await User.objects.filter(id=user_id).afirst()
@@ -104,7 +107,11 @@ class UserUseCase(BaseUseCase):
         email = User.objects.normalize_email(str(data.email))
         password = make_password(data.password)
 
-        with transaction.atomic():
+        with self._transaction_factory(
+            "create user",
+            use_case=type(self).__name__,
+            method="_create_user_transactionally",
+        ):
             existing_user = (
                 User.objects.filter(username=username) | User.objects.filter(email=email)
             ).first()

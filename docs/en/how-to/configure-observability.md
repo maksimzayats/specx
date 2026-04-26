@@ -157,18 +157,22 @@ def process_order(order_id: int) -> Order:
         return order
 ```
 
-## BaseTransactionController Tracing
+## Transaction Tracing
 
-`BaseTransactionController` automatically creates spans:
+`TransactionFactory` wraps explicit Django transactions in Logfire spans:
 
 ```python
 @dataclass(kw_only=True)
-class OrderController(BaseTransactionController):
-    def create_order(self, body: CreateOrderSchema) -> OrderSchema:
-        # Automatically wrapped with span:
-        # "OrderController.create_order"
-        # Plus transaction management
-        ...
+class OrderService(BaseService):
+    _transaction_factory: Injected[TransactionFactory]
+
+    def _create_order_transactionally(self, data: CreateOrderDTO) -> Order:
+        with self._transaction_factory(
+            "create order",
+            service=type(self).__name__,
+            method="_create_order_transactionally",
+        ):
+            return Order.objects.create(...)
 ```
 
 ## Sensitive Data Scrubbing

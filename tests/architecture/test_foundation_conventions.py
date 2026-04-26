@@ -15,7 +15,6 @@ FOUNDATION_BASE_SUFFIXES = {
     "BaseCeleryTaskController": "Controller",
     "BaseCelerySchema": "Schema",
     "BaseConfigurator": "Configurator",
-    "BaseController": "Controller",
     "BaseDTO": "DTO",
     "BaseFactory": "Factory",
     "BaseFastAPISchema": "Schema",
@@ -23,7 +22,6 @@ FOUNDATION_BASE_SUFFIXES = {
     "BaseSettings": "Settings",
     "BaseTasksRegistry": "Registry",
     "BaseThrottler": "Throttler",
-    "BaseTransactionController": "Controller",
     "BaseUseCase": "UseCase",
 }
 
@@ -31,12 +29,10 @@ INJECTABLE_BASES = {
     "BaseAsyncController",
     "BaseCeleryTaskController",
     "BaseConfigurator",
-    "BaseController",
     "BaseFactory",
     "BaseService",
     "BaseTasksRegistry",
     "BaseThrottler",
-    "BaseTransactionController",
     "BaseUseCase",
 }
 

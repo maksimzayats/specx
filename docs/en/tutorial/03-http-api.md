@@ -264,7 +264,7 @@ class TodoController(BaseAsyncController):
 Extending `BaseAsyncController` provides:
 
 - **Exception handling**: Public methods are wrapped with `handle_exception`
-- **Async guardrails**: Sync route methods fail fast
+- **Async guardrails**: Non-async route methods fail fast
 
 Keep Django transactions inside short sync service or use-case methods named
 `*_transactionally`, called with `sync_to_async(..., thread_sensitive=True)`.

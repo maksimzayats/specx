@@ -36,8 +36,6 @@ ROUTE_DECORATOR_NAMES = {
 CONTROLLER_BASES = {
     "BaseAsyncController",
     "BaseCeleryTaskController",
-    "BaseController",
-    "BaseTransactionController",
 }
 CONTROLLER_NON_ENDPOINT_METHOD_NAMES = {"handle_exception", "register"}
 DOMAIN_LOGIC_EXCLUDED_FILE_NAMES = {
@@ -489,6 +487,29 @@ def test_sync_to_async_calls_are_thread_sensitive() -> None:
     )
 
 
+def test_core_transactions_use_injected_transaction_factory() -> None:
+    violations = [
+        f"{module.relative_path}:{_line_number(node)} imports django.db.transaction"
+        for module in iter_source_modules()
+        if _is_core_behavior_module(module)
+        for node in ast.walk(module.tree)
+        if _is_django_transaction_import(node)
+    ]
+    violations.extend(
+        f"{module.relative_path}:{node.lineno} calls {ast.unparse(node.func)}"
+        for module in iter_source_modules()
+        if _is_core_behavior_module(module)
+        for node in ast.walk(module.tree)
+        if isinstance(node, ast.Call)
+        if _is_direct_transaction_boundary_call(node)
+    )
+
+    assert violations == [], (
+        "Core use cases and services must use an injected TransactionFactory, "
+        "not django.db.transaction.atomic() or traced_atomic() directly."
+    )
+
+
 def test_async_to_sync_stays_in_celery_task_bridge() -> None:
     violations = [
         f"{module.relative_path}:{node.lineno} calls async_to_sync"
@@ -643,6 +664,12 @@ def _is_domain_logic_module(module: SourceModule) -> bool:
         _is_core_internal_module(module)
         and "migrations" not in module.source_parts
         and module.path.name not in DOMAIN_LOGIC_EXCLUDED_FILE_NAMES
+    )
+
+
+def _is_core_behavior_module(module: SourceModule) -> bool:
+    return module.source_parts[0] == "core" and (
+        module.path.name == "use_cases.py" or "services" in module.source_parts
     )
 
 
@@ -1176,6 +1203,16 @@ def _is_async_to_sync_call(call: ast.Call) -> bool:
     return _annotation_name(call.func) == "async_to_sync"
 
 
+def _is_django_transaction_import(node: ast.AST) -> bool:
+    if isinstance(node, ast.ImportFrom) and node.module == "django.db":
+        return any(alias.name == "transaction" for alias in node.names)
+
+    if isinstance(node, ast.Import):
+        return any(alias.name == "django.db.transaction" for alias in node.names)
+
+    return False
+
+
 def _function_contains_transaction_boundary(
     function_node: ast.FunctionDef | ast.AsyncFunctionDef,
 ) -> bool:
@@ -1193,7 +1230,20 @@ def _has_transaction_decorator(
 
 
 def _is_transaction_boundary_call(call: ast.Call) -> bool:
+    return _is_direct_transaction_boundary_call(call) or _is_transaction_factory_call(call)
+
+
+def _is_direct_transaction_boundary_call(call: ast.Call) -> bool:
     return _annotation_name(call.func) in {"atomic", "traced_atomic"}
+
+
+def _is_transaction_factory_call(call: ast.Call) -> bool:
+    return (
+        isinstance(call.func, ast.Attribute)
+        and call.func.attr == "_transaction_factory"
+        and isinstance(call.func.value, ast.Name)
+        and call.func.value.id == "self"
+    )
 
 
 def _function_contains_django_password_work(

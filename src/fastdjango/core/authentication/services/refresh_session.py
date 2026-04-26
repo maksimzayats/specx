@@ -6,7 +6,7 @@ from typing import ClassVar, NamedTuple
 
 from asgiref.sync import sync_to_async
 from diwire import Injected
-from django.db import models, transaction
+from django.db import models
 from django.utils import timezone
 from pydantic_settings import BaseSettings
 
@@ -17,6 +17,7 @@ from fastdjango.core.authentication.exceptions import (
 from fastdjango.core.authentication.models import RefreshSession
 from fastdjango.core.user.models import User
 from fastdjango.foundation.services import BaseService
+from fastdjango.foundation.transactions import TransactionFactory
 
 
 class RefreshSessionServiceSettings(BaseSettings):
@@ -35,6 +36,7 @@ class RefreshSessionService(BaseService):
     REFRESH_SESSION_NOT_FOUND_ERROR: ClassVar = RefreshSession.DoesNotExist
 
     _settings: Injected[RefreshSessionServiceSettings]
+    _transaction_factory: Injected[TransactionFactory]
 
     async def create_refresh_session(
         self,
@@ -76,7 +78,11 @@ class RefreshSessionService(BaseService):
         refresh_token = self._issue_refresh_token()
         refresh_token_hash = self._hash_refresh_token(refresh_token)
 
-        with transaction.atomic():
+        with self._transaction_factory(
+            "create refresh session",
+            service=type(self).__name__,
+            method="_create_refresh_session_transactionally",
+        ):
             session = RefreshSession.objects.create(
                 user=user,
                 refresh_token_hash=refresh_token_hash,
@@ -91,7 +97,11 @@ class RefreshSessionService(BaseService):
         new_refresh_token = self._issue_refresh_token()
         new_refresh_token_hash = self._hash_refresh_token(new_refresh_token)
 
-        with transaction.atomic():
+        with self._transaction_factory(
+            "rotate refresh token",
+            service=type(self).__name__,
+            method="_rotate_refresh_token_transactionally",
+        ):
             session = self._get_refresh_session_for_update(refresh_token)
 
             session.refresh_token_hash = new_refresh_token_hash
@@ -112,7 +122,11 @@ class RefreshSessionService(BaseService):
         refresh_token: str,
         user: User,
     ) -> None:
-        with transaction.atomic():
+        with self._transaction_factory(
+            "revoke refresh token",
+            service=type(self).__name__,
+            method="_revoke_refresh_token_transactionally",
+        ):
             session = self._get_refresh_session_for_update(refresh_token)
             if session.user.pk != user.pk:
                 raise self.INVALID_REFRESH_TOKEN_ERROR

@@ -1,4 +1,5 @@
 import hashlib
+from contextlib import AbstractContextManager
 from dataclasses import dataclass, field
 from typing import Self, cast
 
@@ -63,21 +64,25 @@ class NoopAtomic:
         return None
 
 
+class NoopTransactionFactory:
+    def __call__(self, *_args: object, **_kwargs: object) -> AbstractContextManager[None]:
+        return NoopAtomic()
+
+
 @pytest.mark.anyio
 async def test_rotate_refresh_token_locks_session_row(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    service = RefreshSessionService(_settings=RefreshSessionServiceSettings())
+    service = RefreshSessionService(
+        _settings=RefreshSessionServiceSettings(),
+        _transaction_factory=NoopTransactionFactory(),
+    )
     session = FakeRefreshSession()
     queryset = FakeRefreshSessionQuerySet(session=session)
     monkeypatch.setattr(
         RefreshSession,
         "objects",
         FakeRefreshSessionManager(queryset=queryset),
-    )
-    monkeypatch.setattr(
-        "fastdjango.core.authentication.services.refresh_session.transaction.atomic",
-        NoopAtomic,
     )
 
     await service.rotate_refresh_token(refresh_token=_OLD_REFRESH_TOKEN)
@@ -98,17 +103,16 @@ async def test_rotate_refresh_token_locks_session_row(
 async def test_revoke_refresh_token_locks_session_row(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    service = RefreshSessionService(_settings=RefreshSessionServiceSettings())
+    service = RefreshSessionService(
+        _settings=RefreshSessionServiceSettings(),
+        _transaction_factory=NoopTransactionFactory(),
+    )
     session = FakeRefreshSession()
     queryset = FakeRefreshSessionQuerySet(session=session)
     monkeypatch.setattr(
         RefreshSession,
         "objects",
         FakeRefreshSessionManager(queryset=queryset),
-    )
-    monkeypatch.setattr(
-        "fastdjango.core.authentication.services.refresh_session.transaction.atomic",
-        NoopAtomic,
     )
 
     await service.revoke_refresh_token(

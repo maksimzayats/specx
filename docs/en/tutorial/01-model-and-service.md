@@ -161,10 +161,11 @@ Create `src/fastdjango/core/todo/services.py`:
 # src/fastdjango/core/todo/services.py
 from dataclasses import dataclass
 
-from django.db import transaction
+from diwire import Injected
 
 from fastdjango.core.todo.exceptions import TodoAccessDeniedError, TodoNotFoundError
 from fastdjango.foundation.services import BaseService
+from fastdjango.foundation.transactions import TransactionFactory
 from fastdjango.core.todo.models import Todo
 from fastdjango.core.user.models import User
 
@@ -176,6 +177,8 @@ class TodoService(BaseService):
     Encapsulates all database operations for Todo model.
     Controllers should use this service instead of accessing Todo directly.
     """
+
+    _transaction_factory: Injected[TransactionFactory]
 
     def get_todo_by_id(self, todo_id: int, user: User) -> Todo:
         """Get a todo by ID, ensuring it belongs to the user.
@@ -223,7 +226,6 @@ class TodoService(BaseService):
 
         return list(queryset)
 
-    @transaction.atomic
     def create_todo(
         self,
         user: User,
@@ -241,13 +243,13 @@ class TodoService(BaseService):
         Returns:
             The created Todo instance.
         """
-        return Todo.objects.create(
-            user=user,
-            title=title,
-            description=description,
-        )
+        with self._transaction_factory("create todo"):
+            return Todo.objects.create(
+                user=user,
+                title=title,
+                description=description,
+            )
 
-    @transaction.atomic
     def update_todo(
         self,
         todo_id: int,
@@ -273,19 +275,19 @@ class TodoService(BaseService):
             TodoNotFoundError: If the todo doesn't exist.
             TodoAccessDeniedError: If the todo belongs to another user.
         """
-        todo = self.get_todo_by_id(todo_id, user)
+        with self._transaction_factory("update todo"):
+            todo = self.get_todo_by_id(todo_id, user)
 
-        if title is not None:
-            todo.title = title
-        if description is not None:
-            todo.description = description
-        if completed is not None:
-            todo.completed = completed
+            if title is not None:
+                todo.title = title
+            if description is not None:
+                todo.description = description
+            if completed is not None:
+                todo.completed = completed
 
-        todo.save()
-        return todo
+            todo.save()
+            return todo
 
-    @transaction.atomic
     def delete_todo(self, todo_id: int, user: User) -> None:
         """Delete a todo item.
 
@@ -297,8 +299,9 @@ class TodoService(BaseService):
             TodoNotFoundError: If the todo doesn't exist.
             TodoAccessDeniedError: If the todo belongs to another user.
         """
-        todo = self.get_todo_by_id(todo_id, user)
-        todo.delete()
+        with self._transaction_factory("delete todo"):
+            todo = self.get_todo_by_id(todo_id, user)
+            todo.delete()
 
     def mark_completed(self, todo_id: int, user: User) -> Todo:
         """Mark a todo as completed.
@@ -324,7 +327,6 @@ class TodoService(BaseService):
         """
         return self.update_todo(todo_id, user, completed=False)
 
-    @transaction.atomic
     def delete_completed_todos(self, user: User) -> int:
         """Delete all completed todos for a user.
 
@@ -334,11 +336,12 @@ class TodoService(BaseService):
         Returns:
             Number of todos deleted.
         """
-        deleted_count, _ = Todo.objects.filter(
-            user=user,
-            completed=True,
-        ).delete()
-        return deleted_count
+        with self._transaction_factory("delete completed todos"):
+            deleted_count, _ = Todo.objects.filter(
+                user=user,
+                completed=True,
+            ).delete()
+            return deleted_count
 ```
 
 ## Understanding the Service Pattern
@@ -348,7 +351,7 @@ class TodoService(BaseService):
 1. **Testability**: Test business logic without HTTP concerns
 2. **Reusability**: Same service for HTTP, Celery, CLI
 3. **Encapsulation**: Database operations are hidden from controllers
-4. **Transaction Management**: `@transaction.atomic` ensures data integrity
+4. **Transaction Management**: `TransactionFactory` keeps transaction behavior injectable
 
 ### Key Patterns in This Service
 
