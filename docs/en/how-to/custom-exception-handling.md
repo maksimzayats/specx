@@ -8,7 +8,7 @@ Convert service-level exceptions into meaningful HTTP error responses.
 
 ## Prerequisites
 
-- A controller extending `BaseController` or `BaseAsyncController`
+- A controller extending `BaseAsyncController` or `BaseCeleryTaskController`
 - Domain exceptions defined in `exceptions.py`
 
 ## The Pattern

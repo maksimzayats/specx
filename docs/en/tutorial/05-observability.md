@@ -132,9 +132,10 @@ class TodoService(BaseService):
             return deleted_count
 ```
 
-## Step 5: BaseTransactionController Tracing
+## Step 5: Sync Transaction Tracing
 
-The `BaseTransactionController` uses `traced_atomic` to combine database transactions with Logfire tracing:
+For explicitly sync adapters, `BaseTransactionController` uses `traced_atomic`
+to combine database transactions with Logfire tracing:
 
 ```python
 # src/fastdjango/infrastructure/django/controllers.py
@@ -177,7 +178,7 @@ When you extend `BaseTransactionController`, every public method automatically g
 - **Sync guard**: Async routes fail fast; use `BaseAsyncController` for async endpoints
 
 ```python
-# Automatically traced when extending BaseTransactionController
+# Automatically traced in explicitly sync adapters
 @dataclass(kw_only=True)
 class TodoController(BaseTransactionController):
     def list_todos(self, request: AuthenticatedRequest) -> TodoListSchema:
@@ -194,12 +195,12 @@ The project includes a health check endpoint at `GET /v1/health`:
 ```python
 # src/fastdjango/core/health/delivery/fastapi/controllers.py
 @dataclass(kw_only=True)
-class HealthController(BaseController):
-    _system_health_use_case: SystemHealthUseCase
+class HealthController(BaseAsyncController):
+    _system_health_use_case: Injected[SystemHealthUseCase]
 
-    def health_check(self) -> HealthCheckResponseSchema:
+    async def health_check(self) -> HealthCheckResponseSchema:
         try:
-            self._system_health_use_case.check()
+            await self._system_health_use_case.check()
         except HealthCheckError as e:
             raise HTTPException(
                 status_code=HTTPStatus.SERVICE_UNAVAILABLE,

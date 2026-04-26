@@ -281,12 +281,12 @@ Celery tasks are automatically instrumented. For additional logging:
 import logfire
 
 
-class SendEmailTaskController(BaseController):
-    def send_email(self, user_id: int, subject: str) -> SendResult:
+class SendEmailTaskController(BaseCeleryTaskController):
+    async def send_email(self, user_id: int, subject: str) -> SendResult:
         logfire.info("Starting email send", user_id=user_id)
 
         try:
-            result = self._email_service.send(...)
+            result = await self._email_service.send(...)
             logfire.info("Email sent", user_id=user_id, message_id=result.id)
             return SendResult(success=True)
         except Exception as e:

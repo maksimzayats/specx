@@ -4,14 +4,18 @@ Controllers provide a unified pattern for handling requests from any source: HTT
 
 ## The Core Abstraction
 
-FastAPI controllers inherit from `BaseAsyncController`. Synchronous controllers
-are still available for sync delivery mechanisms such as Celery:
+FastAPI controllers inherit from `BaseAsyncController`. Celery task controllers
+inherit from `BaseCeleryTaskController`, which lets task handlers stay async
+while Celery still receives a normal sync task callable.
 
 ```python
-# src/fastdjango/foundation/delivery/controllers.py
+# Base controller shapes
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
+
+from celery import Celery, Task
 
 
 @dataclass(kw_only=True)
@@ -34,6 +38,12 @@ class BaseAsyncController(ABC):
     async def handle_exception(self, exception: Exception) -> Any:
         """Handle exceptions raised by async controller methods."""
         raise exception
+
+
+class BaseCeleryTaskController(BaseAsyncController):
+    def _register_task(self, registry: Celery, *, name: str, handler: Callable) -> Task:
+        """Register an async handler through the Celery sync boundary."""
+        ...
 ```
 
 ## Key Features
@@ -49,7 +59,7 @@ def register(self, registry: APIRouter) -> None:
 
 # Celery Task Controller
 def register(self, registry: Celery) -> None:
-    registry.task(name=PING_TASK_NAME)(self.ping)
+    self._register_task(registry, name=PING_TASK_NAME, handler=self.ping)
 ```
 
 ### 2. Automatic Exception Handling
@@ -77,8 +87,9 @@ def _wrap_route(self, method: Callable[..., Any]) -> Callable[..., Any]:
 ```
 
 This means every public method automatically goes through `handle_exception()` if it raises.
-Use `BaseAsyncController` for FastAPI route methods and `BaseController` for sync
-delivery. The base classes fail fast when the route style does not match.
+Use `BaseAsyncController` for FastAPI route methods and `BaseCeleryTaskController`
+for Celery task handlers. The base classes fail fast when the handler style does
+not match.
 
 ### 3. Custom Exception Handling
 
@@ -200,23 +211,24 @@ class UserController(BaseAsyncController):
 from celery import Celery
 
 from fastdjango.core.health.delivery.celery.schemas import PingResultSchema
-from fastdjango.foundation.delivery.controllers import BaseController
+from fastdjango.infrastructure.celery.controllers import BaseCeleryTaskController
 
 PING_TASK_NAME = "ping"
 
 
-class PingTaskController(BaseController):
+@dataclass(kw_only=True)
+class PingTaskController(BaseCeleryTaskController):
     """Simple task controller with no dependencies."""
 
     def register(self, registry: Celery) -> None:
-        registry.task(name=PING_TASK_NAME)(self.ping)
+        self._register_task(registry, name=PING_TASK_NAME, handler=self.ping)
 
-    def ping(self) -> PingResultSchema:
+    async def ping(self) -> PingResultSchema:
         return PingResultSchema(result="pong")
 ```
 
 !!! note "Dataclass decorator"
-    Controllers without dependencies don't need the `@dataclass` decorator. The base `BaseController` class already uses `@dataclass(kw_only=True)`, so subclasses inherit that behavior. Only add `@dataclass(kw_only=True)` when you have dependency fields to inject.
+    Concrete controllers use `@dataclass(kw_only=True)` even when they do not have dependencies. This keeps the injectable class shape consistent.
 
 ## Async HTTP Handlers
 

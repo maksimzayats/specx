@@ -16,6 +16,12 @@ CORE_DELIVERY_IMPORT_EXEMPTIONS = {
         "fastdjango.core.user.delivery.django",
     ),
 }
+ASYNC_TO_SYNC_ALLOWED_PATHS = {
+    Path("src/fastdjango/infrastructure/celery/controllers.py"),
+}
+SYNC_CELERY_DELAY_ALLOWED_PATHS = {
+    Path("src/fastdjango/infrastructure/celery/registry.py"),
+}
 ENVIRONMENT_ACCESS_FILE_NAMES = {"configurator.py", "manage.py", "settings.py"}
 ROUTE_DECORATOR_NAMES = {
     "api_route",
@@ -29,6 +35,7 @@ ROUTE_DECORATOR_NAMES = {
 }
 CONTROLLER_BASES = {
     "BaseAsyncController",
+    "BaseCeleryTaskController",
     "BaseController",
     "BaseTransactionController",
 }
@@ -415,6 +422,41 @@ def test_fastapi_controller_endpoints_are_async() -> None:
     assert violations == [], "FastAPI controller endpoints must be async def methods."
 
 
+def test_celery_task_controllers_are_async_first() -> None:
+    violations = [
+        f"{module.relative_path}:{class_node.lineno} {class_node.name}"
+        for module, class_node in _iter_celery_task_controller_classes()
+        if not has_base(class_node, {"BaseCeleryTaskController"})
+    ]
+
+    assert violations == [], (
+        "Concrete Celery task controllers must inherit BaseCeleryTaskController."
+    )
+
+
+def test_celery_task_handlers_are_async() -> None:
+    violations = [
+        f"{module.relative_path}:{method_node.lineno} {class_node.name}.{method_node.name}"
+        for module, class_node in _iter_celery_task_controller_classes()
+        for method_node in _iter_public_controller_endpoint_methods(class_node)
+        if not isinstance(method_node, ast.AsyncFunctionDef)
+    ]
+
+    assert violations == [], "Celery task controller handlers must be async def methods."
+
+
+def test_celery_task_controllers_register_through_async_bridge() -> None:
+    violations = [
+        f"{module.relative_path}:{class_node.lineno} {class_node.name}"
+        for module, class_node in _iter_celery_task_controller_classes()
+        if not _register_method_uses_celery_task_bridge(class_node)
+    ]
+
+    assert violations == [], (
+        "Celery task controllers must register handlers through self._register_task()."
+    )
+
+
 def test_fastapi_delivery_does_not_bridge_sync_orm_calls() -> None:
     violations = [
         f"{module.relative_path}:{node.lineno} calls sync_to_async"
@@ -445,6 +487,38 @@ def test_sync_to_async_calls_are_thread_sensitive() -> None:
         "Django sync islands must use sync_to_async(..., thread_sensitive=True) so ORM "
         "work and connection cleanup stay on the same thread-sensitive executor."
     )
+
+
+def test_async_to_sync_stays_in_celery_task_bridge() -> None:
+    violations = [
+        f"{module.relative_path}:{node.lineno} calls async_to_sync"
+        for module in iter_source_modules()
+        if module.relative_path not in ASYNC_TO_SYNC_ALLOWED_PATHS
+        for node in ast.walk(module.tree)
+        if isinstance(node, ast.Call)
+        if _is_async_to_sync_call(node)
+    ]
+
+    assert violations == [], (
+        "async_to_sync is only allowed in the Celery task bridge; application handlers "
+        "should stay async."
+    )
+
+
+def test_async_functions_do_not_call_sync_celery_delay() -> None:
+    violations = [
+        f"{module.relative_path}:{node.lineno} {function_node.name} calls .delay()"
+        for module in iter_source_modules()
+        if module.relative_path not in SYNC_CELERY_DELAY_ALLOWED_PATHS
+        for function_node in ast.walk(module.tree)
+        if isinstance(function_node, ast.AsyncFunctionDef)
+        for node in ast.walk(function_node)
+        if isinstance(node, ast.Call)
+        if isinstance(node.func, ast.Attribute)
+        if node.func.attr == "delay"
+    ]
+
+    assert violations == [], "Async code must enqueue Celery tasks with .adelay(), not .delay()."
 
 
 def test_django_transactions_are_not_opened_inside_async_functions() -> None:
@@ -938,6 +1012,32 @@ def _is_core_fastapi_controller_module(module: SourceModule) -> bool:
     )
 
 
+def _iter_celery_task_controller_classes() -> list[tuple[SourceModule, ast.ClassDef]]:
+    return [
+        (module, class_node)
+        for module in iter_source_modules()
+        if _is_core_celery_delivery_module(module)
+        for class_node in iter_class_definitions(module)
+        if class_node.name.endswith("TaskController")
+    ]
+
+
+def _is_core_celery_delivery_module(module: SourceModule) -> bool:
+    return module.source_parts[0] == "core" and _is_delivery_framework_module(module, "celery")
+
+
+def _register_method_uses_celery_task_bridge(class_node: ast.ClassDef) -> bool:
+    register_method = _class_method_map(class_node).get("register")
+    return register_method is not None and any(
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "_register_task"
+        and isinstance(node.func.value, ast.Name)
+        and node.func.value.id == "self"
+        for node in ast.walk(register_method)
+    )
+
+
 def _fastapi_factory_class() -> tuple[SourceModule, ast.ClassDef]:
     for module in iter_source_modules():
         if module.source_parts != ("entrypoints", "fastapi", "factories.py"):
@@ -1070,6 +1170,10 @@ def _has_true_keyword(call: ast.Call, keyword_name: str) -> bool:
 
 def _is_sync_to_async_call(call: ast.Call) -> bool:
     return _annotation_name(call.func) == "sync_to_async"
+
+
+def _is_async_to_sync_call(call: ast.Call) -> bool:
+    return _annotation_name(call.func) == "async_to_sync"
 
 
 def _function_contains_transaction_boundary(

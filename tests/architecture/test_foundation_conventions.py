@@ -12,6 +12,7 @@ from tests.architecture._source import (
 FOUNDATION_BASE_SUFFIXES = {
     "ApplicationSettings": "Settings",
     "BaseAsyncController": "Controller",
+    "BaseCeleryTaskController": "Controller",
     "BaseCelerySchema": "Schema",
     "BaseConfigurator": "Configurator",
     "BaseController": "Controller",
@@ -28,6 +29,7 @@ FOUNDATION_BASE_SUFFIXES = {
 
 INJECTABLE_BASES = {
     "BaseAsyncController",
+    "BaseCeleryTaskController",
     "BaseConfigurator",
     "BaseController",
     "BaseFactory",

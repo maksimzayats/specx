@@ -94,6 +94,9 @@ foundation/
 └── use_cases.py            # BaseUseCase
 ```
 
+Celery's async task-controller bridge lives in `infrastructure/celery/` because
+it adapts async application handlers to Celery's sync worker API.
+
 ### `src/fastdjango/entrypoints/` - Composition Roots
 
 Application bootstrapping, framework factories, route registration, task

@@ -1,8 +1,10 @@
 # Async Django Boundaries
 
-FastAPI delivery is async-first. Controllers inherit `BaseAsyncController`, public
-use-case and service methods are async where they are called from HTTP flows, and
-Django connection cleanup is handled at the FastAPI request boundary.
+FastAPI and Celery delivery are async-first. Controllers inherit
+`BaseAsyncController` or `BaseCeleryTaskController`, public use-case and service
+methods are async where they are called from delivery flows, and Django
+connection cleanup is handled at the FastAPI request boundary or Celery task
+bridge.
 
 ## The Rule
 
@@ -46,8 +48,9 @@ so transactions do not sit idle while CPU work runs.
 
 ## Connection Handling
 
-FastAPI runs without Django's request handler, so the app adds Django connection
-cleanup middleware around each HTTP request. The middleware also creates an
+FastAPI and Celery run without Django's request handler, so the app adds Django
+connection cleanup middleware around each HTTP request and wraps each Celery
+task handler with the same connection-boundary cleanup. The HTTP middleware also creates an
 `asgiref.sync.ThreadSensitiveContext`, matching Django's ASGI handler, so
 thread-sensitive ORM work for one request shares one worker thread and connection
 lifecycle.
