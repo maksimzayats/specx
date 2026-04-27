@@ -116,7 +116,7 @@ from fastdjango.foundation.services import BaseService
 
 @dataclass(kw_only=True)
 class TodoService(BaseService):
-    def delete_completed_todos(self, user: User) -> int:
+    def delete_completed_todos(self, *, user: User) -> int:
         with logfire.span(
             "delete_completed_todos",
             user_id=user.id,
@@ -143,9 +143,9 @@ keeps controllers free of database transaction policy.
 class TodoService(BaseService):
     _transaction_factory: Injected[TransactionFactory]
 
-    def _create_todo_transactionally(self, user: User, title: str) -> Todo:
+    def _create_todo_transactionally(self, *, user: User, title: str) -> Todo:
         with self._transaction_factory(
-            "create todo",
+            span_name="create todo",
             service=type(self).__name__,
             method="_create_todo_transactionally",
         ):

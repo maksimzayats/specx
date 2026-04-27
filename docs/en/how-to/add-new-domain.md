@@ -15,7 +15,7 @@ Add a new domain (e.g., `product`, `order`, `comment`) with all required compone
 
 - [ ] Create Django app in `core/<domain>/`
 - [ ] Add to `installed_apps` in settings
-- [ ] Create model in `models.py`
+- [ ] Create model in `models.py` with explicit field verbose names
 - [ ] Create domain exceptions in `exceptions.py`
 - [ ] Create service in `services.py`
 - [ ] Create delivery directories in `core/<domain>/delivery/`
@@ -69,14 +69,16 @@ from django.db import models
 
 
 class Product(models.Model):
-    name = models.CharField(max_length=200)
-    description = models.TextField(blank=True)
-    price = models.DecimalField(max_digits=10, decimal_places=2)
-    is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    name = models.CharField(verbose_name="name", max_length=200)
+    description = models.TextField(verbose_name="description", blank=True)
+    price = models.DecimalField(verbose_name="price", max_digits=10, decimal_places=2)
+    is_active = models.BooleanField(verbose_name="is active", default=True)
+    created_at = models.DateTimeField(verbose_name="created at", auto_now_add=True)
+    updated_at = models.DateTimeField(verbose_name="updated at", auto_now=True)
 
     class Meta:
+        verbose_name = "product"
+        verbose_name_plural = "products"
         ordering = ["-created_at"]
 
     def __str__(self) -> str:
@@ -118,7 +120,7 @@ from fastdjango.core.product.models import Product
 class ProductService(BaseService):
     _transaction_factory: Injected[TransactionFactory]
 
-    async def get_product_by_id(self, product_id: int) -> Product:
+    async def get_product_by_id(self, *, product_id: int) -> Product:
         try:
             return await Product.objects.aget(id=product_id)
         except Product.DoesNotExist as e:
@@ -149,7 +151,7 @@ class ProductService(BaseService):
         description: str = "",
         price: Decimal,
     ) -> Product:
-        with self._transaction_factory("create product"):
+        with self._transaction_factory(span_name="create product"):
             return Product.objects.create(
                 name=name,
                 description=description,
@@ -256,7 +258,7 @@ class ProductController(BaseAsyncController):
         ]
 
     async def get_product(self, product_id: int) -> ProductSchema:
-        product = await self._product_service.get_product_by_id(product_id)
+        product = await self._product_service.get_product_by_id(product_id=product_id)
         return ProductSchema.model_validate(product, from_attributes=True)
 
     async def create_product(self, body: CreateProductRequestSchema) -> ProductSchema:
@@ -324,7 +326,7 @@ Import the admin module from the domain app config so Django registers it:
 
 ```python
 def ready(self) -> None:
-    from fastdjango.core.product.delivery.django import admin as _product_admin  # noqa: F401, I001, PLC0415
+    from fastdjango.core.product.delivery.django import admin as _product_admin  # noqa: F401, PLC0415
 ```
 
 ### 11. Run Migrations

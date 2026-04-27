@@ -51,22 +51,24 @@ class SystemHealthUseCase(BaseUseCase):
         try:
             async with asyncio.timeout(self.CELERY_PING_TIMEOUT_SECONDS):
                 task_result = await self._tasks_registry.ping.adelay()
-                return await self._read_celery_ping_result(task_result)
+                return await self._read_celery_ping_result(task_result=task_result)
         except self.UNEXPECTED_ERROR as e:
             logger.exception("Health check failed: Celery ping task did not complete")
             raise self.HEALTH_CHECK_ERROR from e
 
     async def _read_celery_ping_result(
         self,
+        *,
         task_result: CeleryTaskResult[PingResultSchema],
     ) -> PingResultSchema:
         try:
             return await task_result.aget(timeout=self.CELERY_PING_TIMEOUT_SECONDS)
         finally:
-            await self._forget_celery_ping_result(task_result)
+            await self._forget_celery_ping_result(task_result=task_result)
 
     async def _forget_celery_ping_result(
         self,
+        *,
         task_result: CeleryTaskResult[PingResultSchema],
     ) -> None:
         try:

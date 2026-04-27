@@ -42,6 +42,23 @@
 - Delivery schemas stay in delivery layers; DTOs stay near use cases.
 - Infrastructure must not depend on core delivery details.
 - Shared code must be genuinely shared, not a dumping ground.
+- Django admin lives in `core/<domain>/delivery/django/admin.py` and is imported
+  from the domain `AppConfig.ready()`.
+
+## Django Models
+
+- Give every declared model field an explicit `verbose_name=...`.
+- Use keyword arguments for Django model fields, including relationship targets
+  like `to=...`.
+- Type `ForeignKey` and `OneToOneField` attributes with Django field generics,
+  for example `user: models.ForeignKey[User, User] = models.ForeignKey(...)`.
+- Use `settings.AUTH_USER_MODEL` as the relation target for user relations.
+- Give relationship fields an explicit `related_name`.
+- Annotate reverse relationship managers on target models for every
+  `related_name`.
+- Direct `models.Model` subclasses define `Meta.verbose_name` and
+  `Meta.verbose_name_plural`.
+- Concrete models define `__str__()`.
 
 ## Class Markers
 
@@ -69,11 +86,14 @@
 - Do not add backward-compatibility layers unless explicitly requested.
 - Use `apply_patch` for manual edits.
 - Prefer explicit readable code over clever typing workarounds.
+- Prefer keyword arguments for project code. Service and use-case methods must
+  make custom arguments keyword-only with `*` after `self`/`cls`.
 - Prefer guard clauses and early returns/raises when they make code flatter; avoid avoidable nested conditionals.
 - Do not invent local `Protocol` types when a concrete project type already exists; use the real type, with a `TYPE_CHECKING` import if runtime imports would cross a boundary.
 - Use casts only at real third-party or protocol typing boundaries.
 - Name sync methods that open Django transactions with `_transactionally`.
 - Inject `TransactionFactory` into services/use cases that open transactions.
+- Pass transaction labels as `span_name=...`.
 - Do not use `sync_to_async` in FastAPI delivery modules.
 - Do not use `async_to_sync` outside the Celery task bridge.
 - Use `.adelay()` and `.aget()`/`.aforget()` from async code; sync `.delay()`, `.get()`, and `.forget()` are for sync callers.

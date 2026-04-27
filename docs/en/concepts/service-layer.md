@@ -36,7 +36,7 @@ class UserController:
         self._user_use_case = user_use_case
 
     async def get_user(self, user_id: int) -> UserSchema:
-        user = await self._user_use_case.get_user_by_id(user_id)
+        user = await self._user_use_case.get_user_by_id(user_id=user_id)
         return UserSchema.model_validate(user, from_attributes=True)
 ```
 
@@ -75,7 +75,7 @@ class TodoService(BaseService):
 
     _transaction_factory: Injected[TransactionFactory]
 
-    async def get_todo_by_id(self, todo_id: int) -> Todo:
+    async def get_todo_by_id(self, *, todo_id: int) -> Todo:
         try:
             return await Todo.objects.aget(id=todo_id)
         except Todo.DoesNotExist as e:
@@ -84,14 +84,14 @@ class TodoService(BaseService):
     async def list_todos(self) -> list[Todo]:
         return [todo async for todo in Todo.objects.all()]
 
-    async def create_todo(self, user: User, title: str) -> Todo:
+    async def create_todo(self, *, user: User, title: str) -> Todo:
         return await sync_to_async(
             self._create_todo_transactionally,
             thread_sensitive=True,
         )(user=user, title=title)
 
-    def _create_todo_transactionally(self, user: User, title: str) -> Todo:
-        with self._transaction_factory("create todo"):
+    def _create_todo_transactionally(self, *, user: User, title: str) -> Todo:
+        with self._transaction_factory(span_name="create todo"):
             return Todo.objects.create(user=user, title=title)
 ```
 
@@ -105,7 +105,7 @@ Services can use two patterns for "not found" scenarios:
 
 === "Exception pattern"
     ```python
-    def get_todo_by_id(self, todo_id: int) -> Todo:
+    def get_todo_by_id(self, *, todo_id: int) -> Todo:
         try:
             return Todo.objects.get(id=todo_id)
         except Todo.DoesNotExist as e:
@@ -116,7 +116,7 @@ Services can use two patterns for "not found" scenarios:
 
 === "None pattern"
     ```python
-    def get_user_by_id(self, user_id: int) -> User | None:
+    def get_user_by_id(self, *, user_id: int) -> User | None:
         return User.objects.filter(id=user_id).first()
     ```
     - Use when absence is a normal case (e.g., lookup by credentials)
@@ -134,7 +134,7 @@ Test business logic without HTTP:
 ```python
 def test_create_todo():
     service = TodoService()
-    todo = service.create_todo(user, "Test")
+    todo = service.create_todo(user=user, title="Test")
     assert todo.title == "Test"
 ```
 
@@ -146,14 +146,14 @@ Same service works everywhere:
 # HTTP Controller
 class TodoController:
     def create(self, body: CreateTodoSchema) -> TodoSchema:
-        todo = self._service.create_todo(user, body.title)
+        todo = self._service.create_todo(user=user, title=body.title)
         return TodoSchema.model_validate(todo, from_attributes=True)
 
 # Celery Task
 class ImportTaskController:
     def import_todos(self, titles: list[str]) -> None:
         for title in titles:
-            self._service.create_todo(user, title)
+            self._service.create_todo(user=user, title=title)
 ```
 
 ### 3. Clear Boundaries
@@ -207,14 +207,14 @@ from fastdjango.foundation.transactions import TransactionFactory
 class TodoService(BaseService):
     _transaction_factory: Injected[TransactionFactory]
 
-    async def create_todo(self, user: User, title: str) -> Todo:
+    async def create_todo(self, *, user: User, title: str) -> Todo:
         return await sync_to_async(
             self._create_todo_transactionally,
             thread_sensitive=True,
         )(user=user, title=title)
 
-    def _create_todo_transactionally(self, user: User, title: str) -> Todo:
-        with self._transaction_factory("create todo"):
+    def _create_todo_transactionally(self, *, user: User, title: str) -> Todo:
+        with self._transaction_factory(span_name="create todo"):
             todo = Todo.objects.create(user=user, title=title)
             # If anything fails here, the transaction rolls back
             self._audit_service.log_creation(todo)
@@ -285,15 +285,15 @@ class OrderService(BaseService):
     _notification_service: Injected[NotificationService]
     _transaction_factory: Injected[TransactionFactory]
 
-    async def create_order(self, user_id: int, items: list[Item]) -> Order:
+    async def create_order(self, *, user_id: int, items: list[Item]) -> Order:
         return await sync_to_async(
             self._create_order_transactionally,
             thread_sensitive=True,
         )(user_id=user_id, items=items)
 
-    def _create_order_transactionally(self, user_id: int, items: list[Item]) -> Order:
-        with self._transaction_factory("create order"):
-            user = self._user_use_case.get_user_by_id(user_id)
+    def _create_order_transactionally(self, *, user_id: int, items: list[Item]) -> Order:
+        with self._transaction_factory(span_name="create order"):
+            user = self._user_use_case.get_user_by_id(user_id=user_id)
             order = Order.objects.create(user=user)
             self._payment_service.charge(user, order.total)
             self._notification_service.send_confirmation(user, order)

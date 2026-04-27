@@ -74,7 +74,7 @@ class TodoCleanupTaskController(BaseCeleryTaskController):
 
         total_deleted = 0
         for user in users:
-            deleted_count = await self._todo_service.delete_completed_todos(user)
+            deleted_count = await self._todo_service.delete_completed_todos(user=user)
             total_deleted += deleted_count
 
         return CleanupResultSchema(
@@ -295,7 +295,7 @@ Tasks should be safe to retry:
 ```python
 async def cleanup_completed_todos(self) -> CleanupResultSchema:
     # This is idempotent - running it twice doesn't cause issues
-    deleted_count = await self._todo_service.delete_completed_todos(user)
+    deleted_count = await self._todo_service.delete_completed_todos(user=user)
     return {"deleted": deleted_count}
 ```
 
@@ -321,7 +321,7 @@ async def process_user(self, user: User) -> None:
 
 # Good - Pass IDs instead
 async def process_user(self, user_id: int) -> None:
-    user = await self._user_use_case.get_user_by_id(user_id)
+    user = await self._user_use_case.get_user_by_id(user_id=user_id)
     ...
 ```
 
@@ -332,7 +332,7 @@ async def cleanup_completed_todos(self) -> CleanupResultSchema:
     errors = []
     for user in users:
         try:
-            await self._todo_service.delete_completed_todos(user)
+            await self._todo_service.delete_completed_todos(user=user)
         except Exception as e:
             errors.append({"user_id": user.id, "error": str(e)})
 

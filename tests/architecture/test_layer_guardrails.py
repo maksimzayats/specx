@@ -717,11 +717,25 @@ def _is_core_delivery_module(module_name: str) -> bool:
 
 
 def _is_exempt_core_delivery_import(module: SourceModule, module_name: str) -> bool:
+    if _is_same_domain_django_admin_import_from_app_config(module, module_name):
+        return True
+
     relative_path = module.relative_path
     return any(
         relative_path == exempt_path and module_name.startswith(exempt_module)
         for exempt_path, exempt_module in CORE_DELIVERY_IMPORT_EXEMPTIONS
     )
+
+
+def _is_same_domain_django_admin_import_from_app_config(
+    module: SourceModule,
+    module_name: str,
+) -> bool:
+    if module.source_parts[0] != "core" or module.path.name != "apps.py":
+        return False
+
+    domain_name = module.source_parts[1]
+    return module_name == f"fastdjango.core.{domain_name}.delivery.django"
 
 
 def _is_exempt_core_internal_import(module: SourceModule, module_name: str) -> bool:

@@ -40,6 +40,7 @@ class RefreshSessionService(BaseService):
 
     async def create_refresh_session(
         self,
+        *,
         user: User,
         user_agent: str,
         ip_address_trace: str | None,
@@ -53,7 +54,7 @@ class RefreshSessionService(BaseService):
             ip_address_trace=ip_address_trace,
         )
 
-    async def rotate_refresh_token(self, refresh_token: str) -> RefreshSessionResult:
+    async def rotate_refresh_token(self, *, refresh_token: str) -> RefreshSessionResult:
         return await sync_to_async(
             self._rotate_refresh_token_transactionally,
             thread_sensitive=True,
@@ -61,6 +62,7 @@ class RefreshSessionService(BaseService):
 
     async def revoke_refresh_token(
         self,
+        *,
         refresh_token: str,
         user: User,
     ) -> None:
@@ -71,15 +73,16 @@ class RefreshSessionService(BaseService):
 
     def _create_refresh_session_transactionally(
         self,
+        *,
         user: User,
         user_agent: str,
         ip_address_trace: str | None,
     ) -> RefreshSessionResult:
         refresh_token = self._issue_refresh_token()
-        refresh_token_hash = self._hash_refresh_token(refresh_token)
+        refresh_token_hash = self._hash_refresh_token(refresh_token=refresh_token)
 
         with self._transaction_factory(
-            "create refresh session",
+            span_name="create refresh session",
             service=type(self).__name__,
             method="_create_refresh_session_transactionally",
         ):
@@ -93,16 +96,20 @@ class RefreshSessionService(BaseService):
 
         return RefreshSessionResult(refresh_token=refresh_token, session=session)
 
-    def _rotate_refresh_token_transactionally(self, refresh_token: str) -> RefreshSessionResult:
+    def _rotate_refresh_token_transactionally(
+        self,
+        *,
+        refresh_token: str,
+    ) -> RefreshSessionResult:
         new_refresh_token = self._issue_refresh_token()
-        new_refresh_token_hash = self._hash_refresh_token(new_refresh_token)
+        new_refresh_token_hash = self._hash_refresh_token(refresh_token=new_refresh_token)
 
         with self._transaction_factory(
-            "rotate refresh token",
+            span_name="rotate refresh token",
             service=type(self).__name__,
             method="_rotate_refresh_token_transactionally",
         ):
-            session = self._get_refresh_session_for_update(refresh_token)
+            session = self._get_refresh_session_for_update(refresh_token=refresh_token)
 
             session.refresh_token_hash = new_refresh_token_hash
             session.rotation_counter += 1
@@ -119,15 +126,16 @@ class RefreshSessionService(BaseService):
 
     def _revoke_refresh_token_transactionally(
         self,
+        *,
         refresh_token: str,
         user: User,
     ) -> None:
         with self._transaction_factory(
-            "revoke refresh token",
+            span_name="revoke refresh token",
             service=type(self).__name__,
             method="_revoke_refresh_token_transactionally",
         ):
-            session = self._get_refresh_session_for_update(refresh_token)
+            session = self._get_refresh_session_for_update(refresh_token=refresh_token)
             if session.user.pk != user.pk:
                 raise self.INVALID_REFRESH_TOKEN_ERROR
 
@@ -137,15 +145,16 @@ class RefreshSessionService(BaseService):
     def _issue_refresh_token(self) -> str:
         return secrets.token_urlsafe(nbytes=self._settings.refresh_token_nbytes)
 
-    def _hash_refresh_token(self, refresh_token: str) -> str:
+    def _hash_refresh_token(self, *, refresh_token: str) -> str:
         return hashlib.sha256(refresh_token.encode()).hexdigest()
 
     def _get_refresh_session_for_update(
         self,
+        *,
         refresh_token: str,
     ) -> RefreshSession:
         return self._get_active_refresh_session(
-            refresh_token,
+            refresh_token=refresh_token,
             for_update=True,
         )
 
@@ -162,13 +171,13 @@ class RefreshSessionService(BaseService):
 
     def _get_active_refresh_session(
         self,
-        refresh_token: str,
         *,
+        refresh_token: str,
         for_update: bool = False,
     ) -> RefreshSession:
         try:
             session = self._get_refresh_session_query(for_update=for_update).get(
-                refresh_token_hash=self._hash_refresh_token(refresh_token),
+                refresh_token_hash=self._hash_refresh_token(refresh_token=refresh_token),
             )
         except self.REFRESH_SESSION_NOT_FOUND_ERROR as e:
             raise self.INVALID_REFRESH_TOKEN_ERROR from e

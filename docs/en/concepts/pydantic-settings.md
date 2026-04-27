@@ -161,7 +161,7 @@ from fastdjango.foundation.services import BaseService
 class JWTService(BaseService):
     _settings: JWTServiceSettings
 
-    def issue_access_token(self, user_id: int) -> str:
+    def issue_access_token(self, *, user_id: int) -> str:
         payload = {
             "sub": str(user_id),
             "exp": datetime.now(UTC)

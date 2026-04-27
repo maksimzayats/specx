@@ -124,15 +124,15 @@ application layer.
 class UserUseCase(BaseUseCase):
     _transaction_factory: Injected[TransactionFactory]
 
-    async def create_user(self, data: CreateUserDTO) -> User:
+    async def create_user(self, *, data: CreateUserDTO) -> User:
         return await sync_to_async(
             self._create_user_transactionally,
             thread_sensitive=True,
         )(data=data)
 
-    def _create_user_transactionally(self, data: CreateUserDTO) -> User:
+    def _create_user_transactionally(self, *, data: CreateUserDTO) -> User:
         with self._transaction_factory(
-            "create user",
+            span_name="create user",
             use_case=type(self).__name__,
             method="_create_user_transactionally",
         ):
@@ -225,7 +225,7 @@ FastAPI controllers should expose async handlers:
 
 ```python
 async def get_user(self, request: AuthenticatedRequest, user_id: int) -> UserSchema:
-    user = await self._user_use_case.get_user_by_id(user_id)
+    user = await self._user_use_case.get_user_by_id(user_id=user_id)
     return UserSchema.model_validate(user, from_attributes=True)
 ```
 
@@ -235,7 +235,7 @@ transactional method:
 ```python
 from asgiref.sync import sync_to_async
 
-async def create_user(self, data: CreateUserDTO) -> User:
+async def create_user(self, *, data: CreateUserDTO) -> User:
     return await sync_to_async(
         self._create_user_transactionally,
         thread_sensitive=True,

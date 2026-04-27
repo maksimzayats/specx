@@ -176,7 +176,10 @@ class TodoController(BaseAsyncController):
     ) -> TodoListSchema:
         """List all todos for the authenticated user."""
         user = request.state.user
-        todos = await self._todo_service.list_todos_for_user(user, completed=completed)
+        todos = await self._todo_service.list_todos_for_user(
+            user=user,
+            completed=completed,
+        )
 
         return TodoListSchema(
             todos=[
@@ -194,7 +197,7 @@ class TodoController(BaseAsyncController):
         """Create a new todo."""
         user = request.state.user
         todo = await self._todo_service.create_todo(
-            user,
+            user=user,
             title=body.title,
             description=body.description,
         )
@@ -208,7 +211,7 @@ class TodoController(BaseAsyncController):
     ) -> TodoSchema:
         """Get a specific todo by ID."""
         user = request.state.user
-        todo = await self._todo_service.get_todo_by_id(todo_id, user)
+        todo = await self._todo_service.get_todo_by_id(todo_id=todo_id, user=user)
 
         return TodoSchema.model_validate(todo, from_attributes=True)
 
@@ -222,8 +225,8 @@ class TodoController(BaseAsyncController):
         user = request.state.user
 
         todo = await self._todo_service.update_todo(
-            todo_id,
-            user,
+            todo_id=todo_id,
+            user=user,
             title=body.title,
             description=body.description,
             completed=body.completed,
@@ -238,7 +241,7 @@ class TodoController(BaseAsyncController):
     ) -> None:
         """Delete a todo."""
         user = request.state.user
-        await self._todo_service.delete_todo(todo_id, user)
+        await self._todo_service.delete_todo(todo_id=todo_id, user=user)
 
     async def handle_exception(self, exception: Exception) -> Any:
         """Map domain exceptions to HTTP responses."""
@@ -355,7 +358,7 @@ Import the admin module from `TodoConfig.ready()` so Django registers it:
 ```python
 # src/fastdjango/core/todo/apps.py
 def ready(self) -> None:
-    from fastdjango.core.todo.delivery.django import admin as _todo_admin  # noqa: F401, I001, PLC0415
+    from fastdjango.core.todo.delivery.django import admin as _todo_admin  # noqa: F401, PLC0415
 ```
 
 ## Verification

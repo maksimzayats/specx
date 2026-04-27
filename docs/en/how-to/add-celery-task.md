@@ -71,7 +71,7 @@ class SendEmailTaskController(BaseCeleryTaskController):
         Returns:
             Result containing success status and message ID.
         """
-        user = await self._user_use_case.get_user_by_id(user_id)
+        user = await self._user_use_case.get_user_by_id(user_id=user_id)
 
         try:
             message_id = await self._email_service.send(
@@ -165,8 +165,8 @@ calling use cases/services and should not enqueue tasks directly.
 class UserUseCase(BaseUseCase):
     _tasks_registry: Injected[TasksRegistry]
 
-    async def create_user(self, data: CreateUserDTO) -> User:
-        user = await self._create_user(data)
+    async def create_user(self, *, data: CreateUserDTO) -> User:
+        user = await self._create_user(data=data)
 
         # Queue welcome email
         await self._tasks_registry.send_email.adelay(
@@ -277,7 +277,7 @@ class TestSendEmailTask:
 ```python
 # Good - serializable
 async def send_email(self, user_id: int, ...) -> SendEmailResultSchema:
-    user = await self._user_use_case.get_user_by_id(user_id)
+    user = await self._user_use_case.get_user_by_id(user_id=user_id)
 
 # Bad - Django models aren't serializable
 async def send_email(self, user: User, ...) -> SendEmailResultSchema:
@@ -288,7 +288,7 @@ async def send_email(self, user: User, ...) -> SendEmailResultSchema:
 
 ```python
 async def process_order(self, order_id: int) -> ProcessResultSchema:
-    order = await self._order_service.get_order_by_id(order_id)
+    order = await self._order_service.get_order_by_id(order_id=order_id)
 
     # Check if already processed
     if order.status == OrderStatus.PROCESSED:

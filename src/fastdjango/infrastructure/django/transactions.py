@@ -12,7 +12,8 @@ from fastdjango.infrastructure.django.traced_atomic import traced_atomic
 class DjangoTransactionFactory(BaseFactory):
     def __call__(
         self,
+        *,
         span_name: str = "database transaction",
         **span_attributes: Any,
     ) -> AbstractContextManager[LogfireSpan]:
-        return traced_atomic(span_name, **span_attributes)
+        return traced_atomic(span_name=span_name, **span_attributes)

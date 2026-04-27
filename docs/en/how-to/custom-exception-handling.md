@@ -70,14 +70,14 @@ from fastdjango.core.order.exceptions import (
 
 @dataclass(kw_only=True)
 class OrderService(BaseService):
-    def get_order_by_id(self, order_id: int) -> Order:
+    def get_order_by_id(self, *, order_id: int) -> Order:
         try:
             return Order.objects.get(id=order_id)
         except Order.DoesNotExist as e:
             raise OrderNotFoundError(f"Order {order_id} not found") from e
 
-    def pay_order(self, order_id: int) -> Order:
-        order = self.get_order_by_id(order_id)
+    def pay_order(self, *, order_id: int) -> Order:
+        order = self.get_order_by_id(order_id=order_id)
 
         if order.status == OrderStatus.PAID:
             raise OrderAlreadyPaidError(f"Order {order_id} is already paid")
@@ -125,7 +125,7 @@ class OrderController(BaseAsyncController):
         )
 
     async def pay_order(self, order_id: int) -> OrderSchema:
-        order = await self._order_service.pay_order(order_id)
+        order = await self._order_service.pay_order(order_id=order_id)
         return OrderSchema.model_validate(order, from_attributes=True)
 
     async def handle_exception(self, exception: Exception) -> Any:

@@ -23,14 +23,15 @@ class UserUseCase(BaseUseCase):
 
     _transaction_factory: Injected[TransactionFactory]
 
-    async def get_user_by_id(self, user_id: int) -> User | None:
+    async def get_user_by_id(self, *, user_id: int) -> User | None:
         return await User.objects.filter(id=user_id).afirst()
 
-    async def get_active_user_by_id(self, user_id: int) -> User | None:
+    async def get_active_user_by_id(self, *, user_id: int) -> User | None:
         return await User.objects.filter(id=user_id, is_active=True).afirst()
 
     async def get_user_by_username_and_password(
         self,
+        *,
         username: str,
         password: str,
     ) -> User | None:
@@ -41,6 +42,7 @@ class UserUseCase(BaseUseCase):
 
     def _get_user_by_username_and_password(
         self,
+        *,
         username: str,
         password: str,
     ) -> User | None:
@@ -56,6 +58,7 @@ class UserUseCase(BaseUseCase):
 
     async def get_user_by_username_or_email(
         self,
+        *,
         username: str,
         email: str,
     ) -> User | None:
@@ -65,6 +68,7 @@ class UserUseCase(BaseUseCase):
 
     def is_valid_password(
         self,
+        *,
         data: CreateUserDTO,
     ) -> bool:
         """Validate the strength of the given password.
@@ -89,6 +93,7 @@ class UserUseCase(BaseUseCase):
 
     async def create_user(
         self,
+        *,
         data: CreateUserDTO,
     ) -> User:
         return await sync_to_async(
@@ -98,6 +103,7 @@ class UserUseCase(BaseUseCase):
 
     def _create_user_transactionally(
         self,
+        *,
         data: CreateUserDTO,
     ) -> User:
         is_valid_password = self.is_valid_password(data=data)
@@ -109,7 +115,7 @@ class UserUseCase(BaseUseCase):
         password = make_password(data.password)
 
         with self._transaction_factory(
-            "create user",
+            span_name="create user",
             use_case=type(self).__name__,
             method="_create_user_transactionally",
         ):

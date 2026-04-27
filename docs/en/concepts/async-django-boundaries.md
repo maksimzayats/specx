@@ -11,7 +11,7 @@ bridge.
 Async code may do non-transactional ORM reads with Django's async ORM methods:
 
 ```python
-async def get_user_by_id(self, user_id: int) -> User | None:
+async def get_user_by_id(self, *, user_id: int) -> User | None:
     return await User.objects.filter(id=user_id).afirst()
 ```
 
@@ -29,16 +29,16 @@ from fastdjango.foundation.transactions import TransactionFactory
 class UserUseCase(BaseUseCase):
     _transaction_factory: Injected[TransactionFactory]
 
-    async def create_user(self, data: CreateUserDTO) -> User:
+    async def create_user(self, *, data: CreateUserDTO) -> User:
         return await sync_to_async(
             self._create_user_transactionally,
             thread_sensitive=True,
         )(data=data)
 
-    def _create_user_transactionally(self, data: CreateUserDTO) -> User:
+    def _create_user_transactionally(self, *, data: CreateUserDTO) -> User:
         password = make_password(data.password)
 
-        with self._transaction_factory("create user"):
+        with self._transaction_factory(span_name="create user"):
             return User.objects.create(..., password=password)
 ```
 

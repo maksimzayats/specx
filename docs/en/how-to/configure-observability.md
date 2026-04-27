@@ -143,7 +143,7 @@ def batch_process(items: list[Item]) -> BatchResult:
 ```python
 def process_order(order_id: int) -> Order:
     with logfire.span("process_order", order_id=order_id):
-        order = self._order_service.get_order(order_id)
+        order = self._order_service.get_order(order_id=order_id)
 
         with logfire.span("validate_payment"):
             self._payment_service.validate(order)
@@ -166,9 +166,9 @@ def process_order(order_id: int) -> Order:
 class OrderService(BaseService):
     _transaction_factory: Injected[TransactionFactory]
 
-    def _create_order_transactionally(self, data: CreateOrderDTO) -> Order:
+    def _create_order_transactionally(self, *, data: CreateOrderDTO) -> Order:
         with self._transaction_factory(
-            "create order",
+            span_name="create order",
             service=type(self).__name__,
             method="_create_order_transactionally",
         ):

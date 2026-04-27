@@ -58,20 +58,23 @@ from fastdjango.core.user.models import User
 class Todo(models.Model):
     """A todo item belonging to a user."""
 
-    title = models.CharField(max_length=200)
-    description = models.TextField(blank=True, default="")
-    completed = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    title = models.CharField(verbose_name="title", max_length=200)
+    description = models.TextField(verbose_name="description", blank=True, default="")
+    completed = models.BooleanField(verbose_name="completed", default=False)
+    created_at = models.DateTimeField(verbose_name="created at", auto_now_add=True)
+    updated_at = models.DateTimeField(verbose_name="updated at", auto_now=True)
 
     # Foreign key to User - each todo belongs to one user
-    user = models.ForeignKey(
-        User,
+    user: models.ForeignKey[User, User] = models.ForeignKey(
+        to=User,
         on_delete=models.CASCADE,
         related_name="todos",
+        verbose_name="user",
     )
 
     class Meta:
+        verbose_name = "todo"
+        verbose_name_plural = "todos"
         ordering = ["-created_at"]
         indexes = [
             models.Index(fields=["user", "completed"]),
@@ -86,6 +89,8 @@ Key points:
 
 - `user` foreign key establishes ownership
 - `related_name="todos"` allows `user.todos.all()`
+- Explicit `verbose_name` values keep admin/forms human-readable
+- The `models.ForeignKey[User, User]` annotation keeps model relationships typed
 - Indexes improve query performance
 - `ordering` sets default sort order
 
@@ -180,7 +185,7 @@ class TodoService(BaseService):
 
     _transaction_factory: Injected[TransactionFactory]
 
-    def get_todo_by_id(self, todo_id: int, user: User) -> Todo:
+    def get_todo_by_id(self, *, todo_id: int, user: User) -> Todo:
         """Get a todo by ID, ensuring it belongs to the user.
 
         Args:
@@ -206,8 +211,8 @@ class TodoService(BaseService):
 
     def list_todos_for_user(
         self,
-        user: User,
         *,
+        user: User,
         completed: bool | None = None,
     ) -> list[Todo]:
         """List all todos for a user.
@@ -228,8 +233,8 @@ class TodoService(BaseService):
 
     def create_todo(
         self,
-        user: User,
         *,
+        user: User,
         title: str,
         description: str = "",
     ) -> Todo:
@@ -243,7 +248,7 @@ class TodoService(BaseService):
         Returns:
             The created Todo instance.
         """
-        with self._transaction_factory("create todo"):
+        with self._transaction_factory(span_name="create todo"):
             return Todo.objects.create(
                 user=user,
                 title=title,
@@ -252,9 +257,9 @@ class TodoService(BaseService):
 
     def update_todo(
         self,
+        *,
         todo_id: int,
         user: User,
-        *,
         title: str | None = None,
         description: str | None = None,
         completed: bool | None = None,
@@ -275,8 +280,8 @@ class TodoService(BaseService):
             TodoNotFoundError: If the todo doesn't exist.
             TodoAccessDeniedError: If the todo belongs to another user.
         """
-        with self._transaction_factory("update todo"):
-            todo = self.get_todo_by_id(todo_id, user)
+        with self._transaction_factory(span_name="update todo"):
+            todo = self.get_todo_by_id(todo_id=todo_id, user=user)
 
             if title is not None:
                 todo.title = title
@@ -288,7 +293,7 @@ class TodoService(BaseService):
             todo.save()
             return todo
 
-    def delete_todo(self, todo_id: int, user: User) -> None:
+    def delete_todo(self, *, todo_id: int, user: User) -> None:
         """Delete a todo item.
 
         Args:
@@ -299,11 +304,11 @@ class TodoService(BaseService):
             TodoNotFoundError: If the todo doesn't exist.
             TodoAccessDeniedError: If the todo belongs to another user.
         """
-        with self._transaction_factory("delete todo"):
-            todo = self.get_todo_by_id(todo_id, user)
+        with self._transaction_factory(span_name="delete todo"):
+            todo = self.get_todo_by_id(todo_id=todo_id, user=user)
             todo.delete()
 
-    def mark_completed(self, todo_id: int, user: User) -> Todo:
+    def mark_completed(self, *, todo_id: int, user: User) -> Todo:
         """Mark a todo as completed.
 
         Args:
@@ -313,9 +318,9 @@ class TodoService(BaseService):
         Returns:
             The updated Todo instance.
         """
-        return self.update_todo(todo_id, user, completed=True)
+        return self.update_todo(todo_id=todo_id, user=user, completed=True)
 
-    def mark_incomplete(self, todo_id: int, user: User) -> Todo:
+    def mark_incomplete(self, *, todo_id: int, user: User) -> Todo:
         """Mark a todo as incomplete.
 
         Args:
@@ -325,9 +330,9 @@ class TodoService(BaseService):
         Returns:
             The updated Todo instance.
         """
-        return self.update_todo(todo_id, user, completed=False)
+        return self.update_todo(todo_id=todo_id, user=user, completed=False)
 
-    def delete_completed_todos(self, user: User) -> int:
+    def delete_completed_todos(self, *, user: User) -> int:
         """Delete all completed todos for a user.
 
         Args:
@@ -336,7 +341,7 @@ class TodoService(BaseService):
         Returns:
             Number of todos deleted.
         """
-        with self._transaction_factory("delete completed todos"):
+        with self._transaction_factory(span_name="delete completed todos"):
             deleted_count, _ = Todo.objects.filter(
                 user=user,
                 completed=True,
@@ -384,15 +389,19 @@ if not user:
 service = TodoService()
 
 # Create a todo
-todo = service.create_todo(user, title="Learn Fast Django", description="Complete the tutorial")
+todo = service.create_todo(
+    user=user,
+    title="Learn Fast Django",
+    description="Complete the tutorial",
+)
 print(f"Created: {todo.title}")
 
 # List todos
-todos = service.list_todos_for_user(user)
+todos = service.list_todos_for_user(user=user)
 print(f"User has {len(todos)} todos")
 
 # Mark complete
-service.mark_completed(todo.id, user)
+service.mark_completed(todo_id=todo.id, user=user)
 print(f"Completed: {todo.completed}")
 ```
 

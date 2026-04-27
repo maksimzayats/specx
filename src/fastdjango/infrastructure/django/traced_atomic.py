@@ -10,13 +10,14 @@ from logfire import LogfireSpan
 
 @contextmanager
 def traced_atomic(
+    *,
     span_name: str = "database transaction",
     **span_attributes: Any,
 ) -> Generator[LogfireSpan]:
     """Context manager that wraps Django's transaction.atomic() with a Logfire span.
 
     Usage:
-        with traced_atomic("create user and profile", user_id=user.pk):
+        with traced_atomic(span_name="create user and profile", user_id=user.pk):
             User.objects.create(...)
             Profile.objects.create(...)
 
