@@ -1,6 +1,7 @@
 import asyncio
 
 from fastdjango.core.health.delivery.celery.schemas import PingResultSchema
+from fastdjango.entrypoints.celery.registry import TasksRegistry
 from tests.integration.factories import TestCeleryWorkerFactory, TestTasksRegistryFactory
 
 
@@ -14,7 +15,10 @@ class TestPingTaskController:
     ) -> None:
         registry = tasks_registry_factory()
         with celery_worker_factory():
-            result = asyncio.run(registry.ping.adelay())
-            ping_result = result.get(timeout=10)
+            ping_result = asyncio.run(self._ping(registry))
 
         assert ping_result == PingResultSchema(result="pong")
+
+    async def _ping(self, registry: TasksRegistry) -> PingResultSchema:
+        result = await registry.ping.adelay()
+        return await result.aget(timeout=10)

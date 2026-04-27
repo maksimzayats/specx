@@ -228,10 +228,11 @@ Use dotted names for task organization:
 Use the task registry for type-safe calls:
 
 ```python
-from fastdjango.entrypoints.celery.factories import TasksRegistryFactory
+from fastdjango.entrypoints.celery.registry import TasksRegistry
 
-# Get registry (typically injected as TasksRegistry in your own code)
-registry = container.resolve(TasksRegistryFactory)()
+# Get registry manually in shell examples.
+# In application code, inject TasksRegistry into use cases or services.
+registry = container.resolve(TasksRegistry)
 
 # Call task from sync code
 result = registry.todo_cleanup.delay()
@@ -239,8 +240,8 @@ result = registry.todo_cleanup.delay()
 # Call task from async code
 result = await registry.todo_cleanup.adelay()
 
-# Wait for result (in tests)
-cleanup_result = result.get(timeout=30)
+# Wait for result from async code
+cleanup_result = await result.aget(timeout=30)
 ```
 
 ## Verification
@@ -262,11 +263,11 @@ uv run src/fastdjango/manage.py shell
 
 ```python
 from fastdjango.ioc.container import get_container
-from fastdjango.entrypoints.celery.factories import TasksRegistryFactory
+from fastdjango.entrypoints.celery.registry import TasksRegistry
 
 # Create container and get registry
 container = get_container()
-registry = container.resolve(TasksRegistryFactory)()
+registry = container.resolve(TasksRegistry)
 
 # Trigger the cleanup task
 result = registry.todo_cleanup.delay()

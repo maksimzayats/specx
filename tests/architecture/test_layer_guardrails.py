@@ -2,6 +2,7 @@ import ast
 from pathlib import Path
 
 from tests.architecture._source import (
+    ImportReference,
     SourceModule,
     base_names,
     has_base,
@@ -14,6 +15,12 @@ CORE_DELIVERY_IMPORT_EXEMPTIONS = {
     (
         Path("src/fastdjango/core/user/apps.py"),
         "fastdjango.core.user.delivery.django",
+    ),
+}
+CORE_INTERNAL_IMPORT_EXEMPTIONS = {
+    (
+        Path("src/fastdjango/core/health/use_cases.py"),
+        "fastdjango.entrypoints.celery.registry",
     ),
 }
 ASYNC_TO_SYNC_ALLOWED_PATHS = {
@@ -58,6 +65,14 @@ SCHEMA_COLLECTION_RETURN_NAMES = {
     "list",
     "tuple",
 }
+TASK_REGISTRY_DEPENDENCY_NAMES = {
+    "TasksRegistry",
+    "TasksRegistryFactory",
+}
+TASK_REGISTRY_MODULE_NAMES = {
+    "fastdjango.entrypoints.celery.factories",
+    "fastdjango.entrypoints.celery.registry",
+}
 
 
 def test_foundation_layer_has_no_outward_dependencies() -> None:
@@ -101,12 +116,13 @@ def test_domain_logic_modules_do_not_import_delivery_modules() -> None:
         for module in iter_source_modules()
         if _is_domain_logic_module(module)
         for import_reference in iter_imports(module)
-        if ".delivery." in import_reference.module_name
+        if _is_forbidden_domain_logic_delivery_import(import_reference)
     ]
 
     assert violations == [], (
-        "Domain logic modules must not import delivery modules, schemas, controllers, "
-        "tasks, auth, throttling, or other transport concerns."
+        "Domain logic modules must not import runtime delivery modules, schemas, "
+        "controllers, tasks, auth, throttling, or other transport concerns. "
+        "TYPE_CHECKING imports of delivery schemas are allowed for precise result types."
     )
 
 
@@ -455,6 +471,63 @@ def test_celery_task_controllers_register_through_async_bridge() -> None:
     )
 
 
+def test_task_registries_stay_out_of_controllers() -> None:
+    violations = [
+        _format_import_violation(module, import_reference.module_name, import_reference.line_number)
+        for module in iter_source_modules()
+        if _module_defines_concrete_controller(module)
+        for import_reference in iter_imports(module)
+        if not import_reference.is_type_checking
+        if import_reference.module_name in TASK_REGISTRY_MODULE_NAMES
+    ]
+    violations.extend(
+        (
+            f"{module.relative_path}:{field_node.lineno} {class_node.name}."
+            f"{field_node.target.id} injects {_injected_dependency_name(field_node.annotation)}"
+        )
+        for module in iter_source_modules()
+        for class_node in iter_class_definitions(module)
+        if _is_concrete_controller(class_node)
+        for field_node in class_node.body
+        if isinstance(field_node, ast.AnnAssign)
+        if isinstance(field_node.target, ast.Name)
+        if _injected_dependency_name(field_node.annotation) in TASK_REGISTRY_DEPENDENCY_NAMES
+    )
+
+    assert violations == [], (
+        "Task registries and registry factories belong behind services/use cases, "
+        "not in controllers."
+    )
+
+
+def test_task_registry_usage_stays_in_behavior_or_composition_roots() -> None:
+    violations = [
+        _format_import_violation(module, import_reference.module_name, import_reference.line_number)
+        for module in iter_source_modules()
+        if not _can_use_task_registry(module)
+        for import_reference in iter_imports(module)
+        if not import_reference.is_type_checking
+        if import_reference.module_name == "fastdjango.entrypoints.celery.registry"
+    ]
+    violations.extend(
+        (
+            f"{module.relative_path}:{field_node.lineno} {class_node.name}."
+            f"{field_node.target.id} injects {_injected_dependency_name(field_node.annotation)}"
+        )
+        for module in iter_source_modules()
+        if not _can_use_task_registry(module)
+        for class_node in iter_class_definitions(module)
+        for field_node in class_node.body
+        if isinstance(field_node, ast.AnnAssign)
+        if isinstance(field_node.target, ast.Name)
+        if _injected_dependency_name(field_node.annotation) == "TasksRegistry"
+    )
+
+    assert violations == [], (
+        "TasksRegistry may be used by services/use cases and composition roots only."
+    )
+
+
 def test_fastapi_delivery_does_not_bridge_sync_orm_calls() -> None:
     violations = [
         f"{module.relative_path}:{node.lineno} calls sync_to_async"
@@ -614,6 +687,9 @@ def test_core_transactional_sync_methods_use_transactional_suffix() -> None:
 
 
 def _is_forbidden_core_internal_import(module: SourceModule, module_name: str) -> bool:
+    if _is_exempt_core_internal_import(module, module_name):
+        return False
+
     if module_name.startswith(
         ("fastdjango.entrypoints", "fastdjango.infrastructure", "fastdjango.ioc"),
     ):
@@ -625,6 +701,17 @@ def _is_forbidden_core_internal_import(module: SourceModule, module_name: str) -
     return not _is_exempt_core_delivery_import(module, module_name)
 
 
+def _is_forbidden_domain_logic_delivery_import(
+    import_reference: ImportReference,
+) -> bool:
+    if ".delivery." not in import_reference.module_name:
+        return False
+
+    return not (
+        import_reference.is_type_checking and import_reference.module_name.endswith(".schemas")
+    )
+
+
 def _is_core_delivery_module(module_name: str) -> bool:
     return module_name.startswith("fastdjango.core.") and ".delivery." in module_name
 
@@ -634,6 +721,14 @@ def _is_exempt_core_delivery_import(module: SourceModule, module_name: str) -> b
     return any(
         relative_path == exempt_path and module_name.startswith(exempt_module)
         for exempt_path, exempt_module in CORE_DELIVERY_IMPORT_EXEMPTIONS
+    )
+
+
+def _is_exempt_core_internal_import(module: SourceModule, module_name: str) -> bool:
+    relative_path = module.relative_path
+    return any(
+        relative_path == exempt_path and module_name.startswith(exempt_module)
+        for exempt_path, exempt_module in CORE_INTERNAL_IMPORT_EXEMPTIONS
     )
 
 
@@ -773,6 +868,13 @@ def _can_access_container(module: SourceModule) -> bool:
 
 def _can_access_environment(module: SourceModule) -> bool:
     return module.path.name in ENVIRONMENT_ACCESS_FILE_NAMES or module.source_parts[0] in {
+        "entrypoints",
+        "ioc",
+    }
+
+
+def _can_use_task_registry(module: SourceModule) -> bool:
+    return _is_core_behavior_module(module) or module.source_parts[0] in {
         "entrypoints",
         "ioc",
     }
@@ -1039,6 +1141,10 @@ def _is_core_fastapi_controller_module(module: SourceModule) -> bool:
     )
 
 
+def _module_defines_concrete_controller(module: SourceModule) -> bool:
+    return any(_is_concrete_controller(class_node) for class_node in iter_class_definitions(module))
+
+
 def _iter_celery_task_controller_classes() -> list[tuple[SourceModule, ast.ClassDef]]:
     return [
         (module, class_node)
@@ -1094,6 +1200,15 @@ def _injected_field_names_by_type(class_node: ast.ClassDef) -> dict[str, str]:
             fields[injected_type_name] = statement.target.id
 
     return fields
+
+
+def _injected_dependency_name(annotation: ast.expr) -> str:
+    if not (
+        isinstance(annotation, ast.Subscript) and _annotation_name(annotation.value) == "Injected"
+    ):
+        return ""
+
+    return _annotation_name(annotation.slice)
 
 
 def _registered_controller_field_names(class_node: ast.ClassDef) -> set[str]:

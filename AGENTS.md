@@ -31,6 +31,7 @@
 
 - Controllers call use cases or services; use cases and services own ORM access.
 - Controllers must not query Django models directly.
+- Controllers must not import or inject task registries; use cases and services enqueue tasks.
 - FastAPI and Celery delivery are async-first.
 - Celery's sync task execution stays hidden inside the infrastructure task bridge.
 - Keep Django transactions short, synchronous, and inside use-case/service methods.
@@ -68,16 +69,20 @@
 - Do not add backward-compatibility layers unless explicitly requested.
 - Use `apply_patch` for manual edits.
 - Prefer explicit readable code over clever typing workarounds.
+- Prefer guard clauses and early returns/raises when they make code flatter; avoid avoidable nested conditionals.
+- Do not invent local `Protocol` types when a concrete project type already exists; use the real type, with a `TYPE_CHECKING` import if runtime imports would cross a boundary.
 - Use casts only at real third-party or protocol typing boundaries.
 - Name sync methods that open Django transactions with `_transactionally`.
 - Inject `TransactionFactory` into services/use cases that open transactions.
 - Do not use `sync_to_async` in FastAPI delivery modules.
 - Do not use `async_to_sync` outside the Celery task bridge.
-- Use `.adelay()` when enqueueing Celery tasks from async code; `.delay()` is for sync callers.
+- Use `.adelay()` and `.aget()`/`.aforget()` from async code; sync `.delay()`, `.get()`, and `.forget()` are for sync callers.
+- Annotate local placeholders initialized to `None`, for example `result: ResultType | None = None`.
 - In `infrastructure/django/settings.py`, keep direct settings construction with line-local ignores.
 - Do not replace direct settings construction with helper functions or casts.
 - Add comments only for non-obvious behavior.
 - Tests should cover behavior or architectural contracts, not framework internals or static defaults.
+- Do not add toy example tests just to cover a helper or base class; prefer production-facing behavior, an architecture guardrail, or no test.
 - Use coverage ignores for configuration-only modules when coverage would otherwise incentivize meaningless tests.
 - Keep docs short, current, and user-friendly.
 

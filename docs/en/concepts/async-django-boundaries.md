@@ -55,11 +55,11 @@ the database transaction does not sit idle while CPU work runs.
 ## Connection Handling
 
 FastAPI and Celery run without Django's request handler, so the app adds Django
-connection cleanup middleware around each HTTP request and wraps each Celery
-task handler with the same connection-boundary cleanup. The HTTP middleware also creates an
-`asgiref.sync.ThreadSensitiveContext`, matching Django's ASGI handler, so
-thread-sensitive ORM work for one request shares one worker thread and connection
-lifecycle.
+connection cleanup middleware around each HTTP request and WebSocket connection,
+and wraps each Celery task handler with the same connection-boundary cleanup.
+The middleware also creates an `asgiref.sync.ThreadSensitiveContext`, matching
+Django's ASGI handler, so thread-sensitive ORM work for one ASGI connection
+shares one worker thread and connection lifecycle.
 
 `DATABASE_CONN_MAX_AGE` defaults to `0` for ASGI; use database/backend pooling
 rather than Django persistent connections. Docker routes application traffic

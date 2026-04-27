@@ -157,15 +157,16 @@ class TasksRegistry(BaseTasksRegistry):
 
 ### 5. Call the Task
 
-From HTTP controllers or other services:
+Inject `TasksRegistry` into a use case or service. Controllers should keep
+calling use cases/services and should not enqueue tasks directly.
 
 ```python
 @dataclass(kw_only=True)
-class UserController(BaseAsyncController):
-    _tasks_registry: TasksRegistry
+class UserUseCase(BaseUseCase):
+    _tasks_registry: Injected[TasksRegistry]
 
-    async def create_user(self, body: CreateUserSchema) -> UserSchema:
-        user = await self._user_use_case.create_user(...)
+    async def create_user(self, data: CreateUserDTO) -> User:
+        user = await self._create_user(data)
 
         # Queue welcome email
         await self._tasks_registry.send_email.adelay(
@@ -174,7 +175,7 @@ class UserController(BaseAsyncController):
             body="Thanks for signing up.",
         )
 
-        return UserSchema.model_validate(user, from_attributes=True)
+        return user
 ```
 
 ### 6. Schedule the Task (Optional)
@@ -258,7 +259,7 @@ class TestSendEmailTask:
                     body="Hello",
                 ),
             )
-            task_result = result.get(timeout=10)
+            task_result = asyncio.run(result.aget(timeout=10))
 
         assert task_result["success"] is True
         assert task_result["message_id"] == "msg_123"
@@ -338,12 +339,14 @@ class ProcessResultSchema(BaseCelerySchema):
 
 ```python
 from fastdjango.ioc.container import get_container
-from fastdjango.entrypoints.celery.factories import TasksRegistryFactory
+from fastdjango.entrypoints.celery.registry import TasksRegistry
 
 container = get_container()
-registry = container.resolve(TasksRegistryFactory)()
+registry = container.resolve(TasksRegistry)
 result = registry.send_email.delay(user_id=1, subject="Test", body="Hello")
 print(result.get(timeout=10))
 ```
 
-Use `.adelay()` instead of `.delay()` when enqueueing from async code.
+Use `.adelay()` instead of `.delay()` when enqueueing from async code. If async
+code needs a result, use `await result.aget(timeout=...)`, and use
+`await result.aforget()` when the result backend state should be discarded.

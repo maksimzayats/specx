@@ -1,15 +1,13 @@
-import logging
 from dataclasses import dataclass
 from http import HTTPStatus
 
 from diwire import Injected
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, WebSocket
+from starlette import status
 
 from fastdjango.core.health.delivery.fastapi.schemas import HealthCheckResponseSchema
 from fastdjango.core.health.use_cases import SystemHealthUseCase
 from fastdjango.foundation.delivery.controllers import BaseAsyncController
-
-logger = logging.getLogger(__name__)
 
 
 @dataclass(kw_only=True)
@@ -23,6 +21,10 @@ class HealthController(BaseAsyncController):
             methods=["GET"],
             response_model=HealthCheckResponseSchema,
         )
+        registry.add_api_websocket_route(
+            path="/v1/health/ws",
+            endpoint=self.health_check_websocket,
+        )
 
     async def health_check(self) -> HealthCheckResponseSchema:
         try:
@@ -34,3 +36,16 @@ class HealthController(BaseAsyncController):
             ) from e
 
         return HealthCheckResponseSchema(status="ok")
+
+    async def health_check_websocket(self, websocket: WebSocket) -> None:
+        await websocket.accept()
+
+        try:
+            await self._system_health_use_case.check()
+        except SystemHealthUseCase.HEALTH_CHECK_ERROR:
+            await websocket.send_json({"status": "unavailable"})
+            await websocket.close(code=status.WS_1011_INTERNAL_ERROR)
+            return
+
+        await websocket.send_json(HealthCheckResponseSchema(status="ok").model_dump())
+        await websocket.close()

@@ -4,19 +4,20 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 
 
 class DjangoDatabaseConnectionMiddleware:
-    """Give FastAPI requests Django-like database connection boundaries.
+    """Give FastAPI connections Django-like database connection boundaries.
 
     FastAPI does not run through Django's request handler, so Django's database
-    cleanup signals are not sent for these routes. The thread-sensitive context
-    matches Django's ASGI handler and prevents thread-sensitive ORM work from
-    falling back to asgiref's process-wide single-thread executor.
+    cleanup signals are not sent for HTTP or WebSocket routes. The
+    thread-sensitive context matches Django's ASGI handler and prevents
+    thread-sensitive ORM work from falling back to asgiref's process-wide
+    single-thread executor.
     """
 
     def __init__(self, app: ASGIApp) -> None:
         self._app = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http":
+        if scope["type"] not in {"http", "websocket"}:
             await self._app(scope, receive, send)
             return
 

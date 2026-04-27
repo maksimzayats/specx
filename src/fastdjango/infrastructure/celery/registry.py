@@ -11,6 +11,33 @@ class TaskNotFoundError(Exception):
 
 
 @dataclass(kw_only=True)
+class CeleryTaskResult[R]:
+    result: AsyncResult[R]
+
+    @property
+    def raw(self) -> AsyncResult[R]:
+        return self.result
+
+    def get(self, *, timeout: float | None = None) -> R:
+        return self.result.get(timeout=timeout)
+
+    async def aget(self, *, timeout: float | None = None) -> R:  # noqa: ASYNC109
+        return await asyncio.to_thread(self.get, timeout=timeout)
+
+    def forget(self) -> None:
+        self.result.forget()
+
+    async def aforget(self, *, timeout: float | None = None) -> None:  # noqa: ASYNC109
+        forget = asyncio.to_thread(self.forget)
+
+        if timeout is None:
+            await forget
+            return
+
+        await asyncio.wait_for(forget, timeout=timeout)
+
+
+@dataclass(kw_only=True)
 class CeleryTask[**P, R]:
     task: Task[P, R]
 
@@ -22,16 +49,16 @@ class CeleryTask[**P, R]:
     def raw(self) -> Task[P, R]:
         return self.task
 
-    def delay(self, *args: P.args, **kwargs: P.kwargs) -> AsyncResult[R]:
-        return self.task.delay(*args, **kwargs)
+    def delay(self, *args: P.args, **kwargs: P.kwargs) -> CeleryTaskResult[R]:
+        return CeleryTaskResult(result=self.task.delay(*args, **kwargs))
 
-    async def adelay(self, *args: P.args, **kwargs: P.kwargs) -> AsyncResult[R]:
+    async def adelay(self, *args: P.args, **kwargs: P.kwargs) -> CeleryTaskResult[R]:
         return await asyncio.to_thread(self.delay, *args, **kwargs)
 
-    def apply_async(self, *args: Any, **kwargs: Any) -> AsyncResult[R]:
-        return self.task.apply_async(*args, **kwargs)
+    def apply_async(self, *args: Any, **kwargs: Any) -> CeleryTaskResult[R]:
+        return CeleryTaskResult(result=self.task.apply_async(*args, **kwargs))
 
-    async def aapply_async(self, *args: Any, **kwargs: Any) -> AsyncResult[R]:
+    async def aapply_async(self, *args: Any, **kwargs: Any) -> CeleryTaskResult[R]:
         return await asyncio.to_thread(self.apply_async, *args, **kwargs)
 
 

@@ -48,6 +48,10 @@ Every controller implements `register()` to connect to its delivery mechanism:
 def register(self, registry: APIRouter) -> None:
     registry.add_api_route("/v1/users", self.list_users, methods=["GET"])
 
+# WebSocket Controller
+def register(self, registry: APIRouter) -> None:
+    registry.add_api_websocket_route("/v1/health/ws", self.health_check_websocket)
+
 # Celery Task Controller
 def register(self, registry: Celery) -> None:
     self._register_task(registry, name=PING_TASK_NAME, handler=self.ping)
@@ -94,6 +98,18 @@ def handle_exception(self, exception: Exception) -> Any:
     if isinstance(exception, TodoAccessDeniedError):
         raise HTTPException(status_code=403, detail=str(exception))
     return super().handle_exception(exception)
+```
+
+WebSocket handlers should accept the connection, delegate health or business
+checks to use cases/services, send a small wire response, and close or continue
+listening:
+
+```python
+async def health_check_websocket(self, websocket: WebSocket) -> None:
+    await websocket.accept()
+    await self._system_health_use_case.check()
+    await websocket.send_json({"status": "ok"})
+    await websocket.close()
 ```
 
 ## Transaction Boundaries

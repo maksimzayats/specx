@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass
 from functools import wraps
-from inspect import iscoroutinefunction
+from inspect import isclass, iscoroutinefunction
 from typing import Any
 
 
@@ -23,6 +23,7 @@ class BaseAsyncController(ABC):
 
             if (
                 callable(attr)
+                and not isclass(attr)
                 and not hasattr(BaseAsyncController, attr_name)
                 and not attr_name.startswith("_")
                 and attr_name not in dir(BaseAsyncController)
