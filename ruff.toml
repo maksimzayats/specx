@@ -1,7 +1,15 @@
 line-length = 100
+target-version = "py314"
 
 [lint]
 select = ["ALL"]
+extend-select = [
+    "DOC201",
+    "DOC402",
+    "DOC502",
+]
+preview = true
+explicit-preview-rules = true
 unfixable = ["T201"]
 ignore = [
     "D100",
@@ -49,6 +57,12 @@ ignore = [
 
 [lint.isort]
 combine-as-imports = true
+
+[lint.ruff]
+strictly-empty-init-modules = true
+
+[lint.pylint]
+max-nested-blocks = 3
 
 [lint.flake8-tidy-imports]
 ban-relative-imports = "all"

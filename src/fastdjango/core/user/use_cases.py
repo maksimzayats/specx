@@ -69,7 +69,8 @@ class UserUseCase(BaseUseCase):
     ) -> bool:
         """Validate the strength of the given password.
 
-        Returns True if the password is strong enough, False otherwise.
+        Returns:
+            True if the password is strong enough, False otherwise.
         """
         try:
             validate_password(

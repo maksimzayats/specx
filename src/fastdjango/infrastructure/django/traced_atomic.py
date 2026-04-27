@@ -19,6 +19,9 @@ def traced_atomic(
         with traced_atomic("create user and profile", user_id=user.pk):
             User.objects.create(...)
             Profile.objects.create(...)
+
+    Yields:
+        The active Logfire span for the wrapped transaction.
     """
     with logfire.span(span_name, **span_attributes) as span:
         start = time.perf_counter()

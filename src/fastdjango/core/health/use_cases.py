@@ -28,11 +28,7 @@ class SystemHealthUseCase(BaseUseCase):
     _tasks_registry: Injected[TasksRegistry]
 
     async def check(self) -> None:
-        """Check the health of the system components.
-
-        Raises:
-            HealthCheckError: If any component is not healthy.
-        """
+        """Check the health of the system components."""
         await self._check_database()
         await self._check_celery_ping()
 
