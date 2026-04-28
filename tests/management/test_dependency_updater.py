@@ -153,7 +153,9 @@ def test_sync_pyproject_dependency_versions_preserves_upper_bounds(tmp_path: Pat
     )
 
 
-def test_update_github_action_versions_preserves_major_refs(tmp_path: Path) -> None:
+def test_update_github_action_versions_uses_real_latest_tags_for_new_majors(
+    tmp_path: Path,
+) -> None:
     workflows_path = tmp_path / ".github" / "workflows"
     workflows_path.mkdir(parents=True)
     workflow_path = workflows_path / "ci.yaml"
@@ -187,13 +189,13 @@ def test_update_github_action_versions_preserves_major_refs(tmp_path: Path) -> N
     )
 
     assert [(update.repository, update.old_ref, update.new_ref) for update in updates] == [
-        ("astral-sh/setup-uv", "v7", "v8"),
-        ("docker/setup-compose-action", "v1", "v2"),
+        ("astral-sh/setup-uv", "v7", "v8.1.0"),
+        ("docker/setup-compose-action", "v1", "v2.1.0"),
         ("docker/compose", "latest", "v5.1.3"),
     ]
     assert "actions/checkout@v6" in workflow_path.read_text(encoding="utf-8")
-    assert "astral-sh/setup-uv@v8" in workflow_path.read_text(encoding="utf-8")
-    assert "docker/setup-compose-action@v2" in workflow_path.read_text(encoding="utf-8")
+    assert "astral-sh/setup-uv@v8.1.0" in workflow_path.read_text(encoding="utf-8")
+    assert "docker/setup-compose-action@v2.1.0" in workflow_path.read_text(encoding="utf-8")
     assert "version: v5.1.3" in workflow_path.read_text(encoding="utf-8")
 
 
@@ -299,6 +301,31 @@ def test_update_container_image_versions_ignores_arch_only_tags_for_latest(
         ("redis:latest", "redis:8.6.2"),
     ]
     assert "image: redis:8.6.2" in compose_path.read_text(encoding="utf-8")
+
+
+def test_update_container_image_versions_does_not_downgrade_dotted_versions(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    docker_path = tmp_path / "docker"
+    docker_path.mkdir()
+    dockerfile_path = docker_path / "Dockerfile"
+    dockerfile_path.write_text(
+        "FROM ghcr.io/astral-sh/uv:0.11.8 AS uv\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        dependency_updater,
+        "_container_registry_tags",
+        lambda *, repository: (
+            ("0.11.8", "0.10.1", "0.9.28") if repository == "ghcr.io/astral-sh/uv" else ()
+        ),
+    )
+
+    updates = dependency_updater.update_container_image_versions(repo_root=tmp_path)
+
+    assert updates == ()
+    assert "ghcr.io/astral-sh/uv:0.11.8" in dockerfile_path.read_text(encoding="utf-8")
 
 
 def test_update_container_image_versions_uses_library_namespace_for_docker_io(

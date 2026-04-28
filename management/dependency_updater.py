@@ -41,7 +41,7 @@ _LOWER_BOUND_RE = re.compile(r"(?P<operator>>=|>)\s*[^,; ]+")
 _UPPER_BOUND_RE = re.compile(r"(?:^|,)\s*(?P<operator><=|<)\s*(?P<version>[^,; ]+)")
 _VERSION_PREFIX_RE = re.compile(r"(?P<release>\d+(?:\.\d+)*)")
 _CONTAINER_VERSION_RE = re.compile(
-    r"(?P<prefix>.*?)(?P<version>v?\d+(?:\.\d+)*)(?P<suffix>$|[-_.].*)",
+    r"(?P<prefix>.*?)(?P<version>v?\d+(?:\.\d+)*)(?P<suffix>$|[-_].*)",
 )
 _RELEASE_TAG_RE = re.compile(
     r"^RELEASE\.(?P<date>\d{4}-\d{2}-\d{2})T(?P<time>\d{2}-\d{2}-\d{2})Z(?P<suffix>.*)$",
@@ -503,9 +503,6 @@ def _updated_action_ref(*, current_ref: str, latest_tag: str) -> str:
 
     if current_major == latest_major:
         return current_ref
-
-    if _MAJOR_REF_RE.fullmatch(current_ref):
-        return f"v{latest_major}"
 
     return latest_tag
 

@@ -131,7 +131,7 @@ uv run python -m management.dependency_updater $(ARGS)
 
 - Runs `uv lock --upgrade`
 - Syncs direct dependency lower bounds in `pyproject.toml` from `uv.lock`
-- Updates GitHub Action major-version pins and supported CI tool versions in `.github/workflows`
+- Updates GitHub Action pins and supported CI tool versions in `.github/workflows`
 - Updates Dockerfile and Docker Compose image pins, including matching docs references
 - Runs `uv lock` again after pyproject changes
 - Prints progress while it checks package indexes, GitHub, and container registries
