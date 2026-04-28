@@ -97,10 +97,14 @@ git clone https://github.com/MaksimZayats/fastdjango.git
 cd fastdjango
 ```
 
-### 2. Rename the Project
+### 2. Run the Setup Wizard
 
-Replace the default project name in `pyproject.toml` with your own.
-Use lowercase letters, numbers, and hyphens (e.g., `my-awesome-api`, `backend-service`).
+```bash
+make setup
+```
+
+The wizard renames the Python package and distribution, writes `.env`, configures storage, and can remove
+template-only docs or wizard files after setup.
 
 ### 3. Install Dependencies
 
@@ -110,16 +114,13 @@ uv sync --locked --all-groups
 
 ### 4. Configure Environment
 
-```bash
-cp .env.example .env
-```
-
-The `.env.example` contains sensible defaults for local development. Key variables:
+The wizard creates `.env` for local development. Key variables:
 
 - `DJANGO_SECRET_KEY` — Django secret key
 - `JWT_SECRET_KEY` — JWT signing key
 - `DATABASE_URL` — PostgreSQL connection string
 - `REDIS_URL` — Redis connection string
+- `STORAGE_BACKEND` — `local` filesystem storage or `s3`
 - `AWS_S3_ENDPOINT_URL` / `AWS_S3_PUBLIC_ENDPOINT_URL` — internal vs browser S3 endpoints
 
 ### 5. Start Infrastructure Services

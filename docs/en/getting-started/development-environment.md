@@ -163,8 +163,8 @@ make makemigrations
 make migrate
 
 # Or using Django manage.py directly
-uv run src/fastdjango/manage.py makemigrations
-uv run src/fastdjango/manage.py migrate
+uv run python management/manage.py makemigrations
+uv run python management/manage.py migrate
 ```
 
 ## Testing

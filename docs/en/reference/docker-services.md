@@ -183,7 +183,7 @@ readiness contract instead of adding a second Celery-only health entrypoint.
 ```yaml
 migrations:
   build: .
-  command: python src/fastdjango/manage.py migrate --noinput
+  command: python management/manage.py migrate --noinput
   depends_on:
     - pgbouncer
   environment:
@@ -200,7 +200,7 @@ docker compose up migrations
 ```yaml
 collectstatic:
   build: .
-  command: python src/fastdjango/manage.py collectstatic --noinput
+  command: python management/manage.py collectstatic --noinput
   depends_on:
     - minio-create-buckets
   environment:

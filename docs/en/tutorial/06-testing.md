@@ -516,7 +516,7 @@ class TestTodoCleanupTask:
 make test
 
 # Run with coverage report
-uv run pytest tests/
+uv run --all-groups pytest tests/
 
 # Run specific test file
 uv run pytest tests/integration/core/todo/delivery/fastapi/test_controllers.py

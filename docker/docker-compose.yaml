@@ -88,14 +88,14 @@ services:
 
   migrations:
     <<: *common
-    command: python src/fastdjango/manage.py migrate --noinput
+    command: python management/manage.py migrate --noinput
     depends_on:
       pgbouncer:
         condition: service_healthy
 
   collectstatic:
     <<: *common
-    command: python src/fastdjango/manage.py collectstatic --noinput
+    command: python management/manage.py collectstatic --noinput
     depends_on:
       pgbouncer:
         condition: service_healthy

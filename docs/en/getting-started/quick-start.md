@@ -8,24 +8,27 @@ Get the project running in minutes.
 - Docker and Docker Compose
 - uv ([installation guide](https://docs.astral.sh/uv/getting-started/installation/))
 
-## Step 1: Clone and Install Dependencies
+## Step 1: Clone and Run Setup
 
 ```bash
 git clone https://github.com/MaksimZayats/fastdjango.git
 cd fastdjango
+make setup
+```
 
+The setup wizard renames the template, writes `.env`, and lets you choose local filesystem, local MinIO,
+or remote S3-compatible storage.
+
+## Step 2: Install Dependencies
+
+```bash
 # Install all dependencies (including dev tools)
 uv sync --locked --all-groups
 ```
 
-## Step 2: Configure Environment
+## Step 3: Review Environment
 
-```bash
-# Copy the example environment file
-cp .env.example .env
-```
-
-The default `.env` file is configured for local development. Key variables include:
+The generated `.env` file is configured for local development. Key variables include:
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
@@ -33,16 +36,20 @@ The default `.env` file is configured for local development. Key variables inclu
 | `REDIS_URL` | `redis://localhost:6379/0` | Redis connection string |
 | `DJANGO_SECRET_KEY` | Development key | Django security key |
 | `DJANGO_DEBUG` | `true` | Enable debug mode |
+| `STORAGE_BACKEND` | `local` or `s3` | File and static storage mode |
 
 !!! warning "Production Configuration"
     For production, you must change `DJANGO_SECRET_KEY` and set `DJANGO_DEBUG=false`.
 
-## Step 3: Start Infrastructure
+## Step 4: Start Infrastructure
 
-Start the required services (PostgreSQL, Redis, MinIO):
+Start the required services:
 
 ```bash
-docker compose up -d postgres redis minio minio-create-buckets
+docker compose up -d postgres redis
+
+# If you selected local MinIO storage:
+docker compose up -d minio minio-create-buckets
 ```
 
 Verify services are running:
@@ -51,9 +58,9 @@ Verify services are running:
 docker compose ps
 ```
 
-You should see `postgres`, `redis`, and `minio` containers running.
+You should see `postgres` and `redis` containers running, plus `minio` when you selected local MinIO storage.
 
-## Step 4: Run Migrations
+## Step 5: Run Migrations
 
 Apply database migrations to create the required tables:
 
@@ -71,12 +78,12 @@ Collect static files for the admin panel:
 docker compose up collectstatic
 ```
 
-For Docker, keep S3 endpoints split:
+For local MinIO or remote S3-compatible storage, keep S3 endpoints split:
 
 - `AWS_S3_ENDPOINT_URL=http://minio:9000` (internal container networking)
 - `AWS_S3_PUBLIC_ENDPOINT_URL=http://localhost:9000` (browser-reachable static URLs)
 
-## Step 5: Start the Development Server
+## Step 6: Start the Development Server
 
 ```bash
 make dev
@@ -88,7 +95,7 @@ The FastAPI application is now available at:
 - **API Docs**: http://localhost:8000/docs
 - **Django Admin**: http://localhost:8000/django/admin/
 
-## Step 6: Verify Installation
+## Step 7: Verify Installation
 
 Check the health endpoint:
 
@@ -119,13 +126,13 @@ make celery-beat-dev
 To access Django Admin:
 
 ```bash
-docker compose exec api python src/fastdjango/manage.py createsuperuser
+docker compose exec api python management/manage.py createsuperuser
 ```
 
 Or use the shell directly:
 
 ```bash
-uv run src/fastdjango/manage.py createsuperuser
+uv run python management/manage.py createsuperuser
 ```
 
 ## Common Issues

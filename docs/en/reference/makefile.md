@@ -2,6 +2,19 @@
 
 Quick reference for all development commands.
 
+## Setup
+
+| Command | Description |
+|---------|-------------|
+| `make setup` | Run the one-time template setup wizard |
+
+### Examples
+
+```bash
+# Preview planned setup changes
+make setup ARGS="--dry-run"
+```
+
 ## Development
 
 | Command | Description |
@@ -89,6 +102,18 @@ uv run uvicorn fastdjango.entrypoints.fastapi.app:app --reload --host 0.0.0.0 --
 - Accessible at http://localhost:8000
 - API docs at http://localhost:8000/docs
 
+### `make setup`
+
+Runs:
+```bash
+uv run --group setup python -m management.setup_wizard $(ARGS)
+```
+
+- Renames the project/package
+- Writes `.env` and updates committed environment examples
+- Configures local filesystem, local MinIO, or remote S3-compatible storage
+- Can remove template docs and setup-only files
+
 ### `make celery-dev`
 
 Runs:
@@ -145,7 +170,7 @@ uv run prek run --all-files
 
 Runs:
 ```bash
-uv run pytest tests/
+uv run --all-groups pytest tests/
 ```
 
 - Requires 80%+ code coverage
@@ -156,7 +181,7 @@ uv run pytest tests/
 
 Runs:
 ```bash
-uv run src/fastdjango/manage.py migrate
+uv run python management/manage.py migrate
 ```
 
 - Applies all pending migrations
@@ -166,7 +191,7 @@ uv run src/fastdjango/manage.py migrate
 
 Runs:
 ```bash
-uv run src/fastdjango/manage.py makemigrations
+uv run python management/manage.py makemigrations
 ```
 
 - Detects model changes

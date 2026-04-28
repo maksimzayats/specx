@@ -408,7 +408,7 @@ curl http://localhost:8000/v1/todos \
 1. Create a superuser:
 
 ```bash
-uv run src/fastdjango/manage.py createsuperuser
+uv run python management/manage.py createsuperuser
 ```
 
 2. Visit http://localhost:8000/django/admin/

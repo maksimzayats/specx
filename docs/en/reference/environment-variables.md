@@ -80,29 +80,40 @@ JWT_ALGORITHM=HS256
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60
 ```
 
-## S3/MinIO Settings
+## Storage Settings
 
-Prefix: `AWS_S3_`
+S3-compatible settings use the `AWS_S3_` prefix.
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
+| `STORAGE_BACKEND` | No | `s3` | `local` for filesystem storage, `s3` for MinIO or remote S3-compatible storage |
 | `STATIC_URL` | No | `/static/` | URL prefix for static files |
+| `STATIC_ROOT` | No | `staticfiles` | Filesystem path for collected static files in local storage mode |
 | `MEDIA_URL` | No | `/media/` | URL prefix for uploaded media |
+| `MEDIA_ROOT` | No | `media` | Filesystem path for uploaded files in local storage mode |
 | `AWS_S3_ACCESS_KEY_ID` | Yes* | - | S3 access key |
 | `AWS_S3_SECRET_ACCESS_KEY` | Yes* | - | S3 secret key |
 | `AWS_S3_ENDPOINT_URL` | Yes* | - | Internal S3 endpoint used by Django and `collectstatic` (for Docker: `http://minio:9000`) |
 | `AWS_S3_PUBLIC_ENDPOINT_URL` | No | - | Browser-reachable endpoint used to generate public static URLs (for Docker: `http://localhost:9000`) |
+| `AWS_S3_REGION_NAME` | No | - | S3 region name |
 | `AWS_S3_PUBLIC_BUCKET_NAME` | No | `public` | Public bucket name used by Django staticfiles storage |
 | `AWS_S3_PROTECTED_BUCKET_NAME` | No | `protected` | Private bucket name used by default Django file storage |
 
-*Required if using S3 storage.
+*Required when `STORAGE_BACKEND=s3`.
+
+Example (local filesystem):
+```bash
+STORAGE_BACKEND=local
+```
 
 Example (MinIO local):
 ```bash
+STORAGE_BACKEND=s3
 AWS_S3_ACCESS_KEY_ID=example-minio-access-key-id
 AWS_S3_SECRET_ACCESS_KEY=example-minio-secret-access-key
 AWS_S3_ENDPOINT_URL=http://minio:9000
 AWS_S3_PUBLIC_ENDPOINT_URL=http://localhost:9000
+AWS_S3_REGION_NAME=us-east-1
 AWS_S3_PUBLIC_BUCKET_NAME=public
 AWS_S3_PROTECTED_BUCKET_NAME=protected
 ```
@@ -223,11 +234,13 @@ DJANGO_DEBUG=true
 JWT_SECRET_KEY=your-jwt-secret-key-with-at-least-32-bytes
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES=15
 
-# S3/MinIO
+# Storage
+STORAGE_BACKEND=s3
 AWS_S3_ACCESS_KEY_ID=example-minio-access-key-id
 AWS_S3_SECRET_ACCESS_KEY=example-minio-secret-access-key
 AWS_S3_ENDPOINT_URL=http://minio:9000
 AWS_S3_PUBLIC_ENDPOINT_URL=http://localhost:9000
+AWS_S3_REGION_NAME=us-east-1
 AWS_S3_PUBLIC_BUCKET_NAME=public
 AWS_S3_PROTECTED_BUCKET_NAME=protected
 

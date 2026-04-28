@@ -263,7 +263,7 @@ make celery-dev
 
 ```python
 # Using Django shell
-uv run src/fastdjango/manage.py shell
+uv run python management/manage.py shell
 ```
 
 ```python

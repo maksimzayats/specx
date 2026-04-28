@@ -28,6 +28,7 @@ dependencies = [
     "throttled-py>=3.1.1",
     "uvicorn[standard]>=0.46.0",
     "watchdog[watchmedo]>=6.0.0",
+    "whitenoise>=6.11.0",
 ]
 
 [dependency-groups]
@@ -43,6 +44,13 @@ dev = [
 docs = [
     "mkdocs>=1.6.1",
     "mkdocs-material>=9.6.0",
+]
+setup = [
+    "libcst>=1.8.6",
+    "questionary>=2.1.1",
+    "rich>=14.2.0",
+    "ruamel.yaml>=0.18.16",
+    "tomlkit>=0.13.3",
 ]
 
 [build-system]
@@ -92,7 +100,7 @@ branch = true
 source = ["src"]
 omit = [
     # Entry points
-    "src/fastdjango/manage.py",
+    "management/manage.py",
     "src/fastdjango/entrypoints/fastapi/app.py",
     "src/fastdjango/entrypoints/celery/app.py",
     # Import-time framework settings
