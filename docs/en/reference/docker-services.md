@@ -55,7 +55,7 @@ docker compose up -d postgres
 docker compose logs -f postgres
 
 # Connect with psql
-docker compose exec postgres psql -U postgres
+docker compose exec postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
 
 # Stop
 docker compose stop postgres
@@ -96,10 +96,10 @@ docker compose up -d redis
 docker compose logs -f redis
 
 # Connect with redis-cli
-docker compose exec redis redis-cli
+docker compose exec redis sh -c 'REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli'
 
 # Monitor commands
-docker compose exec redis redis-cli MONITOR
+docker compose exec redis sh -c 'REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli MONITOR'
 
 # Stop
 docker compose stop redis
@@ -185,12 +185,11 @@ readiness contract instead of adding a second Celery-only health entrypoint.
 
 ```yaml
 migrations:
-  build: .
+  <<: *common
   command: python management/manage.py migrate --noinput
   depends_on:
-    - pgbouncer
-  environment:
-    - DATABASE_URL=postgres://postgres:example-postgres-password@pgbouncer:5432/postgres
+    pgbouncer:
+      condition: service_healthy
 ```
 
 Run:
@@ -202,13 +201,13 @@ docker compose up migrations
 
 ```yaml
 collectstatic:
-  build: .
+  <<: *common
   command: python management/manage.py collectstatic --noinput
   depends_on:
-    - minio-create-buckets
-  environment:
-    - AWS_S3_ENDPOINT_URL=http://minio:9000
-    - AWS_S3_PUBLIC_ENDPOINT_URL=http://localhost:9000
+    pgbouncer:
+      condition: service_healthy
+    minio-create-buckets:
+      condition: service_completed_successfully
 ```
 
 Run:

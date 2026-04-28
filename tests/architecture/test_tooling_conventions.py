@@ -2,12 +2,17 @@ import tomllib
 from pathlib import Path
 from typing import Any, cast
 
+import yaml
+
 from tests.architecture._source import REPO_ROOT
 
 QUALITY_HOOK_NAMES = {
     "mypy",
     "ruff check",
     "ruff format check",
+}
+WORKFLOWS_WITH_CONTENT_WRITE_PERMISSIONS = {
+    "dependabot-auto-merge.yaml",
 }
 
 
@@ -49,6 +54,19 @@ def test_makefile_quality_targets_use_prek() -> None:
     assert "uv run prek run --all-files" in lint_recipe
 
 
+def test_ci_workflows_use_content_write_permissions_only_when_needed() -> None:
+    violations = [
+        path.name
+        for path in sorted((REPO_ROOT / ".github" / "workflows").glob("*.yaml"))
+        if path.name not in WORKFLOWS_WITH_CONTENT_WRITE_PERMISSIONS
+        if _workflow_requests_content_write_permissions(path=path)
+    ]
+
+    assert violations == [], (
+        "Only workflows that change repository contents should request contents: write."
+    )
+
+
 def _prek_hooks_by_name() -> dict[str, dict[str, Any]]:
     prek_config = _read_toml(REPO_ROOT / "prek.toml")
     repos = cast(list[dict[str, Any]], prek_config["repos"])
@@ -87,3 +105,15 @@ def _make_target_recipe(*, makefile: str, target: str) -> list[str]:
 
 def _read_toml(path: Path) -> dict[str, Any]:
     return tomllib.loads(path.read_text(encoding="utf-8"))
+
+
+def _workflow_requests_content_write_permissions(*, path: Path) -> bool:
+    workflow = cast(dict[str, Any], yaml.safe_load(path.read_text(encoding="utf-8")) or {})
+    permissions = workflow.get("permissions")
+    if permissions == "write-all":
+        return True
+
+    if not isinstance(permissions, dict):
+        return False
+
+    return permissions.get("contents") == "write"
