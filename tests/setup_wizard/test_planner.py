@@ -190,7 +190,12 @@ def test_ports_origins_logfire_and_repo_metadata_are_written(tmp_path: Path) -> 
     assert "LOGFIRE_ENABLED=true" in env_content
     assert "LOGFIRE_TOKEN=real-logfire-token" in env_content
     assert "LOGFIRE_TOKEN=replace-me" in env_example_content
-    assert "AWS_S3_ENDPOINT_URL=http://localhost:19000" in env_content
+    env_values = _env_values(content=env_content)
+    assert env_values["MINIO_ROOT_USER"] == env_values["AWS_S3_ACCESS_KEY_ID"]
+    assert env_values["MINIO_ROOT_PASSWORD"] == env_values["AWS_S3_SECRET_ACCESS_KEY"]
+    assert "MINIO_ROOT_USER=example-minio-access-key-id" in env_example_content
+    assert "MINIO_ROOT_PASSWORD=example-minio-secret-access-key" in env_example_content
+    assert "AWS_S3_ENDPOINT_URL=http://localhost:${MINIO_API_PORT}" in env_content
     assert "${POSTGRES_PORT:-15432}:5432" in overlay
     assert "${REDIS_PORT:-16379}:6379" in overlay
     assert "${MINIO_API_PORT:-19000}:9000" in overlay
@@ -553,6 +558,15 @@ def _assert_markers_in_order(*, content: str, markers: tuple[str, ...]) -> None:
         marker_position = content.find(marker)
         assert marker_position > previous_position
         previous_position = marker_position
+
+
+def _env_values(*, content: str) -> dict[str, str]:
+    return {
+        key: value
+        for line in content.splitlines()
+        if line and not line.startswith("#")
+        for key, value in (line.split("=", maxsplit=1),)
+    }
 
 
 def _write(path: Path, content: str) -> None:

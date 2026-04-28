@@ -8,6 +8,7 @@ from management.setup_wizard.prompts import (
     _ask_storage_answers,
     _suggest_package_name,
     _validate_distribution_name,
+    _validate_optional_http_url,
     _validate_optional_url,
     _validate_package_name,
     _validate_project_name,
@@ -56,6 +57,35 @@ def test_optional_url_validation_accepts_web_and_git_urls() -> None:
     assert _validate_optional_url("not a url") == (
         "Use a URL like https://example.com or git@github.com:owner/repo.git."
     )
+
+
+def test_optional_http_url_validation_rejects_git_urls() -> None:
+    assert _validate_optional_http_url("") is True
+    assert _validate_optional_http_url("https://docs.example.com/reference") is True
+    assert _validate_optional_http_url("git@github.com:owner/repo.git") == (
+        "Use a URL like https://example.com."
+    )
+
+
+def test_remote_s3_bucket_defaults_trim_blank_answers(monkeypatch: pytest.MonkeyPatch) -> None:
+    values = iter(
+        (
+            "https://s3.example.com",
+            "https://cdn.example.com",
+            "us-east-1",
+            "access-key",
+            "secret-key",
+            "   ",
+            "\t",
+        ),
+    )
+
+    monkeypatch.setattr(prompts, "_ask_text", lambda *_, **__: next(values))
+
+    answers = _ask_storage_answers(storage_mode=StorageMode.REMOTE_S3)
+
+    assert answers.s3_public_bucket_name == "public"
+    assert answers.s3_protected_bucket_name == "protected"
 
 
 def test_local_database_port_is_asked_with_database_details(

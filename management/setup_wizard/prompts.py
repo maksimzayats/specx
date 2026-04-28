@@ -227,8 +227,8 @@ def _ask_storage_answers(*, storage_mode: StorageMode) -> StoragePromptAnswers:
         ),
         s3_access_key_id=_ask_text("S3 access key ID", validate=_validate_required_text),
         s3_secret_access_key=_ask_text("S3 secret access key", validate=_validate_required_text),
-        s3_public_bucket_name=_ask_text("Public bucket (blank uses: public)") or "public",
-        s3_protected_bucket_name=_ask_text("Protected bucket (blank uses: protected)")
+        s3_public_bucket_name=_optional_text("Public bucket (blank uses: public)") or "public",
+        s3_protected_bucket_name=_optional_text("Protected bucket (blank uses: protected)")
         or "protected",
     )
 
@@ -239,7 +239,7 @@ def _ask_docs_site_url(*, keep_docs: bool) -> str | None:
 
     return _optional_text(
         "Docs site URL (optional; blank keeps docs local-only for now)",
-        validate=_validate_optional_url,
+        validate=_validate_optional_http_url,
     )
 
 
@@ -385,6 +385,17 @@ def _validate_optional_url(value: str) -> bool | str:
         return True
 
     return "Use a URL like https://example.com or git@github.com:owner/repo.git."
+
+
+def _validate_optional_http_url(value: str) -> bool | str:
+    value = value.strip()
+    if not value:
+        return True
+
+    if re.fullmatch(r"https?://[^/\s]+(?:/[^ \t]*)?", value):
+        return True
+
+    return "Use a URL like https://example.com."
 
 
 def _validate_port(value: str) -> bool | str:

@@ -194,8 +194,8 @@ services:
     env_file:
       - ../.env
     environment:
-      MINIO_ROOT_USER: ${AWS_S3_ACCESS_KEY_ID}
-      MINIO_ROOT_PASSWORD: ${AWS_S3_SECRET_ACCESS_KEY}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     volumes:
       - minio_data:/data
     command: server /data --console-address ":9001"

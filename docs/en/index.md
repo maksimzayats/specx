@@ -15,11 +15,12 @@ quickly without losing a clear application structure:
 - **Pydantic** for validation and settings management
 - **Logfire** for observability (OpenTelemetry-based)
 
-## Start With Setup
+## Start with setup
 
 ```bash
 git clone https://github.com/MaksimZayats/fastdjango.git my-api
 cd my-api
+# Makefile
 make setup
 ```
 
@@ -27,7 +28,7 @@ The wizard renames the project, writes `.env`, configures database, Redis,
 storage, docs, public origins, and Logfire defaults, then prints the next
 commands for the choices you made.
 
-## Key Features
+## Key features
 
 - **Use Case / Service Layer Architecture**: Clean separation between delivery and database operations
 - **Auto-Registration IoC**: Minimal boilerplate dependency injection with automatic wiring
@@ -35,7 +36,7 @@ commands for the choices you made.
 - **Test Isolation**: Per-test container instances with easy mocking
 - **Unified Controller Pattern**: Same pattern for HTTP endpoints, Django delivery, and Celery tasks
 
-## Quick Links
+## Quick links
 
 <div class="grid cards" markdown>
 

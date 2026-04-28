@@ -8,25 +8,26 @@ Get the project running in minutes.
 - uv ([installation guide](https://docs.astral.sh/uv/getting-started/installation/))
 - Docker and Docker Compose for local infrastructure choices
 
-## Step 1: Clone and Run Setup
+## Step 1: Clone and run setup
 
 ```bash
 git clone https://github.com/MaksimZayats/fastdjango.git my-api
 cd my-api
+# Makefile
 make setup
 ```
 
 The setup wizard renames the template, writes `.env`, rewrites the app README, and lets you choose database,
 Redis, storage, docs, public origins, and Logfire defaults.
 
-## Step 2: Install Dependencies
+## Step 2: Install dependencies
 
 ```bash
-# Install all dependencies (including dev tools)
+# pyproject.toml / uv.lock
 uv sync --locked --all-groups
 ```
 
-## Step 3: Review Environment
+## Step 3: Review environment
 
 The generated `.env` file is configured for local development. Key variables include:
 
@@ -42,11 +43,12 @@ The generated `.env` file is configured for local development. Key variables inc
 !!! warning "Production Configuration"
     For production, you must change `DJANGO_SECRET_KEY` and set `DJANGO_DEBUG=false`.
 
-## Step 4: Start Infrastructure
+## Step 4: Start infrastructure
 
 Start the required local services for the choices you made in the wizard:
 
 ```bash
+# docker/docker-compose.yaml
 # If you selected local Docker PostgreSQL and local Docker Redis:
 docker compose up -d postgres redis
 
@@ -58,17 +60,19 @@ docker compose up minio-create-buckets
 Verify services are running:
 
 ```bash
+# docker/docker-compose.yaml
 docker compose ps
 ```
 
 You can skip a local service when you selected SQLite, remote PostgreSQL,
 remote Redis, local filesystem storage, or remote S3.
 
-## Step 5: Run Migrations
+## Step 5: Run migrations
 
 Apply database migrations to create the required tables:
 
 ```bash
+# management/manage.py
 # If you are using the Dockerized app services:
 docker compose up migrations
 
@@ -79,6 +83,7 @@ make migrate
 Collect static files for the admin panel:
 
 ```bash
+# management/manage.py
 # If you are using the Dockerized app services:
 docker compose up collectstatic
 
@@ -92,9 +97,10 @@ the browser-reachable endpoint for host commands:
 - `AWS_S3_ENDPOINT_URL=http://minio:9000` (internal container networking)
 - `AWS_S3_PUBLIC_ENDPOINT_URL=http://localhost:9000` (browser-reachable static URLs)
 
-## Step 6: Start the Development Server
+## Step 6: Start the development server
 
 ```bash
+# Makefile
 make dev
 ```
 
@@ -104,11 +110,12 @@ The FastAPI application is now available at:
 - **API Docs**: http://localhost:8000/docs
 - **Django Admin**: http://localhost:8000/django/admin/
 
-## Step 7: Verify Installation
+## Step 7: Verify installation
 
 Check the health endpoint:
 
 ```bash
+# src/fastdjango/entrypoints/fastapi/delivery/controllers/health.py
 curl http://localhost:8000/v1/health
 ```
 
@@ -118,11 +125,12 @@ Expected response:
 {"status": "ok"}
 ```
 
-## Optional: Start Celery Workers
+## Optional: Start Celery workers
 
 For background task processing:
 
 ```bash
+# Makefile
 # In a new terminal
 make celery-dev
 
@@ -130,27 +138,30 @@ make celery-dev
 make celery-beat-dev
 ```
 
-## Optional: Create a Superuser
+## Optional: Create a superuser
 
 To access Django Admin:
 
 ```bash
+# management/manage.py
 docker compose exec api python management/manage.py createsuperuser
 ```
 
 Or use the shell directly:
 
 ```bash
+# management/manage.py
 uv run python management/manage.py createsuperuser
 ```
 
-## Common Issues
+## Common issues
 
-### Port Already in Use
+### Port already in use
 
 If port 8000 is occupied:
 
 ```bash
+# Terminal
 # Find the process
 lsof -i :8000
 

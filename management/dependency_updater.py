@@ -1329,7 +1329,11 @@ def _json_response(*, url: str, headers: dict[str, str] | None = None) -> JsonRe
                 payload=json.load(response),
                 link=response.headers.get("Link"),
             )
-    except OSError, urllib.error.URLError, json.JSONDecodeError:
+    except (
+        OSError,
+        urllib.error.URLError,
+        json.JSONDecodeError,
+    ):
         return None
 
 

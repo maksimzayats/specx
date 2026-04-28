@@ -111,8 +111,11 @@ storage.
 | `AWS_S3_PROTECTED_BUCKET_NAME` | No | `protected` | Private bucket name used by default Django file storage |
 | `MINIO_API_PORT` | No | `9000` | Host port used by the local MinIO API |
 | `MINIO_CONSOLE_PORT` | No | `9001` | Host port used by the local MinIO console |
+| `MINIO_ROOT_USER` | No | - | Local MinIO root user; generated to match `AWS_S3_ACCESS_KEY_ID` |
+| `MINIO_ROOT_PASSWORD` | No | - | Local MinIO root password; generated to match `AWS_S3_SECRET_ACCESS_KEY` |
 
-*Required when `STORAGE_BACKEND=s3`.
+*The `AWS_S3_*` credential and endpoint values are required when `STORAGE_BACKEND=s3`.
+`MINIO_ROOT_*` is only used by the local MinIO service.
 
 Example (local filesystem):
 ```bash
@@ -122,11 +125,14 @@ STORAGE_BACKEND=local
 Example (MinIO local):
 ```bash
 STORAGE_BACKEND=s3
+MINIO_API_PORT=9000
+MINIO_CONSOLE_PORT=9001
+MINIO_ROOT_USER=example-minio-access-key-id
+MINIO_ROOT_PASSWORD=example-minio-secret-access-key
+AWS_S3_ENDPOINT_URL=http://localhost:${MINIO_API_PORT}
+AWS_S3_PUBLIC_ENDPOINT_URL=http://localhost:${MINIO_API_PORT}
 AWS_S3_ACCESS_KEY_ID=example-minio-access-key-id
 AWS_S3_SECRET_ACCESS_KEY=example-minio-secret-access-key
-MINIO_API_PORT=9000
-AWS_S3_ENDPOINT_URL=http://localhost:9000
-AWS_S3_PUBLIC_ENDPOINT_URL=http://localhost:9000
 AWS_S3_REGION_NAME=us-east-1
 AWS_S3_PUBLIC_BUCKET_NAME=public
 AWS_S3_PROTECTED_BUCKET_NAME=protected
@@ -239,8 +245,8 @@ COMPOSE_PROJECT_NAME=fastdjango
 COMPOSE_FILE=docker/docker-compose.yaml:docker/docker-compose.local.yaml
 
 # Application
-ENVIRONMENT=local
 DJANGO_DEBUG=true
+ENVIRONMENT=local
 LOGGING_LEVEL=DEBUG
 
 # Secrets
@@ -273,10 +279,12 @@ REDIS_URL="redis://default:${REDIS_PASSWORD}@localhost:${REDIS_PORT}/0"
 STORAGE_BACKEND=s3
 MINIO_API_PORT=9000
 MINIO_CONSOLE_PORT=9001
+MINIO_ROOT_USER=example-minio-access-key-id
+MINIO_ROOT_PASSWORD=example-minio-secret-access-key
 
 # S3
-AWS_S3_ENDPOINT_URL=http://localhost:9000
-AWS_S3_PUBLIC_ENDPOINT_URL=http://localhost:9000
+AWS_S3_ENDPOINT_URL=http://localhost:${MINIO_API_PORT}
+AWS_S3_PUBLIC_ENDPOINT_URL=http://localhost:${MINIO_API_PORT}
 AWS_S3_ACCESS_KEY_ID=example-minio-access-key-id
 AWS_S3_SECRET_ACCESS_KEY=example-minio-secret-access-key
 AWS_S3_REGION_NAME=us-east-1

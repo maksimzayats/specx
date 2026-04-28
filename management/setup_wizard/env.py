@@ -50,8 +50,8 @@ def build_test_env_example_content() -> str:
     return _join_env_lines(
         lines=[
             "# Application",
-            "ENVIRONMENT=test",
             "DJANGO_DEBUG=true",
+            "ENVIRONMENT=test",
             "LOGGING_LEVEL=DEBUG",
             "",
             "# Secrets",
@@ -86,8 +86,8 @@ def _build_base_env_lines(
         "COMPOSE_FILE=docker/docker-compose.yaml:docker/docker-compose.local.yaml",
         "",
         "# Application",
-        "ENVIRONMENT=local",
         "DJANGO_DEBUG=true",
+        "ENVIRONMENT=local",
         "LOGGING_LEVEL=DEBUG",
         "",
         "# Secrets",
@@ -223,17 +223,25 @@ def _build_storage_lines(*, answers: SetupAnswers, real_values: bool) -> list[st
         ]
 
     if answers.storage_mode == StorageMode.MINIO:
+        minio_access_key = (
+            f"fd{secrets.token_hex(9)}" if real_values else "example-minio-access-key-id"
+        )
+        minio_secret_key = (
+            secrets.token_urlsafe(40) if real_values else "example-minio-secret-access-key"
+        )
         return [
             "# Storage",
             "STORAGE_BACKEND=s3",
             f"MINIO_API_PORT={answers.minio_api_port}",
             f"MINIO_CONSOLE_PORT={answers.minio_console_port}",
+            f"MINIO_ROOT_USER={minio_access_key}",
+            f"MINIO_ROOT_PASSWORD={minio_secret_key}",
             "",
             "# S3",
-            f"AWS_S3_ENDPOINT_URL=http://localhost:{answers.minio_api_port}",
-            f"AWS_S3_PUBLIC_ENDPOINT_URL=http://localhost:{answers.minio_api_port}",
-            "AWS_S3_ACCESS_KEY_ID=example-minio-access-key-id",
-            "AWS_S3_SECRET_ACCESS_KEY=example-minio-secret-access-key",
+            "AWS_S3_ENDPOINT_URL=http://localhost:${MINIO_API_PORT}",
+            "AWS_S3_PUBLIC_ENDPOINT_URL=http://localhost:${MINIO_API_PORT}",
+            f"AWS_S3_ACCESS_KEY_ID={minio_access_key}",
+            f"AWS_S3_SECRET_ACCESS_KEY={minio_secret_key}",
             "AWS_S3_REGION_NAME=us-east-1",
             "AWS_S3_PUBLIC_BUCKET_NAME=public",
             "AWS_S3_PROTECTED_BUCKET_NAME=protected",

@@ -1,4 +1,5 @@
 import tomllib
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, cast
 
@@ -67,6 +68,23 @@ def test_ci_workflows_use_content_write_permissions_only_when_needed() -> None:
     )
 
 
+def test_workflow_permission_check_finds_nested_content_write_permissions(
+    tmp_path: Path,
+) -> None:
+    workflow_path = tmp_path / "workflow.yaml"
+    workflow_path.write_text(
+        """
+jobs:
+  check:
+    permissions:
+      contents: write
+""".lstrip(),
+        encoding="utf-8",
+    )
+
+    assert _workflow_requests_content_write_permissions(path=workflow_path)
+
+
 def _prek_hooks_by_name() -> dict[str, dict[str, Any]]:
     prek_config = _read_toml(REPO_ROOT / "prek.toml")
     repos = cast(list[dict[str, Any]], prek_config["repos"])
@@ -109,11 +127,20 @@ def _read_toml(path: Path) -> dict[str, Any]:
 
 def _workflow_requests_content_write_permissions(*, path: Path) -> bool:
     workflow = cast(dict[str, Any], yaml.safe_load(path.read_text(encoding="utf-8")) or {})
-    permissions = workflow.get("permissions")
-    if permissions == "write-all":
-        return True
+    return _contains_content_write_permissions(node=workflow)
 
-    if not isinstance(permissions, dict):
-        return False
 
-    return permissions.get("contents") == "write"
+def _contains_content_write_permissions(*, node: object) -> bool:
+    if isinstance(node, Mapping):
+        permissions = node.get("permissions")
+        if permissions == "write-all":
+            return True
+        if isinstance(permissions, Mapping) and permissions.get("contents") == "write":
+            return True
+
+        return any(_contains_content_write_permissions(node=value) for value in node.values())
+
+    if isinstance(node, list):
+        return any(_contains_content_write_permissions(node=value) for value in node)
+
+    return False

@@ -7,7 +7,7 @@ Docker assets live in `docker/`. The default `.env.example` sets
 so local `docker compose` commands can still be run from the repository root
 after the setup wizard generates `.env`.
 
-## Services Overview
+## Services overview
 
 | Service | Image | Port | Purpose |
 |---------|-------|------|---------|
@@ -33,7 +33,7 @@ postgres:
     - postgres_data:/var/lib/postgresql
 ```
 
-### Connection String
+### Connection string
 
 ```bash
 DATABASE_URL=postgres://postgres:example-postgres-password@localhost:${POSTGRES_PORT:-5432}/postgres
@@ -80,7 +80,7 @@ redis:
     test: ["CMD-SHELL", "REDISCLI_AUTH=\"$${REDIS_PASSWORD}\" redis-cli ping | grep PONG"]
 ```
 
-### Connection String
+### Connection string
 
 ```bash
 REDIS_URL=redis://default:${REDIS_PASSWORD}@localhost:${REDIS_PORT:-6379}/0
@@ -105,7 +105,7 @@ docker compose exec redis sh -c 'REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli MONIT
 docker compose stop redis
 ```
 
-## MinIO (S3 Storage)
+## MinIO (S3 storage)
 
 ### Configuration
 
@@ -114,8 +114,8 @@ minio:
   image: minio/minio:RELEASE.2025-09-07T16-13-09Z
   command: server /data --console-address ":9001"
   environment:
-    MINIO_ROOT_USER: ${AWS_S3_ACCESS_KEY_ID}
-    MINIO_ROOT_PASSWORD: ${AWS_S3_SECRET_ACCESS_KEY}
+    MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+    MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
   ports:
     - "${MINIO_API_PORT:-9000}:9000"  # API
     - "${MINIO_CONSOLE_PORT:-9001}:9001"  # Console
@@ -123,15 +123,17 @@ minio:
     - minio_data:/data
 ```
 
-### Environment Variables
+### Environment variables
 
 ```bash
-AWS_S3_ACCESS_KEY_ID=example-minio-access-key-id
-AWS_S3_SECRET_ACCESS_KEY=example-minio-secret-access-key
 MINIO_API_PORT=9000
 MINIO_CONSOLE_PORT=9001
-AWS_S3_ENDPOINT_URL=http://localhost:9000
-AWS_S3_PUBLIC_ENDPOINT_URL=http://localhost:9000
+MINIO_ROOT_USER=example-minio-access-key-id
+MINIO_ROOT_PASSWORD=example-minio-secret-access-key
+AWS_S3_ENDPOINT_URL=http://localhost:${MINIO_API_PORT}
+AWS_S3_PUBLIC_ENDPOINT_URL=http://localhost:${MINIO_API_PORT}
+AWS_S3_ACCESS_KEY_ID=example-minio-access-key-id
+AWS_S3_SECRET_ACCESS_KEY=example-minio-secret-access-key
 AWS_S3_PUBLIC_BUCKET_NAME=public
 AWS_S3_PROTECTED_BUCKET_NAME=protected
 ```
@@ -153,14 +155,14 @@ open http://localhost:9001
 docker compose stop minio
 ```
 
-### Web Console
+### Web console
 
 Access MinIO console at http://localhost:9001
 
-- Username: value of `AWS_S3_ACCESS_KEY_ID`
-- Password: value of `AWS_S3_SECRET_ACCESS_KEY`
+- Username: value of `MINIO_ROOT_USER`
+- Password: value of `MINIO_ROOT_PASSWORD`
 
-## Health Checks
+## Health checks
 
 The `api` service healthcheck calls the existing HTTP health endpoint:
 
@@ -179,7 +181,7 @@ api:
 result after it is read. This keeps Docker health aligned with the real HTTP
 readiness contract instead of adding a second Celery-only health entrypoint.
 
-## Init Containers
+## Init containers
 
 ### Migrations
 
@@ -197,7 +199,7 @@ Run:
 docker compose up migrations
 ```
 
-### Collect Static
+### Collect static
 
 ```yaml
 collectstatic:
@@ -218,9 +220,9 @@ docker compose up collectstatic
 `AWS_S3_ENDPOINT_URL` is the internal container endpoint, while `AWS_S3_PUBLIC_ENDPOINT_URL`
 must be browser-reachable for Django admin static files.
 
-## Common Operations
+## Common operations
 
-### Start Local Services
+### Start local services
 
 ```bash
 # Local Docker PostgreSQL and Redis
@@ -231,13 +233,13 @@ docker compose up -d minio
 docker compose up minio-create-buckets
 ```
 
-### Stop All Services
+### Stop all services
 
 ```bash
 docker compose down
 ```
 
-### Reset Local Docker Data
+### Reset local Docker data
 
 ```bash
 docker compose down -v  # Remove volumes
@@ -247,22 +249,22 @@ docker compose up -d postgres redis
 docker compose up -d minio
 docker compose up minio-create-buckets
 
-docker compose up migrations
+docker compose up migrations collectstatic
 ```
 
-### View All Logs
+### View all logs
 
 ```bash
 docker compose logs -f
 ```
 
-### Check Service Status
+### Check service status
 
 ```bash
 docker compose ps
 ```
 
-### Restart a Service
+### Restart a service
 
 ```bash
 docker compose restart postgres
@@ -276,13 +278,13 @@ docker compose restart postgres
 | `redis_data` | Redis | Persistence |
 | `minio_data` | MinIO | Object storage |
 
-### Inspect Volume
+### Inspect volume
 
 ```bash
 docker volume inspect <project>_postgres_data
 ```
 
-### Remove Volume
+### Remove volume
 
 ```bash
 docker volume rm <project>_postgres_data
@@ -306,7 +308,7 @@ Internal hostnames:
 
 ## Troubleshooting
 
-### Port Already in Use
+### Port already in use
 
 ```bash
 # Find process
@@ -315,7 +317,7 @@ lsof -i :5432
 # Or change the published port in docker/docker-compose.local.yaml
 ```
 
-### Container Won't Start
+### Container won't start
 
 ```bash
 # Check logs
@@ -325,7 +327,7 @@ docker compose logs postgres
 docker compose ps
 ```
 
-### Database Connection Refused
+### Database connection refused
 
 If you selected local Docker PostgreSQL, ensure it is running and healthy:
 
@@ -334,7 +336,7 @@ docker compose ps postgres
 docker compose logs postgres
 ```
 
-### MinIO Bucket Not Found
+### MinIO bucket not found
 
 Run bucket creation:
 
@@ -342,7 +344,7 @@ Run bucket creation:
 docker compose up minio-create-buckets
 ```
 
-### Reset to Clean State
+### Reset to clean state
 
 ```bash
 docker compose down -v
@@ -355,7 +357,7 @@ docker compose up minio-create-buckets
 docker compose up migrations collectstatic
 ```
 
-## Production Considerations
+## Production considerations
 
 For production deployments:
 

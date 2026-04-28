@@ -158,7 +158,7 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES uv run watchmedo auto-restart \
 ```
 
 - Processes background tasks
-- Requires configured Redis to be reachable
+- Requires Redis to be configured and reachable
 - Logs to console
 
 ### `make celery-beat-dev`
@@ -173,7 +173,7 @@ uv run watchmedo auto-restart \
 ```
 
 - Schedules periodic tasks
-- Requires configured Redis to be reachable
+- Requires Redis to be configured and reachable
 - Must run alongside worker
 
 ### `make format`
