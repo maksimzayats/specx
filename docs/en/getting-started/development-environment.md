@@ -100,13 +100,15 @@ Create `.vscode/settings.json`:
 
 ### Local Development
 
-The `.env` file is loaded automatically. Copy from example:
+The setup wizard writes `.env` for the database, Redis, storage, and public
+origin choices you made:
 
 ```bash
-cp .env.example .env
+make setup
 ```
 
-Key variables for development:
+The `.env.example` file stays committed as a reference. Key variables for
+development:
 
 ```bash
 # Django
@@ -115,6 +117,7 @@ DJANGO_DEBUG=true
 
 # Database
 DATABASE_URL=postgres://postgres:example-postgres-password@localhost:5432/postgres
+# or DATABASE_URL=sqlite:///db.sqlite3
 
 # Redis
 REDIS_URL=redis://localhost:6379/0
@@ -227,14 +230,22 @@ uv run celery -A fastdjango.entrypoints.celery.app worker --loglevel=debug
 
 ## Docker Development
 
-### Start All Services
+### Start Local Services
 
 ```bash
-# Infrastructure only
-docker compose up -d postgres redis minio minio-create-buckets
+# Local Docker PostgreSQL and Redis
+docker compose up -d postgres redis
 
-# Run migrations
+# If you selected local MinIO storage
+docker compose up -d minio
+docker compose up minio-create-buckets
+
+# Run migrations and collect static files with Dockerized app services
 docker compose up migrations collectstatic
+
+# Or run them from the host
+make migrate
+make collectstatic
 
 # Full stack (including app)
 docker compose up -d
@@ -255,11 +266,16 @@ docker compose logs -f
 docker compose logs -f postgres
 ```
 
-### Reset Database
+### Reset Local Docker Data
 
 ```bash
 docker compose down -v  # Remove volumes
-docker compose up -d postgres
+docker compose up -d postgres redis
+
+# If you selected local MinIO storage
+docker compose up -d minio
+docker compose up minio-create-buckets
+
 docker compose up migrations
 ```
 

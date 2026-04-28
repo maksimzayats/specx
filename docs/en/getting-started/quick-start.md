@@ -5,14 +5,14 @@ Get the project running in minutes.
 ## Prerequisites
 
 - Python 3.14+
-- Docker and Docker Compose
 - uv ([installation guide](https://docs.astral.sh/uv/getting-started/installation/))
+- Docker and Docker Compose for local infrastructure choices
 
 ## Step 1: Clone and Run Setup
 
 ```bash
-git clone https://github.com/MaksimZayats/fastdjango.git
-cd fastdjango
+git clone https://github.com/MaksimZayats/fastdjango.git my-api
+cd my-api
 make setup
 ```
 
@@ -32,7 +32,7 @@ The generated `.env` file is configured for local development. Key variables inc
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `DATABASE_URL` | `postgres://...` | PostgreSQL connection string |
+| `DATABASE_URL` | `postgres://...` or `sqlite:///...` | Database connection string |
 | `REDIS_URL` | `redis://...` | Redis connection string |
 | `DJANGO_SECRET_KEY` | Development key | Django security key |
 | `DJANGO_DEBUG` | `true` | Enable debug mode |
@@ -61,24 +61,29 @@ Verify services are running:
 docker compose ps
 ```
 
-You can skip a local service when you selected SQLite, remote PostgreSQL, remote Redis, or remote S3.
+You can skip a local service when you selected SQLite, remote PostgreSQL,
+remote Redis, local filesystem storage, or remote S3.
 
 ## Step 5: Run Migrations
 
 Apply database migrations to create the required tables:
 
 ```bash
-# Using Docker (recommended)
+# If you are using the Dockerized app services:
 docker compose up migrations
 
-# Or manually
+# Or from the host:
 make migrate
 ```
 
 Collect static files for the admin panel:
 
 ```bash
+# If you are using the Dockerized app services:
 docker compose up collectstatic
+
+# Or from the host:
+make collectstatic
 ```
 
 For Dockerized local MinIO, Compose overrides the internal endpoint for containers while `.env` keeps
@@ -155,7 +160,7 @@ uv run uvicorn fastdjango.entrypoints.fastapi.app:app --host 0.0.0.0 --port 8001
 
 ### Database Connection Error
 
-Ensure PostgreSQL is running:
+If you selected local Docker PostgreSQL, ensure it is running:
 
 ```bash
 docker compose ps postgres
@@ -164,7 +169,7 @@ docker compose logs postgres
 
 ### Redis Connection Error
 
-Ensure Redis is running:
+If you selected local Docker Redis, ensure it is running:
 
 ```bash
 docker compose ps redis

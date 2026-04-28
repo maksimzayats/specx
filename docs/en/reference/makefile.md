@@ -130,7 +130,7 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES uv run watchmedo auto-restart \
 ```
 
 - Processes background tasks
-- Requires Redis running
+- Requires configured Redis to be reachable
 - Logs to console
 
 ### `make celery-beat-dev`
@@ -145,7 +145,7 @@ uv run watchmedo auto-restart \
 ```
 
 - Schedules periodic tasks
-- Requires Redis running
+- Requires configured Redis to be reachable
 - Must run alongside worker
 
 ### `make format`
@@ -226,14 +226,18 @@ uv run mkdocs build -f docs/mkdocs.yml
 ### Starting Fresh
 
 ```bash
+# Customize the template and generate .env
+make setup
+
 # Install dependencies
 uv sync --locked --all-groups
 
-# Copy environment
-cp .env.example .env
+# Start local infrastructure for the choices made in setup
+docker compose up -d postgres redis
 
-# Start infrastructure
-docker compose up -d postgres redis minio minio-create-buckets
+# If you selected local MinIO storage
+docker compose up -d minio
+docker compose up minio-create-buckets
 
 # Run migrations
 make migrate
@@ -300,7 +304,7 @@ sudo make <command>
 
 ### Database Connection Error
 
-Ensure PostgreSQL is running:
+If you selected local Docker PostgreSQL, ensure it is running:
 
 ```bash
 docker compose up -d postgres
@@ -308,7 +312,7 @@ docker compose up -d postgres
 
 ### Redis Connection Error
 
-Ensure Redis is running:
+If you selected local Docker Redis, ensure it is running:
 
 ```bash
 docker compose up -d redis

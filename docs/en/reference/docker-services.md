@@ -5,7 +5,7 @@ Reference for container configuration and management.
 Docker assets live in `docker/`. The default `.env.example` sets
 `COMPOSE_FILE=docker/docker-compose.yaml:docker/docker-compose.local.yaml`,
 so local `docker compose` commands can still be run from the repository root
-after copying `.env.example` to `.env`.
+after the setup wizard generates `.env`.
 
 ## Services Overview
 
@@ -140,7 +140,8 @@ AWS_S3_PROTECTED_BUCKET_NAME=protected
 
 ```bash
 # Start
-docker compose up -d minio minio-create-buckets
+docker compose up -d minio
+docker compose up minio-create-buckets
 
 # View logs
 docker compose logs -f minio
@@ -220,10 +221,15 @@ must be browser-reachable for Django admin static files.
 
 ## Common Operations
 
-### Start Core Local Services
+### Start Local Services
 
 ```bash
-docker compose up -d postgres redis minio minio-create-buckets
+# Local Docker PostgreSQL and Redis
+docker compose up -d postgres redis
+
+# If you selected local MinIO storage
+docker compose up -d minio
+docker compose up minio-create-buckets
 ```
 
 ### Stop All Services
@@ -232,11 +238,16 @@ docker compose up -d postgres redis minio minio-create-buckets
 docker compose down
 ```
 
-### Reset Everything (Including Data)
+### Reset Local Docker Data
 
 ```bash
 docker compose down -v  # Remove volumes
-docker compose up -d postgres redis minio minio-create-buckets
+docker compose up -d postgres redis
+
+# If you selected local MinIO storage
+docker compose up -d minio
+docker compose up minio-create-buckets
+
 docker compose up migrations
 ```
 
@@ -317,7 +328,7 @@ docker compose ps
 
 ### Database Connection Refused
 
-Ensure postgres is running and healthy:
+If you selected local Docker PostgreSQL, ensure it is running and healthy:
 
 ```bash
 docker compose ps postgres
@@ -336,7 +347,12 @@ docker compose up minio-create-buckets
 
 ```bash
 docker compose down -v
-docker compose up -d postgres redis minio minio-create-buckets
+docker compose up -d postgres redis
+
+# If you selected local MinIO storage
+docker compose up -d minio
+docker compose up minio-create-buckets
+
 docker compose up migrations collectstatic
 ```
 
@@ -344,7 +360,7 @@ docker compose up migrations collectstatic
 
 For production deployments:
 
-1. **Use managed services**: AWS RDS, ElastiCache, S3
+1. **Use managed services**: database, cache, and object storage providers
 2. **Set strong passwords**: Don't use defaults
 3. **Enable persistence**: Configure backup strategies
 4. **Use health checks**: Add to compose file

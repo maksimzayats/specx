@@ -9,9 +9,13 @@ Understanding the codebase organization is essential for working effectively wit
 ├── src/                    # Application source code
 │   └── fastdjango/         # Application package
 │       ├── core/           # Business logic and domain models
+│       ├── entrypoints/    # FastAPI, Django, and Celery composition roots
+│       ├── foundation/     # Shared base contracts
 │       ├── infrastructure/ # Cross-cutting concerns
-│       ├── ioc/            # Dependency injection container
-│       └── manage.py       # Django management entry point
+│       └── ioc/            # Dependency injection container
+├── management/             # Repository management commands
+│   ├── manage.py           # Django management entry point
+│   └── setup_wizard/       # One-time template setup wizard
 ├── tests/                  # Test suite
 │   ├── integration/        # Integration tests
 │   └── unit/               # Unit tests

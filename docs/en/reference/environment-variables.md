@@ -91,6 +91,10 @@ JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60
 
 S3-compatible settings use the `AWS_S3_` prefix.
 
+The runtime default is `s3` when `STORAGE_BACKEND` is omitted, but the setup
+wizard writes an explicit value and defaults new projects to local filesystem
+storage.
+
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `STORAGE_BACKEND` | No | `s3` | `local` for filesystem storage, `s3` for MinIO or remote S3-compatible storage |
@@ -224,6 +228,10 @@ trusted proxy before relying on client-controlled forwarded headers.
 | `REFRESH_TOKEN_TTL_DAYS` | No | `30` | Refresh token lifetime in days |
 
 ## Example `.env` File
+
+This example matches local Docker PostgreSQL, local Docker Redis, and local
+MinIO storage. The setup wizard may generate a shorter file when you choose
+SQLite, remote services, or local filesystem storage.
 
 ```bash
 # Compose
