@@ -55,6 +55,21 @@ def test_declined_reinitialize_git_plan_warns_without_actions(tmp_path: Path) ->
     assert _commands(plan=plan) == []
 
 
+def test_missing_git_does_not_remove_existing_metadata(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    git_config_path = tmp_path / ".git" / "config"
+    _write(git_config_path, "template config\n")
+    plan = build_git_plan(repo_root=tmp_path, answers=_answers())
+    monkeypatch.setattr(shutil, "which", lambda *_: None)
+
+    with pytest.raises(FileNotFoundError):
+        apply_git_plan(plan=plan)
+
+    assert git_config_path.read_text(encoding="utf-8") == "template config\n"
+
+
 def test_env_remains_ignored_and_not_force_added(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

@@ -25,7 +25,7 @@ make setup
 ```
 
 The wizard renames the project, writes `.env`, configures database, Redis,
-storage, docs, public origins, Logfire defaults, and a fresh Git repository,
+storage, docs, public origins, Logfire defaults, and optional Git reset choices,
 then prints the next commands for the choices you made.
 
 ## Key features

@@ -16,7 +16,7 @@ make setup
 
 The wizard renames the project and Python package, writes a generated `.env`,
 lets you choose database, Redis, storage, docs, public origins, and Logfire
-defaults, reinitializes Git for the generated project, then prints the exact
+defaults, can reinitialize Git for the generated project, then prints the exact
 next commands for your choices.
 
 To preview the changes first:

@@ -254,7 +254,7 @@ def _ask_docs_site_url(*, keep_docs: bool) -> str | None:
 
 def _ask_repo_url() -> str | None:
     return _optional_text(
-        "Repository URL (optional; used for docs metadata and Git origin; blank removes template repository links)",
+        "Repository URL (optional; used for docs metadata and, if Git is reinitialized, as Git origin; blank removes template repository links)",
         validate=_validate_optional_url,
     )
 

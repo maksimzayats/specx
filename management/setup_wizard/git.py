@@ -116,6 +116,7 @@ def apply_git_plan(*, plan: GitPlan) -> GitSetupResult:
     if not plan.reinitialize_git_repository:
         return GitSetupResult(reinitialized=False)
 
+    _git_executable()
     git_dir = plan.repo_root / ".git"
     if git_dir.exists():
         shutil.rmtree(git_dir)
@@ -158,11 +159,11 @@ def apply_git_plan(*, plan: GitPlan) -> GitSetupResult:
 
 
 def _run_git_command(*, command: tuple[str, ...], plan: GitPlan) -> None:
-    subprocess.run(_git_command(command=command), cwd=plan.repo_root, check=True)  # noqa: S603
-
-
-def _git_command(*, command: tuple[str, ...]) -> tuple[str, ...]:
-    return (_git_executable(), *command[1:])
+    subprocess.run(  # noqa: S603
+        (_git_executable(), *command[1:]),
+        cwd=plan.repo_root,
+        check=True,
+    )
 
 
 def _git_executable() -> str:
