@@ -55,7 +55,7 @@ Unprefixed variables:
 
 | Variable | Purpose |
 |----------|---------|
-| `DATABASE_URL` | PostgreSQL connection string |
+| `DATABASE_URL` | Database connection string |
 | `REDIS_URL` | Redis connection string |
 | `ENVIRONMENT` | Deployment environment |
 | `ALLOWED_HOSTS` | Django allowed hosts |

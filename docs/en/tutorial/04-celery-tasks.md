@@ -261,9 +261,9 @@ make celery-dev
 
 2. In another terminal, trigger the task:
 
-```python
-# Using Django shell
-uv run src/fastdjango/manage.py shell
+```bash
+# management/manage.py
+uv run python management/manage.py shell
 ```
 
 ```python

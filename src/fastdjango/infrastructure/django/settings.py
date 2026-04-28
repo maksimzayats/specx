@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 from urllib.parse import urlsplit
 
 import dj_database_url
@@ -35,6 +35,7 @@ class DjangoHttpSettings(BaseSettings):
 
     middleware: tuple[str, ...] = (
         "django.middleware.security.SecurityMiddleware",
+        "whitenoise.middleware.WhiteNoiseMiddleware",
         "django.contrib.sessions.middleware.SessionMiddleware",
         "django.middleware.common.CommonMiddleware",
         "django.middleware.csrf.CsrfViewMiddleware",
@@ -81,7 +82,8 @@ class DjangoDatabaseSettings(BaseSettings):
     disable_server_side_cursors: bool = True
     test_name: str | None = None
 
-    @computed_field()
+    @computed_field()  # type: ignore[prop-decorator]
+    @property
     def databases(self) -> dict[str, Any]:
         default_database = dj_database_url.parse(
             self.url.get_secret_value(),
@@ -108,16 +110,26 @@ class DjangoSecuritySettings(BaseSettings):
 class DjangoStorageSettings(BaseSettings):
     model_config = SettingsConfigDict(populate_by_name=True)
 
+    storage_backend: Literal["local", "s3"] = Field(
+        default="s3",
+        validation_alias="STORAGE_BACKEND",
+    )
     static_url: str = "/static/"
+    static_root: str = "staticfiles"
     media_url: str = "/media/"
+    media_root: str = "media"
 
-    endpoint_url: str = Field(validation_alias="AWS_S3_ENDPOINT_URL")
+    endpoint_url: str | None = Field(default=None, validation_alias="AWS_S3_ENDPOINT_URL")
     public_endpoint_url: str | None = Field(
         default=None,
         validation_alias="AWS_S3_PUBLIC_ENDPOINT_URL",
     )
-    access_key_id: str = Field(validation_alias="AWS_S3_ACCESS_KEY_ID")
-    secret_access_key: SecretStr = Field(validation_alias="AWS_S3_SECRET_ACCESS_KEY")
+    access_key_id: str | None = Field(default=None, validation_alias="AWS_S3_ACCESS_KEY_ID")
+    secret_access_key: SecretStr | None = Field(
+        default=None,
+        validation_alias="AWS_S3_SECRET_ACCESS_KEY",
+    )
+    region_name: str | None = Field(default=None, validation_alias="AWS_S3_REGION_NAME")
     protected_bucket_name: str = Field(
         default="protected",
         validation_alias="AWS_S3_PROTECTED_BUCKET_NAME",
@@ -127,13 +139,36 @@ class DjangoStorageSettings(BaseSettings):
         validation_alias="AWS_S3_PUBLIC_BUCKET_NAME",
     )
 
-    @computed_field()
+    @computed_field()  # type: ignore[prop-decorator]
+    @property
     def storages(self) -> dict[str, Any]:
+        if self.storage_backend == "local":
+            return {
+                "staticfiles": {
+                    "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+                },
+                "default": {
+                    "BACKEND": "django.core.files.storage.FileSystemStorage",
+                },
+            }
+
+        return self._build_s3_storages()
+
+    def _build_s3_storages(self) -> dict[str, Any]:
         base_options = {
-            "access_key": self.access_key_id,
-            "secret_key": self.secret_access_key.get_secret_value(),
-            "endpoint_url": self.endpoint_url,
+            "access_key": self._require_s3_setting(
+                self.access_key_id,
+                name="AWS_S3_ACCESS_KEY_ID",
+            ),
+            "secret_key": self._require_s3_secret(self.secret_access_key),
+            "endpoint_url": self._require_s3_setting(
+                self.endpoint_url,
+                name="AWS_S3_ENDPOINT_URL",
+            ),
         }
+
+        if self.region_name is not None:
+            base_options["region_name"] = self.region_name
 
         return {
             "staticfiles": {
@@ -148,6 +183,20 @@ class DjangoStorageSettings(BaseSettings):
                 },
             },
         }
+
+    def _require_s3_setting(self, value: str | None, *, name: str) -> str:
+        if value is None or value == "":
+            msg = f"{name} is required when STORAGE_BACKEND=s3."
+            raise ValueError(msg)
+
+        return value
+
+    def _require_s3_secret(self, value: SecretStr | None) -> str:
+        if value is None or value.get_secret_value() == "":
+            msg = "AWS_S3_SECRET_ACCESS_KEY is required when STORAGE_BACKEND=s3."
+            raise ValueError(msg)
+
+        return value.get_secret_value()
 
     def _build_staticfiles_options(self, *, base_options: dict[str, Any]) -> dict[str, Any]:
         options = {
@@ -209,7 +258,7 @@ adapter.adapt(
     DjangoDatabaseSettings(),  # type: ignore[call-arg]
     DjangoAuthSettings(),
     DjangoSecuritySettings(),  # type: ignore[call-arg]
-    DjangoStorageSettings(),  # type: ignore[call-arg]
+    DjangoStorageSettings(),
     DjangoTemplatesSettings(),
     settings_locals=locals(),
 )

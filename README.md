@@ -1,202 +1,115 @@
 # Fast Django
 
-Production-ready **FastAPI** template with **Django ORM**, admin panel, and **Celery** background tasks —
-featuring dependency injection, type-safe configuration, and comprehensive observability.
+A FastAPI + Django + Celery project template for teams that want Django's ORM
+and admin, FastAPI's async delivery, and a clean application structure from the
+first commit.
 
-## Features
+## Start Here
 
-- **HTTP API** — [FastAPI](https://fastapi.tiangolo.com/) with automatic OpenAPI documentation
-- **Background Tasks** — [Celery](https://docs.celeryq.dev/en/stable/) with beat scheduler
-- **Dependency Injection** — [diwire](https://pypi.org/project/diwire/) IoC container
-- **Type-Safe Config** — [Pydantic Settings](https://docs.pydantic.dev/latest/concepts/pydantic_settings/) with
-  validation
-- **Observability** — [Logfire](https://logfire.pydantic.dev/docs/) (OpenTelemetry) integration
-- **Production Ready** — Docker Compose with PostgreSQL, PgBouncer, Redis, MinIO
-
-## At a Glance
-
-**Define a service** with business logic and database operations:
-
-```python
-# src/fastdjango/core/todo/services.py
-from django.db import transaction
-
-from fastdjango.foundation.services import BaseService
-from fastdjango.core.todo.models import Todo
-
-
-class TodoService(BaseService):
-    def get_todo_by_id(self, todo_id: int) -> Todo | None:
-        return Todo.objects.filter(id=todo_id).first()
-
-    def list_todos(self, user_id: int) -> list[Todo]:
-        return list(Todo.objects.filter(user_id=user_id))
-
-    @transaction.atomic
-    def create_todo(self, user_id: int, title: str) -> Todo:
-        return Todo.objects.create(user_id=user_id, title=title)
-```
-
-**Create a controller** — services are auto-injected via the IoC container:
-
-```python
-# src/fastdjango/core/todo/delivery/fastapi/controllers.py
-from dataclasses import dataclass
-from fastapi import APIRouter, Depends
-
-from fastdjango.core.todo.services import TodoService
-from fastdjango.core.authentication.delivery.fastapi.auth import AuthenticatedRequest, JWTAuthFactory
-from fastdjango.foundation.delivery.fastapi.schemas import BaseFastAPISchema
-from fastdjango.foundation.delivery.controllers import BaseController
-
-
-class TodoSchema(BaseFastAPISchema):
-    id: int
-    title: str
-    completed: bool
-
-
-@dataclass(kw_only=True)
-class TodoController(BaseController):
-    _jwt_auth_factory: JWTAuthFactory
-    _todo_service: TodoService  # Auto-injected
-
-    def __post_init__(self) -> None:
-        self._jwt_auth = self._jwt_auth_factory()
-        super().__post_init__()
-
-    def register(self, registry: APIRouter) -> None:
-        registry.add_api_route(
-            path="/v1/todos",
-            endpoint=self.list_todos,
-            methods=["GET"],
-            dependencies=[Depends(self._jwt_auth)],
-        )
-
-    def list_todos(self, request: AuthenticatedRequest) -> list[TodoSchema]:
-        todos = self._todo_service.list_todos(user_id=request.state.user.id)
-        return [TodoSchema.model_validate(t, from_attributes=True) for t in todos]
-```
-
-> **The Golden Rule:** Controllers never query models directly → database operations live in use cases or services.
-
-## Prerequisites
-
-Before getting started, ensure you have installed:
-
-- **uv** — Blazingly fast Python package manager ([Install uv](https://docs.astral.sh/uv/getting-started/installation/))
-- **Docker & Docker Compose** — For infrastructure
-  services ([Install Docker](https://docs.docker.com/get-started/get-docker/))
-
-## Quick Start
-
-### 1. Clone the Repository
+Fast Django is meant to be cloned and customized through the setup wizard.
 
 ```bash
-git clone https://github.com/MaksimZayats/fastdjango.git
-cd fastdjango
+git clone https://github.com/MaksimZayats/fastdjango.git my-api
+cd my-api
+make setup
 ```
 
-### 2. Rename the Project
+The wizard renames the project and Python package, writes a generated `.env`,
+lets you choose database, Redis, storage, docs, public origins, and Logfire
+defaults, then prints the exact next commands for your choices.
 
-Replace the default project name in `pyproject.toml` with your own.
-Use lowercase letters, numbers, and hyphens (e.g., `my-awesome-api`, `backend-service`).
+To preview the changes first:
 
-### 3. Install Dependencies
+```bash
+make setup ARGS="--dry-run"
+```
+
+## Run Locally
+
+Install dependencies after setup:
 
 ```bash
 uv sync --locked --all-groups
 ```
 
-### 4. Configure Environment
+For local Docker PostgreSQL, local Docker Redis, and local filesystem storage:
 
 ```bash
-cp .env.example .env
-```
-
-The `.env.example` contains sensible defaults for local development. Key variables:
-
-- `DJANGO_SECRET_KEY` — Django secret key
-- `JWT_SECRET_KEY` — JWT signing key
-- `DATABASE_URL` — PostgreSQL connection string
-- `REDIS_URL` — Redis connection string
-- `AWS_S3_ENDPOINT_URL` / `AWS_S3_PUBLIC_ENDPOINT_URL` — internal vs browser S3 endpoints
-
-### 5. Start Infrastructure Services
-
-```bash
-docker compose up -d postgres redis minio
-```
-
-This starts the services you need for local development:
-
-- **PostgreSQL 18** — Primary database
-- **Redis** — Cache and Celery broker
-- **MinIO** — S3-compatible object storage
-
-PgBouncer is used by the Dockerized app and migration services; Compose starts it
-automatically when those services need it.
-
-### 6. Initialize Database and Storage
-
-```bash
-docker compose up minio-create-buckets migrations collectstatic
-```
-
-This runs one-time setup tasks:
-
-1. Creates MinIO buckets for static/media files
-2. Applies Django database migrations
-3. Collects static files to MinIO
-
-### 7. Start Development Server
-
-```bash
+docker compose up -d postgres redis
+make migrate
+make collectstatic
 make dev
 ```
 
-The API is available at `http://localhost:8000` with interactive docs at `/docs`.
+The API runs at `http://localhost:8000`, interactive API docs are at `/docs`,
+and Django admin is mounted at `/django/admin/`.
 
-## Verify Installation
+If you choose SQLite, remote PostgreSQL, remote Redis, local MinIO, or remote
+S3, follow the next-step summary printed by the wizard.
 
-```bash
-curl http://localhost:8000/v1/health
+## What You Get
+
+- FastAPI HTTP delivery with Django mounted for admin and Django URLs.
+- Django ORM, migrations, admin, authentication model, and typed settings.
+- Celery worker and beat entrypoints using Redis.
+- Dependency injection with `diwire` and explicit base contracts.
+- Local Docker Compose for PostgreSQL, PgBouncer, Redis, and optional MinIO.
+- Storage modes for local filesystem, local MinIO, or remote S3-compatible services.
+- Logfire/OpenTelemetry integration that is off by default until configured.
+- Strict linting, typing, architecture guardrails, and pytest coverage.
+
+## Architecture
+
+The main rule is deliberately simple:
+
+```text
+Controller -> Use Case / Service -> Model
 ```
 
-Expected response:
+Controllers handle FastAPI, Django, or Celery delivery concerns. Use cases and
+services own application behavior, ORM access, and transaction boundaries.
+Transactions use the injected `TransactionFactory`; delivery code does not call
+Django models directly.
 
-```json
-{
-  "status": "ok"
-}
-```
+The source layout follows that rule:
+
+- `src/fastdjango/core/` - domains, models, DTOs, use cases, services, and domain delivery.
+- `src/fastdjango/foundation/` - shared base contracts.
+- `src/fastdjango/entrypoints/` - FastAPI, Django, and Celery composition roots.
+- `src/fastdjango/infrastructure/` - framework and external-system integration.
+- `src/fastdjango/ioc/` - dependency injection container setup.
+- `management/` - repository management commands, including `manage.py` and the setup wizard.
 
 ## Documentation
 
-Full documentation is available at [fastdjango.zayats.dev](https://fastdjango.zayats.dev).
+- [Quick Start](docs/en/getting-started/quick-start.md)
+- [Project Structure](docs/en/getting-started/project-structure.md)
+- [Development Environment](docs/en/getting-started/development-environment.md)
+- [Tutorial: Build a Todo List](docs/en/tutorial/index.md)
+- [Concepts](docs/en/concepts/index.md)
+- [Reference](docs/en/reference/index.md)
 
-| Section                                                                                           | Description                                |
-|---------------------------------------------------------------------------------------------------|--------------------------------------------|
-| [Quick Start](https://fastdjango.zayats.dev/getting-started/quick-start/)                         | Get running in 5 minutes                   |
-| [Project Structure](https://fastdjango.zayats.dev/getting-started/project-structure/)             | Understand the codebase organization       |
-| [Development Environment](https://fastdjango.zayats.dev/getting-started/development-environment/) | IDE setup and tooling                      |
-| [Tutorial: Build a Todo List](https://fastdjango.zayats.dev/tutorial/)                            | Learn by building a complete feature       |
-| [Concepts](https://fastdjango.zayats.dev/concepts/)                                               | Service layer, IoC, controllers, factories |
-| [How-To Guides](https://fastdjango.zayats.dev/how-to/)                                            | Add domains, tasks, secure endpoints       |
-| [Reference](https://fastdjango.zayats.dev/reference/)                                             | Environment variables, Makefile, Docker    |
+## Useful Commands
 
-## Tech Stack
+| Command | Purpose |
+| --- | --- |
+| `make setup` | Run the one-time template setup wizard |
+| `make dev` | Run the FastAPI development server |
+| `make migrate` | Apply Django migrations |
+| `make collectstatic` | Collect Django static files |
+| `make celery-dev` | Run a Celery worker |
+| `make celery-beat-dev` | Run Celery beat |
+| `make update-dependencies` | Update uv lock, dependency bounds, CI pins, and container image pins |
+| `make format` | Format through `prek` hooks |
+| `make lint` | Run lint and type checks |
+| `make test` | Run the test suite |
+| `make docs` | Serve the MkDocs documentation |
 
-| Component       | Technology        | Documentation                                                                              |
-|-----------------|-------------------|--------------------------------------------------------------------------------------------|
-| HTTP API        | FastAPI 0.136+    | [fastapi.tiangolo.com](https://fastapi.tiangolo.com/)                                      |
-| ORM & Admin     | Django 6+         | [docs.djangoproject.com](https://docs.djangoproject.com/en/stable/)                        |
-| Task Queue      | Celery 5.x        | [docs.celeryq.dev](https://docs.celeryq.dev/en/stable/)                                    |
-| Validation      | Pydantic 2.x      | [docs.pydantic.dev](https://docs.pydantic.dev/latest/)                                     |
-| Settings        | Pydantic Settings | [docs.pydantic.dev/settings](https://docs.pydantic.dev/latest/concepts/pydantic_settings/) |
-| IoC Container   | diwire            | [pypi.org/project/diwire](https://pypi.org/project/diwire/)                                |
-| Observability   | Logfire           | [Logfire docs](https://logfire.pydantic.dev/docs/)                                         |
-| Package Manager | uv                | [docs.astral.sh/uv](https://docs.astral.sh/uv/)                                            |
+## Requirements
+
+- Python 3.14+
+- [uv](https://docs.astral.sh/uv/getting-started/installation/)
+- Docker and Docker Compose for local infrastructure choices
 
 ## License
 

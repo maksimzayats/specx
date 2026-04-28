@@ -2,6 +2,19 @@
 
 Quick reference for all development commands.
 
+## Setup
+
+| Command | Description |
+|---------|-------------|
+| `make setup` | Run the one-time template setup wizard |
+
+### Examples
+
+```bash
+# Preview planned setup changes
+make setup ARGS="--dry-run"
+```
+
 ## Development
 
 | Command | Description |
@@ -47,6 +60,7 @@ make migrate
 | `make format` | Format code through prek hooks |
 | `make lint` | Run all prek checks except tests |
 | `make test` | Run tests with coverage |
+| `make update-dependencies` | Update uv lock, dependency bounds, CI pins, and container image pins |
 
 ### Examples
 
@@ -57,6 +71,9 @@ make lint
 
 # Run tests
 make test
+
+# Update dependency bounds and CI action pins
+make update-dependencies
 ```
 
 ## Documentation
@@ -89,6 +106,46 @@ uv run uvicorn fastdjango.entrypoints.fastapi.app:app --reload --host 0.0.0.0 --
 - Accessible at http://localhost:8000
 - API docs at http://localhost:8000/docs
 
+### `make setup`
+
+Runs:
+```bash
+uv run --group setup python -m management.setup_wizard $(ARGS)
+```
+
+- Renames the project/package
+- Writes `.env` and updates committed environment examples
+- Configures SQLite, local Docker PostgreSQL, or remote PostgreSQL
+- Configures local Docker Redis or remote Redis
+- Configures local filesystem, local MinIO, or remote S3-compatible storage
+- Rewrites the README for the generated app
+- Sets optional public origins, repository metadata, ports, and Logfire defaults
+- Can remove template docs and setup-only files
+
+### `make update-dependencies`
+
+Runs:
+```bash
+uv run python -m management.dependency_updater $(ARGS)
+```
+
+- Runs `uv lock --upgrade`
+- Syncs direct dependency lower bounds in `pyproject.toml` from `uv.lock`
+- Updates GitHub Action pins and supported CI tool versions in `.github/workflows`
+- Updates Dockerfile and Docker Compose image pins, including matching docs references
+- Runs `uv lock` again after pyproject changes
+- Prints progress while it checks package indexes, GitHub, and container registries
+
+Preview without writing files:
+```bash
+make update-dependencies ARGS="--dry-run"
+```
+
+Hide progress messages:
+```bash
+make update-dependencies ARGS="--quiet"
+```
+
 ### `make celery-dev`
 
 Runs:
@@ -101,7 +158,7 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES uv run watchmedo auto-restart \
 ```
 
 - Processes background tasks
-- Requires Redis running
+- Requires Redis to be configured and reachable
 - Logs to console
 
 ### `make celery-beat-dev`
@@ -116,7 +173,7 @@ uv run watchmedo auto-restart \
 ```
 
 - Schedules periodic tasks
-- Requires Redis running
+- Requires Redis to be configured and reachable
 - Must run alongside worker
 
 ### `make format`
@@ -145,7 +202,7 @@ uv run prek run --all-files
 
 Runs:
 ```bash
-uv run pytest tests/
+uv run --all-groups pytest tests/
 ```
 
 - Requires 80%+ code coverage
@@ -156,7 +213,7 @@ uv run pytest tests/
 
 Runs:
 ```bash
-uv run src/fastdjango/manage.py migrate
+uv run python management/manage.py migrate
 ```
 
 - Applies all pending migrations
@@ -166,7 +223,7 @@ uv run src/fastdjango/manage.py migrate
 
 Runs:
 ```bash
-uv run src/fastdjango/manage.py makemigrations
+uv run python management/manage.py makemigrations
 ```
 
 - Detects model changes
@@ -197,14 +254,18 @@ uv run mkdocs build -f docs/mkdocs.yml
 ### Starting Fresh
 
 ```bash
+# Customize the template and generate .env
+make setup
+
 # Install dependencies
 uv sync --locked --all-groups
 
-# Copy environment
-cp .env.example .env
+# Start local infrastructure for the choices made in setup
+docker compose up -d postgres redis
 
-# Start infrastructure
-docker compose up -d postgres redis minio minio-create-buckets
+# If you selected local MinIO storage
+docker compose up -d minio
+docker compose up minio-create-buckets
 
 # Run migrations
 make migrate
@@ -271,7 +332,7 @@ sudo make <command>
 
 ### Database Connection Error
 
-Ensure PostgreSQL is running:
+If you selected local Docker PostgreSQL, ensure it is running:
 
 ```bash
 docker compose up -d postgres
@@ -279,7 +340,7 @@ docker compose up -d postgres
 
 ### Redis Connection Error
 
-Ensure Redis is running:
+If you selected local Docker Redis, ensure it is running:
 
 ```bash
 docker compose up -d redis

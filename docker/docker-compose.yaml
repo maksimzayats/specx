@@ -88,14 +88,14 @@ services:
 
   migrations:
     <<: *common
-    command: python src/fastdjango/manage.py migrate --noinput
+    command: python management/manage.py migrate --noinput
     depends_on:
       pgbouncer:
         condition: service_healthy
 
   collectstatic:
     <<: *common
-    command: python src/fastdjango/manage.py collectstatic --noinput
+    command: python management/manage.py collectstatic --noinput
     depends_on:
       pgbouncer:
         condition: service_healthy
@@ -103,7 +103,7 @@ services:
         condition: service_completed_successfully
 
   postgres:
-    image: postgres:18-alpine
+    image: postgres:18.3-alpine
     restart: unless-stopped
     env_file:
       - ../.env
@@ -125,7 +125,7 @@ services:
       - main
 
   pgbouncer:
-    image: edoburu/pgbouncer:latest
+    image: edoburu/pgbouncer:v1.25.1-p0
     restart: unless-stopped
     env_file:
       - ../.env
@@ -167,7 +167,7 @@ services:
       - no-new-privileges:true
 
   redis:
-    image: redis:latest
+    image: redis:8.6.2
     restart: unless-stopped
     env_file:
       - ../.env
@@ -187,15 +187,15 @@ services:
       - main
 
   minio:
-    image: minio/minio:latest
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
     env_file:
       - ../.env
     environment:
-      MINIO_ROOT_USER: ${AWS_S3_ACCESS_KEY_ID}
-      MINIO_ROOT_PASSWORD: ${AWS_S3_SECRET_ACCESS_KEY}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     volumes:
       - minio_data:/data
     command: server /data --console-address ":9001"
@@ -208,7 +208,7 @@ services:
       - main
 
   minio-create-buckets:
-    image: minio/mc
+    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
     depends_on:
       minio:
         condition: service_healthy
@@ -216,12 +216,12 @@ services:
       - ../.env
     entrypoint: >
       /bin/sh -c "
-      /usr/bin/mc alias set my-minio http://minio:9000 ${AWS_S3_ACCESS_KEY_ID} ${AWS_S3_SECRET_ACCESS_KEY};
-      /usr/bin/mc mb my-minio/${AWS_S3_PROTECTED_BUCKET_NAME:-protected};
-      mc anonymous set none my-minio/${AWS_S3_PROTECTED_BUCKET_NAME:-protected};
+      /usr/bin/mc alias set my-minio http://minio:9000 \"$${AWS_S3_ACCESS_KEY_ID}\" \"$${AWS_S3_SECRET_ACCESS_KEY}\";
+      /usr/bin/mc mb --ignore-existing \"my-minio/$${AWS_S3_PROTECTED_BUCKET_NAME:-protected}\";
+      /usr/bin/mc anonymous set none \"my-minio/$${AWS_S3_PROTECTED_BUCKET_NAME:-protected}\";
 
-      /usr/bin/mc mb my-minio/${AWS_S3_PUBLIC_BUCKET_NAME:-public};
-      mc anonymous set public my-minio/${AWS_S3_PUBLIC_BUCKET_NAME:-public};
+      /usr/bin/mc mb --ignore-existing \"my-minio/$${AWS_S3_PUBLIC_BUCKET_NAME:-public}\";
+      /usr/bin/mc anonymous set public \"my-minio/$${AWS_S3_PUBLIC_BUCKET_NAME:-public}\";
 
       exit 0;
       "

@@ -135,8 +135,8 @@ class TodoService(BaseService):
 ## Step 5: Transaction Tracing
 
 Use the injected `TransactionFactory` in synchronous use-case or service
-transaction methods. It combines `transaction.atomic()` with a Logfire span and
-keeps controllers free of database transaction policy.
+transaction methods. It wraps Django's atomic transaction handling with a
+Logfire span and keeps controllers free of database transaction policy.
 
 ```python
 @dataclass(kw_only=True)

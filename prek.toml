@@ -62,7 +62,7 @@ name = "ruff format check"
 alias = "ruff-format-check"
 language = "system"
 entry = "uv run ruff format --check ."
-files = "^(src|tests)/.*\\.py$|^pyproject\\.toml$|^ruff\\.toml$|^prek\\.toml$|^uv\\.lock$"
+files = "^(src|management|tests)/.*\\.py$|^pyproject\\.toml$|^ruff\\.toml$|^prek\\.toml$|^uv\\.lock$"
 pass_filenames = false
 priority = 30
 
@@ -71,7 +71,7 @@ id = "ruff-check"
 name = "ruff check"
 language = "system"
 entry = "uv run ruff check ."
-files = "^(src|tests)/.*\\.py$|^pyproject\\.toml$|^ruff\\.toml$|^prek\\.toml$|^uv\\.lock$"
+files = "^(src|management|tests)/.*\\.py$|^pyproject\\.toml$|^ruff\\.toml$|^prek\\.toml$|^uv\\.lock$"
 pass_filenames = false
 priority = 30
 
@@ -79,7 +79,7 @@ priority = 30
 id = "mypy"
 name = "mypy"
 language = "system"
-entry = "uv run --env-file .env.test.example mypy src/ tests/"
-files = "^(src|tests)/.*\\.py$|^pyproject\\.toml$|^prek\\.toml$|^uv\\.lock$|^\\.env\\.test\\.example$"
+entry = "uv run --env-file .env.test.example mypy src/ management/ tests/"
+files = "^(src|management|tests)/.*\\.py$|^pyproject\\.toml$|^prek\\.toml$|^uv\\.lock$|^\\.env\\.test\\.example$"
 pass_filenames = false
 priority = 30

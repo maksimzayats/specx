@@ -1,10 +1,12 @@
 # Fast Django
 
-A production-ready Django + FastAPI + Celery template with dependency injection, type safety, and modern Python practices.
+A FastAPI + Django + Celery project template with a setup wizard, dependency
+injection, typed settings, and practical architecture guardrails.
 
 ## Why Fast Django?
 
-This template provides a solid foundation for building scalable Python applications by combining:
+Fast Django gives you a backend template that can be cloned and customized
+quickly without losing a clear application structure:
 
 - **Django** for ORM, admin panel, and authentication
 - **FastAPI** for high-performance REST APIs
@@ -13,15 +15,28 @@ This template provides a solid foundation for building scalable Python applicati
 - **Pydantic** for validation and settings management
 - **Logfire** for observability (OpenTelemetry-based)
 
-## Key Features
+## Start with setup
+
+```bash
+git clone https://github.com/MaksimZayats/fastdjango.git my-api
+cd my-api
+# Makefile
+make setup
+```
+
+The wizard renames the project, writes `.env`, configures database, Redis,
+storage, docs, public origins, and Logfire defaults, then prints the next
+commands for the choices you made.
+
+## Key features
 
 - **Use Case / Service Layer Architecture**: Clean separation between delivery and database operations
 - **Auto-Registration IoC**: Minimal boilerplate dependency injection with automatic wiring
 - **Type Safety**: Full `mypy --strict` compatibility with Python 3.14+
 - **Test Isolation**: Per-test container instances with easy mocking
-- **Unified Controller Pattern**: Same pattern for HTTP endpoints and Celery tasks
+- **Unified Controller Pattern**: Same pattern for HTTP endpoints, Django delivery, and Celery tasks
 
-## Quick Links
+## Quick links
 
 <div class="grid cards" markdown>
 
@@ -71,13 +86,15 @@ Controller → Use Case / Service → Model
 ❌ Controller queries models directly
 ```
 
-Controllers handle HTTP/Celery concerns. Use cases and services contain application logic and database operations. Models define data structures.
+Controllers handle FastAPI, Django, and Celery delivery concerns. Use cases and
+services contain application logic and database operations. Models define data
+structures.
 
 ## Requirements
 
 - Python 3.14+
-- Docker and Docker Compose
 - uv (Python package manager)
+- Docker and Docker Compose for local infrastructure choices
 
 ## Getting Help
 

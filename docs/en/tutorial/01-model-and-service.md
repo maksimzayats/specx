@@ -435,7 +435,7 @@ class TodoService(BaseService):
 Test the service in a Django shell:
 
 ```bash
-uv run src/fastdjango/manage.py shell
+uv run python management/manage.py shell
 ```
 
 ```python
