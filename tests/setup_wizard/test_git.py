@@ -44,14 +44,29 @@ def test_initial_commit_commands_are_skipped_when_declined(tmp_path: Path) -> No
     assert ("git", "commit", "-m", "initial commit") not in _commands(plan=plan)
 
 
-def test_declined_reinitialize_git_plan_warns_without_actions(tmp_path: Path) -> None:
+def test_preserved_git_plan_can_create_initial_commit(tmp_path: Path) -> None:
+    (tmp_path / ".git").mkdir()
+    plan = build_git_plan(
+        repo_root=tmp_path,
+        answers=_answers(reinitialize_git_repository=False),
+    )
+
+    assert [action.kind for action in plan.actions] == ["preserve", "command", "command"]
+    assert "Keep existing Git history and origin" in plan.actions[0].detail
+    assert _commands(plan=plan) == [
+        ("git", "add", "--all"),
+        ("git", "commit", "-m", "initial commit"),
+    ]
+
+
+def test_declined_reinitialize_without_git_repo_warns_without_actions(tmp_path: Path) -> None:
     plan = build_git_plan(
         repo_root=tmp_path,
         answers=_answers(reinitialize_git_repository=False),
     )
 
     assert [action.kind for action in plan.actions] == ["warning"]
-    assert "template" in plan.actions[0].detail
+    assert "No Git repository exists" in plan.actions[0].detail
     assert _commands(plan=plan) == []
 
 
@@ -92,6 +107,40 @@ def test_env_remains_ignored_and_not_force_added(
     assert ".env" not in tracked_files
     assert ".env.example" in tracked_files
     assert "app.py" in tracked_files
+
+
+def test_preserved_git_commit_keeps_origin_and_ignored_env(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    if shutil.which("git") is None:
+        pytest.skip("git is required for setup wizard Git tests")
+
+    _configure_git_identity(monkeypatch=monkeypatch)
+    _git(repo_root=tmp_path, args=("init", "--initial-branch=main"))
+    _git(
+        repo_root=tmp_path,
+        args=("remote", "add", "origin", "https://github.com/acme/acme-api"),
+    )
+    _write(tmp_path / ".gitignore", ".env\n")
+    _write(tmp_path / ".env", "SECRET_KEY=local-secret\n")
+    _write(tmp_path / ".env.example", "SECRET_KEY=replace-me\n")
+    _write(tmp_path / "app.py", "print('hello')\n")
+    plan = build_git_plan(
+        repo_root=tmp_path,
+        answers=_answers(reinitialize_git_repository=False),
+    )
+
+    result = apply_git_plan(plan=plan)
+
+    assert result.reinitialized is False
+    assert result.initial_commit_created is True
+    assert _git(repo_root=tmp_path, args=("remote", "get-url", "origin")).stdout.strip() == (
+        "https://github.com/acme/acme-api"
+    )
+    tracked_files = _git(repo_root=tmp_path, args=("ls-files",)).stdout.splitlines()
+    assert ".env" not in tracked_files
+    assert ".env.example" in tracked_files
 
 
 def _commands(*, plan: GitPlan) -> list[tuple[str, ...]]:

@@ -124,7 +124,8 @@ def test_declined_git_reinitialization_prints_warning() -> None:
         result=GitSetupResult(reinitialized=False),
     )
 
-    assert "any existing remote may still point at the template" in output.getvalue()
+    assert "Git repository was preserved" in output.getvalue()
+    assert "verify `git remote -v` before pushing" in output.getvalue()
 
 
 def test_failed_initial_commit_prints_exact_next_step() -> None:

@@ -14,7 +14,7 @@ INITIAL_BRANCH_NAME = "main"
 
 @dataclass(frozen=True, kw_only=True)
 class GitAction:
-    kind: Literal["delete", "command", "warning"]
+    kind: Literal["delete", "command", "preserve", "warning"]
     target: str
     detail: str
     command: tuple[str, ...] | None = None
@@ -42,18 +42,27 @@ class GitSetupResult:
 def build_git_plan(*, repo_root: Path, answers: SetupAnswers) -> GitPlan:
     actions: list[GitAction] = []
     if not answers.reinitialize_git_repository:
+        has_git_repository = (repo_root / ".git").exists()
         actions.append(
             GitAction(
-                kind="warning",
-                target=".git/config",
-                detail="Existing Git remote may still point at the template",
+                kind="preserve" if has_git_repository else "warning",
+                target=".git",
+                detail=(
+                    "Keep existing Git history and origin"
+                    if has_git_repository
+                    else "No Git repository exists, so no initial commit can be created"
+                ),
             ),
         )
+        create_initial_commit = answers.create_initial_commit and has_git_repository
+        if create_initial_commit:
+            actions.extend(_initial_commit_actions())
+
         return GitPlan(
             repo_root=repo_root,
             reinitialize_git_repository=False,
             repo_url=answers.repo_url,
-            create_initial_commit=False,
+            create_initial_commit=create_initial_commit,
             actions=tuple(actions),
         )
 
@@ -86,22 +95,7 @@ def build_git_plan(*, repo_root: Path, answers: SetupAnswers) -> GitPlan:
         )
 
     if answers.create_initial_commit:
-        actions.extend(
-            (
-                GitAction(
-                    kind="command",
-                    target="git add --all",
-                    detail="Stage generated project files",
-                    command=("git", "add", "--all"),
-                ),
-                GitAction(
-                    kind="command",
-                    target='git commit -m "initial commit"',
-                    detail="Create the initial project commit",
-                    command=("git", "commit", "-m", INITIAL_COMMIT_MESSAGE),
-                ),
-            ),
-        )
+        actions.extend(_initial_commit_actions())
 
     return GitPlan(
         repo_root=repo_root,
@@ -114,7 +108,7 @@ def build_git_plan(*, repo_root: Path, answers: SetupAnswers) -> GitPlan:
 
 def apply_git_plan(*, plan: GitPlan) -> GitSetupResult:
     if not plan.reinitialize_git_repository:
-        return GitSetupResult(reinitialized=False)
+        return _apply_initial_commit_plan(plan=plan, reinitialized=False, origin_added=False)
 
     _git_executable()
     git_dir = plan.repo_root / ".git"
@@ -131,6 +125,39 @@ def apply_git_plan(*, plan: GitPlan) -> GitSetupResult:
     if not plan.create_initial_commit:
         return GitSetupResult(reinitialized=True, origin_added=origin_added)
 
+    return _apply_initial_commit_plan(
+        plan=plan,
+        reinitialized=True,
+        origin_added=origin_added,
+    )
+
+
+def _initial_commit_actions() -> tuple[GitAction, GitAction]:
+    return (
+        GitAction(
+            kind="command",
+            target="git add --all",
+            detail="Stage generated project files",
+            command=("git", "add", "--all"),
+        ),
+        GitAction(
+            kind="command",
+            target='git commit -m "initial commit"',
+            detail="Create the initial project commit",
+            command=("git", "commit", "-m", INITIAL_COMMIT_MESSAGE),
+        ),
+    )
+
+
+def _apply_initial_commit_plan(
+    *,
+    plan: GitPlan,
+    reinitialized: bool,
+    origin_added: bool,
+) -> GitSetupResult:
+    if not plan.create_initial_commit:
+        return GitSetupResult(reinitialized=reinitialized, origin_added=origin_added)
+
     _run_git_command(command=("git", "add", "--all"), plan=plan)
     git_path = _git_executable()
     commit_result = subprocess.run(  # noqa: S603
@@ -142,7 +169,7 @@ def apply_git_plan(*, plan: GitPlan) -> GitSetupResult:
     )
     if commit_result.returncode != 0:
         return GitSetupResult(
-            reinitialized=True,
+            reinitialized=reinitialized,
             origin_added=origin_added,
             initial_commit_failed=True,
             initial_commit_stdout=commit_result.stdout,
@@ -150,7 +177,7 @@ def apply_git_plan(*, plan: GitPlan) -> GitSetupResult:
         )
 
     return GitSetupResult(
-        reinitialized=True,
+        reinitialized=reinitialized,
         origin_added=origin_added,
         initial_commit_created=True,
         initial_commit_stdout=commit_result.stdout,

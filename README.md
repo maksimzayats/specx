@@ -1,4 +1,4 @@
-# Fast Django
+# fastdjango
 
 [![CI](https://github.com/maksimzayats/fastdjango/actions/workflows/lint_test.yaml/badge.svg?branch=main)](https://github.com/maksimzayats/fastdjango/actions/workflows/lint_test.yaml)
 [![Docs](https://img.shields.io/badge/docs-fastdjango.zayats.dev-blue)](https://fastdjango.zayats.dev)
@@ -11,16 +11,29 @@ first commit.
 
 ## Start
 
-Clone the template and let the setup wizard turn it into your project:
+Recommended: create your own repository from this template on GitHub, clone it,
+then run the wizard inside that checkout:
+
+```bash
+make setup
+```
+
+In this flow, keep the existing Git repository when prompted; the wizard will
+clean up the template files and can create the initial commit without changing
+your `origin`.
+
+If you clone the original template directly instead, use:
 
 ```bash
 git clone https://github.com/maksimzayats/fastdjango.git && cd fastdjango && make setup
 ```
 
+For direct clones, let the wizard reinitialize Git so the generated project does
+not keep the template history or `origin`.
+
 The wizard renames the checkout folder to the project slug, renames the project
 and Python package, writes env files, configures database, Redis, storage, docs,
-public origins, and observability, and can reset Git history for the generated
-project.
+public origins, observability, and Git setup for the flow you chose.
 
 ## Run Locally
 

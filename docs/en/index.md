@@ -17,14 +17,26 @@ quickly without losing a clear application structure:
 
 ## Start with setup
 
+Recommended: create your own repository from this template on GitHub, clone it,
+then run the wizard inside that checkout:
+
+```bash
+make setup
+```
+
+Keep the existing Git repository when prompted. The wizard will clean up the
+template files and can create the initial commit without changing your `origin`.
+
+If you clone the original template directly instead, use:
+
 ```bash
 git clone https://github.com/maksimzayats/fastdjango.git && cd fastdjango && make setup
 ```
 
 The wizard renames the checkout folder to the project slug, renames the project
 and Python package, writes `.env`, configures database, Redis, storage, docs,
-public origins, Logfire defaults, and optional Git reset choices, then prints
-the next commands for the choices you made.
+public origins, Logfire defaults, and Git setup for the flow you chose, then
+prints the next commands.
 
 ## Key features
 

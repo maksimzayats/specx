@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import re
+import shutil
+import subprocess
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -12,9 +14,16 @@ from management.setup_wizard.models import DatabaseMode, RedisMode, SetupAnswers
 
 PACKAGE_NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
 DISTRIBUTION_NAME_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._-]*[a-z0-9]$")
-TEMPLATE_PROJECT_NAME = "Fast Django"
+TEMPLATE_PROJECT_NAME = "fastdjango"
 TEMPLATE_PACKAGE_NAME = "fastdjango"
 TEMPLATE_DISTRIBUTION_NAME = "fastdjango"
+TEMPLATE_REPOSITORY_URLS = frozenset(
+    {
+        "git@github.com:maksimzayats/fastdjango",
+        "https://github.com/maksimzayats/fastdjango",
+        "ssh://git@github.com/maksimzayats/fastdjango",
+    },
+)
 MAX_PORT = 65535
 
 
@@ -82,7 +91,7 @@ def prompt_for_answers(*, repo_root: Path) -> SetupAnswers:
     keep_docs = _ask_confirm("Keep documentation?", default=True)
     docs_site_url = _ask_docs_site_url(keep_docs=keep_docs)
     repo_url = _ask_repo_url()
-    git_answers = _ask_git_answers()
+    git_answers = _ask_git_answers(repo_root=repo_root)
     storage_mode = _ask_storage_mode()
     storage_answers = _ask_storage_answers(storage_mode=storage_mode)
     database_mode = _ask_database_mode()
@@ -259,21 +268,46 @@ def _ask_repo_url() -> str | None:
     )
 
 
-def _ask_git_answers() -> GitPromptAnswers:
+def _ask_git_answers(*, repo_root: Path | None = None) -> GitPromptAnswers:
     reinitialize_git_repository = _ask_confirm(
-        "Reinitialize Git repository to remove template history and old origin?",
-        default=True,
+        "Reinitialize Git repository to remove cloned-template history and old origin?",
+        default=_default_reinitialize_git_repository(repo_root=repo_root),
     )
-    if not reinitialize_git_repository:
-        return GitPromptAnswers(
-            reinitialize_git_repository=False,
-            create_initial_commit=False,
-        )
 
     return GitPromptAnswers(
-        reinitialize_git_repository=True,
+        reinitialize_git_repository=reinitialize_git_repository,
         create_initial_commit=_ask_confirm("Create initial commit?", default=True),
     )
+
+
+def _default_reinitialize_git_repository(*, repo_root: Path | None) -> bool:
+    if repo_root is None:
+        return True
+
+    origin_url = _current_origin_url(repo_root=repo_root)
+    if origin_url is None:
+        return True
+
+    normalized_origin_url = origin_url.casefold().removesuffix(".git").rstrip("/")
+    return normalized_origin_url in TEMPLATE_REPOSITORY_URLS
+
+
+def _current_origin_url(*, repo_root: Path) -> str | None:
+    if not (repo_root / ".git").exists():
+        return None
+
+    git_path = shutil.which("git")
+    if git_path is None:
+        return None
+
+    result = subprocess.run(  # noqa: S603
+        [git_path, "config", "--get", "remote.origin.url"],
+        cwd=repo_root,
+        capture_output=True,
+        check=False,
+        text=True,
+    )
+    return result.stdout.strip() or None
 
 
 def _ask_public_origin_answers() -> PublicOriginPromptAnswers:

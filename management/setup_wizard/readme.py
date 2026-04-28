@@ -11,7 +11,7 @@ def build_project_readme(*, answers: SetupAnswers) -> str:  # noqa: PLR0912
     sections = [
         f"# {answers.project_name}",
         "",
-        f"Generated from [FastDjango]({FASTDJANGO_TEMPLATE_URL}) on {_generated_date()}.",
+        f"Generated from [fastdjango]({FASTDJANGO_TEMPLATE_URL}) on {_generated_date()}.",
         "",
     ]
 

@@ -1,3 +1,6 @@
+from collections.abc import Callable
+from pathlib import Path
+
 import pytest
 from management.setup_wizard import prompts
 from management.setup_wizard.models import DatabaseMode, RedisMode, StorageMode
@@ -7,6 +10,7 @@ from management.setup_wizard.prompts import (
     _ask_git_answers,
     _ask_redis_answers,
     _ask_storage_answers,
+    _default_reinitialize_git_repository,
     _suggest_package_name,
     _validate_distribution_name,
     _validate_optional_http_url,
@@ -158,26 +162,62 @@ def test_git_prompts_default_to_reinitialize_and_initial_commit(
     assert answers.reinitialize_git_repository is True
     assert answers.create_initial_commit is True
     assert calls == [
-        ("Reinitialize Git repository to remove template history and old origin?", True),
+        ("Reinitialize Git repository to remove cloned-template history and old origin?", True),
         ("Create initial commit?", True),
     ]
 
 
-def test_git_prompts_skip_commit_question_when_reinitialize_is_declined(
+def test_git_prompts_can_preserve_git_and_create_initial_commit(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    values = iter((False, True))
     calls: list[tuple[str, bool]] = []
 
     def fake_ask_confirm(message: str, *, default: bool) -> bool:
         calls.append((message, default))
-        return False
+        return next(values)
 
     monkeypatch.setattr(prompts, "_ask_confirm", fake_ask_confirm)
 
     answers = _ask_git_answers()
 
     assert answers.reinitialize_git_repository is False
-    assert answers.create_initial_commit is False
+    assert answers.create_initial_commit is True
     assert calls == [
-        ("Reinitialize Git repository to remove template history and old origin?", True),
+        ("Reinitialize Git repository to remove cloned-template history and old origin?", True),
+        ("Create initial commit?", True),
     ]
+
+
+def test_git_reinitialize_default_is_false_for_user_owned_origin(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        prompts,
+        "_current_origin_url",
+        _fake_origin_url("https://github.com/acme/acme-api"),
+    )
+
+    assert _default_reinitialize_git_repository(repo_root=tmp_path) is False
+
+
+def test_git_reinitialize_default_is_true_for_template_origin(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        prompts,
+        "_current_origin_url",
+        _fake_origin_url("git@github.com:MaksimZayats/fastdjango.git"),
+    )
+
+    assert _default_reinitialize_git_repository(repo_root=tmp_path) is True
+
+
+def _fake_origin_url(value: str) -> Callable[..., str]:
+    def fake_current_origin_url(*, repo_root: Path) -> str:
+        assert repo_root.name
+        return value
+
+    return fake_current_origin_url

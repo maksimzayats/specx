@@ -208,7 +208,7 @@ def test_ports_origins_logfire_and_repo_metadata_are_written(tmp_path: Path) -> 
     assert "repo_name: acme/acme-api" in mkdocs
     assert "Project repository: [https://github.com/acme/acme-api]" in readme
     assert (
-        f"Generated from [FastDjango](https://github.com/maksimzayats/fastdjango) "
+        f"Generated from [fastdjango](https://github.com/maksimzayats/fastdjango) "
         f"on {datetime.now(tz=UTC).date().isoformat()}."
     ) in readme
     assert (

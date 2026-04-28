@@ -46,7 +46,7 @@ def main() -> int:
         Panel.fit(
             f"Current package: [bold]{current_package_name}[/bold]\n"
             "This wizard will rewrite repository files for your new project.",
-            title="FastDjango Setup",
+            title="fastdjango setup",
         ),
     )
 
@@ -96,7 +96,7 @@ def main() -> int:
 
 
 def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run the FastDjango one-time setup wizard.")
+    parser = argparse.ArgumentParser(description="Run the fastdjango one-time setup wizard.")
     parser.add_argument(
         "--dry-run",
         action="store_true",
@@ -196,11 +196,15 @@ def _render_git_result(
 ) -> None:
     if not answers.reinitialize_git_repository:
         console.print(
-            "[yellow]Git was not reinitialized; any existing remote may still point at the template.[/yellow]",
+            "[yellow]Git repository was preserved; existing origin was not changed.[/yellow]",
         )
-        return
+        console.print(
+            "[yellow]If this checkout was cloned from the original template, verify `git remote -v` before pushing.[/yellow]",
+        )
+        if not result.initial_commit_failed:
+            return
 
-    if not result.initial_commit_failed:
+    elif not result.initial_commit_failed:
         return
 
     if _is_missing_git_identity(result=result):
