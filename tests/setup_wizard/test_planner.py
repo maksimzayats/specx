@@ -279,6 +279,40 @@ def test_self_delete_removes_wizard_files_and_setup_dependency_group(tmp_path: P
     assert "setup:" not in (tmp_path / "Makefile").read_text()
 
 
+def test_generated_setup_files_keep_tidy_blank_lines(tmp_path: Path) -> None:
+    setup_cases = {
+        "remove_docs": _answers(keep_docs=False, delete_wizard=False),
+        "remove_wizard": _answers(delete_wizard=True),
+        "remove_local_services_docs_and_wizard": _answers(
+            database_mode=DatabaseMode.SQLITE,
+            redis_mode=RedisMode.REMOTE_REDIS,
+            redis_url="redis://default:secret@redis.example.com:6379/0",
+            storage_mode=StorageMode.LOCAL,
+            keep_docs=False,
+            delete_wizard=True,
+        ),
+    }
+
+    for case_name, answers in setup_cases.items():
+        repo_root = tmp_path / case_name
+        _create_mini_repo(repo_root=repo_root)
+
+        build_setup_plan(repo_root=repo_root, answers=answers).apply(run_commands=False)
+
+        for relative_path in (
+            "Makefile",
+            "docker/docker-compose.yaml",
+            "docker/docker-compose.local.yaml",
+            "docker/docker-compose.test.yaml",
+        ):
+            content = (repo_root / relative_path).read_text(encoding="utf-8")
+            assert content.endswith("\n"), f"{case_name}: {relative_path} lacks final newline"
+            assert not content.endswith("\n\n"), (
+                f"{case_name}: {relative_path} has trailing blank line"
+            )
+            assert "\n\n\n" not in content, f"{case_name}: {relative_path} has repeated blank lines"
+
+
 def _answers(
     *,
     project_name: str = "Example API",
