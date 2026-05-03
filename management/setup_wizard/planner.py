@@ -279,6 +279,7 @@ def _rewrite_makefile(
         else _remove_setup_target(content)
     )
     content = _remove_docs_targets(content) if not answers.keep_docs else content
+    content = _normalize_makefile_spacing(content)
     plan.add_write(path, content=content, detail="Update Makefile")
 
 
@@ -394,6 +395,10 @@ def _remove_docs_targets(content: str) -> str:
     )
     content = re.sub(pattern=r"\ndocs-build:\n\t.*\n", repl="\n", string=content)
     return content.replace(" docs docs-build", "")
+
+
+def _normalize_makefile_spacing(content: str) -> str:
+    return re.sub(pattern=r"\n{3,}", repl="\n\n", string=content).rstrip() + "\n"
 
 
 def _is_python_package(path: Path) -> bool:
