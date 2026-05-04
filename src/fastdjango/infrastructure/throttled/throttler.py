@@ -4,9 +4,8 @@ from typing import Any, cast
 from diwire import Injected
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from throttled import BaseStore, Quota, RateLimiterType, RedisStore, Throttled
+from throttled import Quota, RateLimiterType, RedisStore, Throttled
 from throttled.asyncio import (
-    BaseStore as AsyncBaseStore,
     Quota as AsyncQuota,
     RateLimiterType as AsyncRateLimiterType,
     RedisStore as AsyncRedisStore,
@@ -26,7 +25,7 @@ class ThrottledRedisSettings(BaseSettings):
 class ThrottlerStoreFactory(BaseFactory):
     _redis_settings: Injected[ThrottledRedisSettings]
 
-    def __call__(self) -> BaseStore:
+    def __call__(self) -> RedisStore:
         return RedisStore(server=self._redis_settings.url.get_secret_value())
 
 
@@ -53,7 +52,7 @@ class ThrottlerFactory(BaseFactory):
 class AsyncThrottlerStoreFactory(BaseFactory):
     _redis_settings: Injected[ThrottledRedisSettings]
 
-    def __call__(self) -> AsyncBaseStore:
+    def __call__(self) -> AsyncRedisStore:
         return AsyncRedisStore(server=self._redis_settings.url.get_secret_value())
 
 
