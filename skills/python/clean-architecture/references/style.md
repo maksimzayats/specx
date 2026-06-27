@@ -8,6 +8,7 @@ signatures, imports, naming, or small snippets.
 - [Class Shape](#class-shape)
 - [Naming](#naming)
 - [Method Shape](#method-shape)
+- [Control Flow](#control-flow)
 - [Type Aliases](#type-aliases)
 - [Imports](#imports)
 - [`__init__.py` Files](#__init__py-files)
@@ -117,6 +118,17 @@ class PasswordHasher:
 
 Keep application method arguments keyword-only. This makes call sites clearer
 and makes DTO migration easier.
+
+## Control Flow
+
+Keep branching shallow. Prefer early returns, early raises, guard clauses, and
+small extracted methods over deeply nested `if`/`else`, `try`, or loop blocks.
+Make the happy path easy to scan after invalid, missing, or exceptional cases
+have exited.
+
+Avoid hiding multiple application decisions inside one nested method. If a block
+needs several levels of indentation, first look for a clearer boundary: a guard
+clause, a focused service method, or a small private helper.
 
 ## Type Aliases
 

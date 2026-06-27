@@ -18,6 +18,9 @@ formatting, type-checking, dependency commands, or local check workflows.
 - Preserve the repo's existing toolchain when it already works.
 - Default to Python 3.14 for new repos unless the user asks for another version.
 - Prefer `uv` for dependency and command execution when starting from scratch.
+- Add dependencies with `uv add` or `uv add --dev` so `pyproject.toml` records
+  the dependency requirement and version constraint. Do not hand-edit dependency
+  lists unless preserving an existing repo convention requires it.
 - Prefer `ruff` for linting and formatting unless the repo has a strong existing
   formatter/linter convention.
 - Use `mypy` when type checking is expected; adopt strictness gradually in
