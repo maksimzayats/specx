@@ -2,7 +2,7 @@ import hashlib
 import secrets
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import ClassVar, NamedTuple
+from typing import ClassVar, NamedTuple, NoReturn
 
 from diwire import Injected
 from pydantic_settings import BaseSettings
@@ -90,22 +90,21 @@ class RefreshSessionService(BaseService):
         The operation result.
         """
         expected_refresh_token_hash = self._hash_refresh_token(refresh_token=refresh_token)
-        session = await self._get_active_refresh_session(
-            repository=uow.refresh_session_repository,
-            refresh_token_hash=expected_refresh_token_hash,
-        )
         new_refresh_token = self._issue_refresh_token()
+        used_at = datetime.now(tz=UTC)
         rotated_session = await uow.refresh_session_repository.replace_token_hash(
             data=ReplaceRefreshSessionTokenDTO(
-                session_id=session.id,
                 expected_refresh_token_hash=expected_refresh_token_hash,
                 refresh_token_hash=self._hash_refresh_token(refresh_token=new_refresh_token),
-                last_used_at=datetime.now(tz=UTC),
-                rotation_counter=session.rotation_counter + 1,
+                last_used_at=used_at,
+                expires_after=used_at,
             ),
         )
         if rotated_session is None:
-            raise self.INVALID_REFRESH_TOKEN_ERROR
+            await self._raise_refresh_rotation_error(
+                repository=uow.refresh_session_repository,
+                refresh_token_hash=expected_refresh_token_hash,
+            )
 
         return RefreshSessionResult(refresh_token=new_refresh_token, session=rotated_session)
 
@@ -134,6 +133,18 @@ class RefreshSessionService(BaseService):
 
     def _hash_refresh_token(self, *, refresh_token: str) -> str:
         return hashlib.sha256(refresh_token.encode()).hexdigest()
+
+    async def _raise_refresh_rotation_error(
+        self,
+        *,
+        repository: RefreshSessionRepository,
+        refresh_token_hash: str,
+    ) -> NoReturn:
+        session = await repository.get_by_token_hash(refresh_token_hash=refresh_token_hash)
+        if session is not None and not session.is_active:
+            raise self.EXPIRED_REFRESH_TOKEN_ERROR
+
+        raise self.INVALID_REFRESH_TOKEN_ERROR
 
     async def _get_active_refresh_session(
         self,

@@ -1,7 +1,8 @@
 from dataclasses import dataclass, field
+from http import HTTPStatus
 
 from diwire import Injected
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPBearer
 
 from fastapi_template.core.authentication.delivery.fastapi.auth.authenticated_request import (
@@ -11,6 +12,9 @@ from fastapi_template.core.authentication.delivery.fastapi.auth.jwt_auth_factory
     JWTAuthFactory,
 )
 from fastapi_template.core.user.delivery.fastapi.schemas.user import UserSchema
+from fastapi_template.core.user.use_cases.get_active_user_by_id import (
+    GetActiveUserByIdUseCase,
+)
 from fastapi_template.foundation.delivery.controller import BaseAsyncController
 
 
@@ -19,6 +23,7 @@ class CurrentUserController(BaseAsyncController):
     """Define CurrentUserController."""
 
     _jwt_auth_factory: Injected[JWTAuthFactory]
+    _get_active_user_by_id_use_case: Injected[GetActiveUserByIdUseCase]
 
     _jwt_auth: HTTPBearer = field(init=False)
 
@@ -43,4 +48,13 @@ class CurrentUserController(BaseAsyncController):
         Returns:
         The operation result.
         """
-        return UserSchema.model_validate(request.state.user, from_attributes=True)
+        user = await self._get_active_user_by_id_use_case.execute(
+            user_id=request.state.user_id,
+        )
+        if user is None:
+            raise HTTPException(
+                status_code=HTTPStatus.UNAUTHORIZED,
+                detail="User not found",
+            )
+
+        return UserSchema.model_validate(user, from_attributes=True)

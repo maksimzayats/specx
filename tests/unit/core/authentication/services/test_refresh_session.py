@@ -36,10 +36,9 @@ class UnexpectedRepositoryAccessError(Exception):
 class FakeRefreshSessionRepository(RefreshSessionRepository):
     session: RefreshSession | None
     replace_returns_none: bool = False
-    replaced_session_id: uuid.UUID | None = None
     replaced_expected_hash: str | None = None
     replaced_hash: str | None = None
-    replaced_rotation_counter: int | None = None
+    replaced_expires_after: datetime | None = None
     revoked_session_id: uuid.UUID | None = None
 
     async def create(self, *, data: CreateRefreshSessionDTO) -> RefreshSession:
@@ -64,21 +63,22 @@ class FakeRefreshSessionRepository(RefreshSessionRepository):
         *,
         data: ReplaceRefreshSessionTokenDTO,
     ) -> RefreshSession | None:
-        self.replaced_session_id = data.session_id
         self.replaced_expected_hash = data.expected_refresh_token_hash
         self.replaced_hash = data.refresh_token_hash
-        self.replaced_rotation_counter = data.rotation_counter
+        self.replaced_expires_after = data.expires_after
         if (
             self.replace_returns_none
             or self.session is None
             or self.session.refresh_token_hash != data.expected_refresh_token_hash
+            or not self.session.is_active
         ):
             return None
 
         self.session = _build_session(
-            session_id=data.session_id,
+            session_id=self.session.id,
+            user=self.session.user,
             refresh_token_hash=data.refresh_token_hash,
-            rotation_counter=data.rotation_counter,
+            rotation_counter=self.session.rotation_counter + 1,
             last_used_at=data.last_used_at,
         )
         return self.session
@@ -141,11 +141,10 @@ async def test_rotate_refresh_token_replaces_stored_hash() -> None:
         refresh_token=_OLD_REFRESH_TOKEN,
     )
 
-    assert repository.replaced_session_id == session.id
     assert repository.replaced_expected_hash == session.refresh_token_hash
     assert repository.replaced_hash is not None
     assert repository.replaced_hash != session.refresh_token_hash
-    assert repository.replaced_rotation_counter == session.rotation_counter + 1
+    assert repository.replaced_expires_after is not None
     assert result.session.rotation_counter == 1
 
 
@@ -230,9 +229,53 @@ async def test_revoke_refresh_token_rejects_session_for_another_user() -> None:
 
 
 @pytest.mark.anyio
+async def test_revoke_refresh_token_rejects_missing_session() -> None:
+    repository = FakeRefreshSessionRepository(session=None)
+    uow = FakeUnitOfWork(_refresh_session_repository=repository)
+    service = _build_service()
+
+    with pytest.raises(RefreshSessionService.INVALID_REFRESH_TOKEN_ERROR):
+        await service.revoke_refresh_token(
+            uow=uow,
+            refresh_token=_OLD_REFRESH_TOKEN,
+            user=_build_user(),
+        )
+
+
+@pytest.mark.anyio
+async def test_revoke_refresh_token_rejects_expired_session() -> None:
+    session = _build_session(expires_at=datetime.now(tz=UTC) - timedelta(seconds=1))
+    repository = FakeRefreshSessionRepository(session=session)
+    uow = FakeUnitOfWork(_refresh_session_repository=repository)
+    service = _build_service()
+
+    with pytest.raises(RefreshSessionService.EXPIRED_REFRESH_TOKEN_ERROR):
+        await service.revoke_refresh_token(
+            uow=uow,
+            refresh_token=_OLD_REFRESH_TOKEN,
+            user=session.user,
+        )
+
+
+@pytest.mark.anyio
 async def test_refresh_token_rejects_expired_sessions() -> None:
     repository = FakeRefreshSessionRepository(
         session=_build_session(expires_at=datetime.now(tz=UTC) - timedelta(seconds=1)),
+    )
+    uow = FakeUnitOfWork(_refresh_session_repository=repository)
+    service = _build_service()
+
+    with pytest.raises(RefreshSessionService.EXPIRED_REFRESH_TOKEN_ERROR):
+        await service.rotate_refresh_token(
+            uow=uow,
+            refresh_token=_OLD_REFRESH_TOKEN,
+        )
+
+
+@pytest.mark.anyio
+async def test_refresh_token_rejects_revoked_sessions() -> None:
+    repository = FakeRefreshSessionRepository(
+        session=_build_session(revoked_at=datetime.now(tz=UTC)),
     )
     uow = FakeUnitOfWork(_refresh_session_repository=repository)
     service = _build_service()

@@ -1,24 +1,19 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from types import TracebackType
-from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from fastapi_template.core.authentication.dtos.refresh_token import RefreshTokenDTO
 from fastapi_template.core.authentication.repositories.refresh_session import (
     RefreshSessionRepository,
 )
-from fastapi_template.core.authentication.services.refresh_session import (
-    RefreshSessionService,
-)
-from fastapi_template.core.authentication.use_cases.revoke_token import RevokeTokenUseCase
 from fastapi_template.core.health.repositories.health import HealthRepository
 from fastapi_template.core.unit_of_work import UnitOfWork
 from fastapi_template.core.user.dtos.create_user import CreateUserDTO
 from fastapi_template.core.user.entities.user import User
 from fastapi_template.core.user.repositories.user import UserRepository
+from fastapi_template.core.user.services.permission import UserPermissionService
+from fastapi_template.core.user.use_cases.staff_user_lookup import StaffUserLookupUseCase
 
-_REFRESH_TOKEN = "refresh-token"  # noqa: S105
 _PASSWORD_HASH = "hash"  # noqa: S105
 
 
@@ -28,16 +23,17 @@ class UnexpectedRepositoryAccessError(Exception):
 
 @dataclass
 class FakeUserRepository(UserRepository):
-    user: User | None
+    users: list[User] = field(default_factory=list)
 
     async def get_by_id(self, *, user_id: int) -> User | None:
-        raise UnexpectedRepositoryAccessError
+        return next((user for user in self.users if user.id == user_id), None)
 
     async def get_active_by_id(self, *, user_id: int) -> User | None:
-        if self.user is None or self.user.id != user_id:
+        user = await self.get_by_id(user_id=user_id)
+        if user is None or not user.is_active:
             return None
 
-        return self.user
+        return user
 
     async def get_by_username(self, *, username: str) -> User | None:
         raise UnexpectedRepositoryAccessError
@@ -93,56 +89,64 @@ class FakeUnitOfWork(UnitOfWork):
 
 
 @pytest.mark.anyio
-async def test_revoke_token_uses_one_unit_of_work_for_revoke() -> None:
-    user = _build_user()
-    refresh_session_service = MagicMock(spec=RefreshSessionService)
-    refresh_session_service.revoke_refresh_token = AsyncMock()
-    uow = FakeUnitOfWork(_user_repository=FakeUserRepository(user=user))
-    use_case = RevokeTokenUseCase(
-        _refresh_session_service=refresh_session_service,
+async def test_staff_user_lookup_uses_one_unit_of_work() -> None:
+    actor = _build_user(user_id=1, is_staff=True)
+    target = _build_user(user_id=2)
+    repository = FakeUserRepository(users=[actor, target])
+    uow = FakeUnitOfWork(_user_repository=repository)
+    use_case = StaffUserLookupUseCase(
+        _user_permission_service=UserPermissionService(),
         _uow=uow,
     )
 
-    await use_case.execute(data=RefreshTokenDTO(refresh_token=_REFRESH_TOKEN), user_id=user.id)
+    result = await use_case.execute(user_id=target.id, actor_user_id=actor.id)
 
+    assert result == target
     assert uow.entered_count == 1
     assert uow.exited_count == 1
     assert uow.rolled_back is False
-    refresh_session_service.revoke_refresh_token.assert_awaited_once_with(
-        uow=uow,
-        refresh_token=_REFRESH_TOKEN,
-        user=user,
-    )
 
 
 @pytest.mark.anyio
-async def test_revoke_token_rejects_missing_authenticated_user() -> None:
-    refresh_session_service = MagicMock(spec=RefreshSessionService)
-    refresh_session_service.revoke_refresh_token = AsyncMock()
-    uow = FakeUnitOfWork(_user_repository=FakeUserRepository(user=None))
-    use_case = RevokeTokenUseCase(
-        _refresh_session_service=refresh_session_service,
+async def test_staff_user_lookup_rejects_missing_actor() -> None:
+    target = _build_user(user_id=2)
+    repository = FakeUserRepository(users=[target])
+    uow = FakeUnitOfWork(_user_repository=repository)
+    use_case = StaffUserLookupUseCase(
+        _user_permission_service=UserPermissionService(),
         _uow=uow,
     )
 
-    with pytest.raises(RevokeTokenUseCase.AUTHENTICATED_USER_NOT_FOUND_ERROR):
-        await use_case.execute(
-            data=RefreshTokenDTO(refresh_token=_REFRESH_TOKEN),
-            user_id=1,
-        )
+    with pytest.raises(StaffUserLookupUseCase.AUTHENTICATED_USER_NOT_FOUND_ERROR):
+        await use_case.execute(user_id=target.id, actor_user_id=1)
 
-    assert uow.entered_count == 1
-    assert uow.exited_count == 1
     assert uow.rolled_back is True
-    refresh_session_service.revoke_refresh_token.assert_not_awaited()
 
 
-def _build_user() -> User:
+@pytest.mark.anyio
+async def test_staff_user_lookup_rejects_non_staff_actor() -> None:
+    actor = _build_user(user_id=1, is_staff=False)
+    target = _build_user(user_id=2)
+    repository = FakeUserRepository(users=[actor, target])
+    uow = FakeUnitOfWork(_user_repository=repository)
+    use_case = StaffUserLookupUseCase(
+        _user_permission_service=UserPermissionService(),
+        _uow=uow,
+    )
+
+    with pytest.raises(StaffUserLookupUseCase.PERMISSION_DENIED_ERROR):
+        await use_case.execute(user_id=target.id, actor_user_id=actor.id)
+
+    assert uow.rolled_back is True
+
+
+def _build_user(*, user_id: int, is_staff: bool = False) -> User:
     return User(
-        id=1,
-        username="test_user",
-        email="test@example.com",
+        id=user_id,
+        username=f"test_user_{user_id}",
+        email=f"test-{user_id}@example.com",
         first_name="Test",
         last_name="User",
         password_hash=_PASSWORD_HASH,
+        is_staff=is_staff,
     )

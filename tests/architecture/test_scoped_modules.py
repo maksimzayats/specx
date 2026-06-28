@@ -5,6 +5,7 @@ from tests.architecture._source import SourceModule, iter_source_modules
 AGGREGATE_SOURCE_FILENAMES = {
     "auth.py",
     "configurators.py",
+    "constants.py",
     "controllers.py",
     "dtos.py",
     "exceptions.py",

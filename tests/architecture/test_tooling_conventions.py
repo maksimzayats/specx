@@ -65,10 +65,14 @@ def test_focused_repository_quality_hooks_are_enabled() -> None:
 def test_ruff_config_keeps_broad_rule_selection_and_safe_preview() -> None:
     ruff_config = _read_toml(REPO_ROOT / "ruff.toml")
     lint_config = cast(dict[str, Any], ruff_config["lint"])
+    ruff_lint_config = cast(dict[str, Any], lint_config["ruff"])
+    tidy_imports_config = cast(dict[str, Any], lint_config["flake8-tidy-imports"])
 
     assert lint_config["select"] == ["ALL"]
     assert lint_config["preview"] is True
     assert lint_config["explicit-preview-rules"] is True
+    assert ruff_lint_config["strictly-empty-init-modules"] is True
+    assert tidy_imports_config["ban-relative-imports"] == "all"
 
 
 def test_wemake_styleguide_config_is_strict_but_scoped() -> None:

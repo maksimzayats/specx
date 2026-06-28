@@ -38,10 +38,10 @@ class RefreshSessionRepository(ABC):
         *,
         data: ReplaceRefreshSessionTokenDTO,
     ) -> RefreshSession | None:
-        """Replace the refresh token hash for a session.
+        """Replace the refresh token hash for an active session.
 
         Returns:
-            The updated refresh session, if one exists.
+            The updated refresh session, if an active matching session exists.
         """
         raise NotImplementedError
 

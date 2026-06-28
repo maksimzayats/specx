@@ -5,7 +5,8 @@ src/fastapi_template/
   core/
     unit_of_work.py
     user/
-      constants.py
+      constraints/
+        create_user.py
       dtos/
         create_user.py
       entities/
@@ -22,7 +23,7 @@ src/fastapi_template/
       use_cases/
         create_user.py
         get_active_user_by_id.py
-        get_user_by_id.py
+        staff_user_lookup.py
       infrastructure/sqlalchemy/
         models/user.py
         mappers/user.py
@@ -55,7 +56,8 @@ src/fastapi_template/
         repositories/health.py
       delivery/fastapi/
         schemas/health.py
-        controllers/health.py
+        controllers/health_check.py
+        controllers/health_check_websocket.py
   foundation/        # Small base classes and shared primitives
   infrastructure/    # Shared SQLAlchemy wiring, logging, telemetry, throttling
     sqlalchemy/

@@ -5,11 +5,14 @@ from diwire import Injected
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPBearer
 
+from fastapi_template.core.authentication.delivery.fastapi.auth.authenticated_request import (
+    AuthenticatedRequest,
+)
 from fastapi_template.core.authentication.delivery.fastapi.auth.jwt_auth_factory import (
     JWTAuthFactory,
 )
 from fastapi_template.core.user.delivery.fastapi.schemas.user import UserSchema
-from fastapi_template.core.user.use_cases.get_user_by_id import GetUserByIdUseCase
+from fastapi_template.core.user.use_cases.staff_user_lookup import StaffUserLookupUseCase
 from fastapi_template.foundation.delivery.controller import BaseAsyncController
 
 
@@ -18,13 +21,13 @@ class StaffUserLookupController(BaseAsyncController):
     """Define StaffUserLookupController."""
 
     _jwt_auth_factory: Injected[JWTAuthFactory]
-    _get_user_by_id_use_case: Injected[GetUserByIdUseCase]
+    _staff_user_lookup_use_case: Injected[StaffUserLookupUseCase]
 
     _staff_jwt_auth: HTTPBearer = field(init=False)
 
     def __post_init__(self) -> None:
         """Run post init."""
-        self._staff_jwt_auth = self._jwt_auth_factory(require_staff=True)
+        self._staff_jwt_auth = self._jwt_auth_factory()
         super().__post_init__()
 
     def register(self, registry: APIRouter) -> None:
@@ -39,6 +42,7 @@ class StaffUserLookupController(BaseAsyncController):
 
     async def get_user_by_id(
         self,
+        request: AuthenticatedRequest,
         user_id: int,
     ) -> UserSchema:
         """Run get user by id.
@@ -46,7 +50,10 @@ class StaffUserLookupController(BaseAsyncController):
         Returns:
         The operation result.
         """
-        user = await self._get_user_by_id_use_case.execute(user_id=user_id)
+        user = await self._staff_user_lookup_use_case.execute(
+            user_id=user_id,
+            actor_user_id=request.state.user_id,
+        )
         if user is None:
             raise HTTPException(
                 status_code=HTTPStatus.NOT_FOUND,
@@ -54,3 +61,23 @@ class StaffUserLookupController(BaseAsyncController):
             )
 
         return UserSchema.model_validate(user, from_attributes=True)
+
+    async def handle_exception(self, exception: Exception) -> object:
+        """Run handle exception.
+
+        Returns:
+        The operation result.
+        """
+        if isinstance(exception, StaffUserLookupUseCase.AUTHENTICATED_USER_NOT_FOUND_ERROR):
+            raise HTTPException(
+                status_code=HTTPStatus.UNAUTHORIZED,
+                detail="User not found",
+            ) from exception
+
+        if isinstance(exception, StaffUserLookupUseCase.PERMISSION_DENIED_ERROR):
+            raise HTTPException(
+                status_code=HTTPStatus.FORBIDDEN,
+                detail="Permission denied",
+            ) from exception
+
+        return await super().handle_exception(exception)

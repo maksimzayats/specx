@@ -7,10 +7,6 @@ from starlette.types import Scope
 
 from fastapi_template.core.authentication.delivery.fastapi.auth.jwt_auth import JWTAuth
 from fastapi_template.core.authentication.services.jwt import JWTService
-from fastapi_template.core.user.entities.user import User
-from fastapi_template.core.user.use_cases.get_active_user_by_id import (
-    GetActiveUserByIdUseCase,
-)
 
 
 class FakeJWTService:
@@ -33,17 +29,9 @@ class FakeJWTService:
         return self._payload
 
 
-class FakeGetActiveUserByIdUseCase:
-    def __init__(self, *, user: User | None) -> None:
-        self._user = user
-
-    async def execute(self, *, user_id: int) -> User | None:
-        return self._user
-
-
 @pytest.mark.anyio
 async def test_jwt_auth_returns_none_when_credentials_are_optional_and_missing() -> None:
-    auth = _build_auth(payload={"sub": "1"}, user=_build_user())
+    auth = _build_auth(payload={"sub": "1"})
     auth.auto_error = False
 
     assert await auth(_request()) is None
@@ -51,7 +39,7 @@ async def test_jwt_auth_returns_none_when_credentials_are_optional_and_missing()
 
 @pytest.mark.anyio
 async def test_jwt_auth_rejects_payload_without_subject() -> None:
-    auth = _build_auth(payload={}, user=_build_user())
+    auth = _build_auth(payload={})
 
     with pytest.raises(HTTPException) as exc_info:
         await auth(_request(token=_bearer_token()))
@@ -62,7 +50,7 @@ async def test_jwt_auth_rejects_payload_without_subject() -> None:
 
 @pytest.mark.anyio
 async def test_jwt_auth_rejects_payload_with_invalid_subject() -> None:
-    auth = _build_auth(payload={"sub": "not-an-int"}, user=_build_user())
+    auth = _build_auth(payload={"sub": "not-an-int"})
 
     with pytest.raises(HTTPException) as exc_info:
         await auth(_request(token=_bearer_token()))
@@ -72,21 +60,19 @@ async def test_jwt_auth_rejects_payload_with_invalid_subject() -> None:
 
 
 @pytest.mark.anyio
-async def test_jwt_auth_rejects_missing_active_user() -> None:
-    auth = _build_auth(payload={"sub": "1"}, user=None)
+async def test_jwt_auth_records_authenticated_user_id() -> None:
+    auth = _build_auth(payload={"sub": "42"})
+    request = _request(token=_bearer_token())
 
-    with pytest.raises(HTTPException) as exc_info:
-        await auth(_request(token=_bearer_token()))
+    await auth(request)
 
-    assert exc_info.value.status_code == 401
-    assert exc_info.value.detail == "User not found"
+    assert request.state.user_id == 42
 
 
 @pytest.mark.anyio
 async def test_jwt_auth_maps_expired_token_error() -> None:
     auth = _build_auth(
         payload={},
-        user=_build_user(),
         error=JWTService.EXPIRED_SIGNATURE_ERROR(),
     )
 
@@ -101,7 +87,6 @@ async def test_jwt_auth_maps_expired_token_error() -> None:
 async def test_jwt_auth_maps_invalid_token_error() -> None:
     auth = _build_auth(
         payload={},
-        user=_build_user(),
         error=JWTService.INVALID_TOKEN_ERROR(),
     )
 
@@ -115,16 +100,9 @@ async def test_jwt_auth_maps_invalid_token_error() -> None:
 def _build_auth(
     *,
     payload: dict[str, Any],
-    user: User | None,
     error: Exception | None = None,
 ) -> JWTAuth:
-    return JWTAuth(
-        jwt_service=cast(JWTService, FakeJWTService(payload=payload, error=error)),
-        get_active_user_by_id_use_case=cast(
-            GetActiveUserByIdUseCase,
-            FakeGetActiveUserByIdUseCase(user=user),
-        ),
-    )
+    return JWTAuth(jwt_service=cast(JWTService, FakeJWTService(payload=payload, error=error)))
 
 
 def _request(*, token: str | None = None) -> Request:
@@ -146,20 +124,5 @@ def _request(*, token: str | None = None) -> Request:
     return Request(scope)
 
 
-def _build_user() -> User:
-    return User(
-        id=1,
-        username="test_user",
-        email="test@example.com",
-        first_name="Test",
-        last_name="User",
-        password_hash=_password_hash(),
-    )
-
-
 def _bearer_token() -> str:
     return "signed-jwt-value"
-
-
-def _password_hash() -> str:
-    return "argon2-hash-value"

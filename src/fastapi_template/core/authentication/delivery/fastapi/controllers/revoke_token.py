@@ -64,7 +64,7 @@ class RevokeTokenController(BaseAsyncController):
         """Run revoke token."""
         await self._revoke_token_use_case.execute(
             data=RefreshTokenDTO(refresh_token=body.refresh_token),
-            user=request.state.user,
+            user_id=request.state.user_id,
         )
 
     async def handle_exception(self, exception: Exception) -> Any:
@@ -89,6 +89,12 @@ class RevokeTokenController(BaseAsyncController):
             raise HTTPException(
                 status_code=HTTPStatus.UNAUTHORIZED,
                 detail="Refresh token error",
+            ) from exception
+
+        if isinstance(exception, RevokeTokenUseCase.AUTHENTICATED_USER_NOT_FOUND_ERROR):
+            raise HTTPException(
+                status_code=HTTPStatus.UNAUTHORIZED,
+                detail="User not found",
             ) from exception
 
         return await super().handle_exception(exception)

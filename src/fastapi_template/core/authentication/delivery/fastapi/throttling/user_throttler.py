@@ -13,7 +13,7 @@ class UserThrottler(BaseThrottler):
 
     def _build_key(self, request: Any) -> str:
         request = cast(AuthenticatedRequest, request)
-        user_id = request.state.user.id
+        user_id = request.state.user_id
         path = request.url.path
         method = request.method
 

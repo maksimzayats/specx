@@ -25,17 +25,17 @@ from fastapi_template.core.authentication.use_cases.revoke_token import RevokeTo
 from fastapi_template.core.shared.delivery.fastapi.throttling.ip_throttler_factory import (
     IPThrottlerFactory,
 )
-from fastapi_template.core.user.entities.user import User
 
 _REFRESH_TOKEN = "refresh-token"  # noqa: S105
-_PASSWORD_HASH = "hash"  # noqa: S105
 
 
 class RecordingRevokeTokenUseCase:
     data: RefreshTokenDTO | None = None
+    user_id: int | None = None
 
-    async def execute(self, *, data: RefreshTokenDTO, user: User) -> None:
+    async def execute(self, *, data: RefreshTokenDTO, user_id: int) -> None:
         self.data = data
+        self.user_id = user_id
 
 
 @pytest.mark.anyio
@@ -46,11 +46,12 @@ async def test_revoke_token_controller_maps_revoke_schema_to_dto() -> None:
     )
 
     await controller.revoke_token(
-        request=cast(AuthenticatedRequest, SimpleNamespace(state=SimpleNamespace(user=_user()))),
+        request=cast(AuthenticatedRequest, SimpleNamespace(state=SimpleNamespace(user_id=1))),
         body=RefreshTokenRequestSchema(refresh_token=_REFRESH_TOKEN),
     )
 
     assert revoke_token_use_case.data == RefreshTokenDTO(refresh_token=_REFRESH_TOKEN)
+    assert revoke_token_use_case.user_id == 1
 
 
 @pytest.mark.anyio
@@ -60,6 +61,7 @@ async def test_revoke_token_controller_maps_revoke_schema_to_dto() -> None:
         (RevokeTokenUseCase.INVALID_REFRESH_TOKEN_ERROR(), "Invalid refresh token"),
         (RevokeTokenUseCase.EXPIRED_REFRESH_TOKEN_ERROR(), "Refresh token expired or revoked"),
         (RefreshTokenError(), "Refresh token error"),
+        (RevokeTokenUseCase.AUTHENTICATED_USER_NOT_FOUND_ERROR(), "User not found"),
     ],
 )
 async def test_revoke_token_controller_translates_domain_errors(
@@ -91,19 +93,8 @@ def _build_controller(
     revoke_token_use_case: RevokeTokenUseCase | None = None,
 ) -> RevokeTokenController:
     return RevokeTokenController(
-        _jwt_auth_factory=cast(JWTAuthFactory, lambda **_kwargs: object()),
+        _jwt_auth_factory=cast(JWTAuthFactory, object),
         _ip_throttler_factory=cast(IPThrottlerFactory, object()),
         _user_throttler_factory=cast(UserThrottlerFactory, object()),
         _revoke_token_use_case=revoke_token_use_case or cast(RevokeTokenUseCase, object()),
-    )
-
-
-def _user() -> User:
-    return User(
-        id=1,
-        username="test",
-        email="test@example.com",
-        first_name="Test",
-        last_name="User",
-        password_hash=_PASSWORD_HASH,
     )

@@ -72,17 +72,18 @@ class SQLAlchemyRefreshSessionRepository(RefreshSessionRepository):
         *,
         data: ReplaceRefreshSessionTokenDTO,
     ) -> RefreshSession | None:
-        """Replace the refresh token hash for a session.
+        """Replace the refresh token hash for an active session.
 
         Returns:
-            The updated refresh session, if one exists.
+            The updated refresh session, if an active matching session exists.
         """
         query_result = await self._session.execute(
             select(RefreshSessionModel)
             .options(selectinload(RefreshSessionModel.user))
             .where(
-                RefreshSessionModel.id == data.session_id,
                 RefreshSessionModel.refresh_token_hash == data.expected_refresh_token_hash,
+                RefreshSessionModel.revoked_at.is_(None),
+                RefreshSessionModel.expires_at > data.expires_after,
             )
             .with_for_update(),
         )
@@ -91,7 +92,7 @@ class SQLAlchemyRefreshSessionRepository(RefreshSessionRepository):
             return None
 
         model.refresh_token_hash = data.refresh_token_hash
-        model.rotation_counter = data.rotation_counter
+        model.rotation_counter += 1
         model.last_used_at = data.last_used_at
 
         return refresh_session_from_model(model=model)

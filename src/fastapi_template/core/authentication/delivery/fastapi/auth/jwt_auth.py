@@ -9,23 +9,15 @@ from fastapi_template.core.authentication.delivery.fastapi.auth.authenticated_re
     AuthenticatedRequest,
 )
 from fastapi_template.core.authentication.services.jwt import JWTService
-from fastapi_template.core.user.use_cases.get_active_user_by_id import (
-    GetActiveUserByIdUseCase,
-)
 
 
 class JWTAuth(HTTPBearer):
     """Define JWTAuth."""
 
-    def __init__(
-        self,
-        jwt_service: JWTService,
-        get_active_user_by_id_use_case: GetActiveUserByIdUseCase,
-    ) -> None:
+    def __init__(self, *, jwt_service: JWTService) -> None:
         """Initialize the instance."""
         super().__init__()
         self._jwt_service = jwt_service
-        self._get_active_user_by_id_use_case = get_active_user_by_id_use_case
 
     async def __call__(self, request: Request) -> HTTPAuthorizationCredentials | None:
         """Run call.
@@ -41,17 +33,7 @@ class JWTAuth(HTTPBearer):
 
         payload = self._get_token_payload(token=credentials.credentials)
         authenticated_request.state.jwt_payload = payload
-
-        user = await self._get_active_user_by_id_use_case.execute(
-            user_id=self._get_subject_user_id(payload=payload),
-        )
-        if user is None:
-            raise HTTPException(
-                status_code=HTTPStatus.UNAUTHORIZED,
-                detail="User not found",
-            )
-
-        authenticated_request.state.user = user
+        authenticated_request.state.user_id = self._get_subject_user_id(payload=payload)
 
         return credentials
 
