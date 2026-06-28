@@ -1,4 +1,4 @@
-.PHONY: dev makemigrations migrate setup update-dependencies format lint test docs docs-build
+.PHONY: dev makemigrations migrate update-dependencies format lint test docs docs-build
 
 dev:
 	uv run uvicorn fastapi_template.entrypoints.fastapi.app:app --reload --host 0.0.0.0 --port 8000
@@ -8,9 +8,6 @@ makemigrations:
 
 migrate:
 	uv run alembic upgrade head
-
-setup:
-	uv run --group setup python -m management.setup_wizard $(ARGS)
 
 update-dependencies:
 	uv run python -m management.dependency_updater $(ARGS)

@@ -3,7 +3,7 @@
 [![CI](https://github.com/maksimzayats/fastapi-template/actions/workflows/lint_test.yaml/badge.svg?branch=main)](https://github.com/maksimzayats/fastapi-template/actions/workflows/lint_test.yaml)
 [![Docs](https://img.shields.io/badge/docs-fastapi--template.zayats.dev-blue)](https://fastapi-template.zayats.dev)
 
-A FastAPI project template with SQLAlchemy async persistence, Alembic migrations, dependency injection, JWT authentication, Redis-backed rate limiting, and a setup wizard.
+A FastAPI project template with SQLAlchemy async repositories, Alembic migrations, dependency injection, JWT authentication, Redis-backed rate limiting, and strict quality checks.
 
 ## Quick Start
 
@@ -34,7 +34,7 @@ The API runs at `http://localhost:8000`. Health checks are available at `/api/v1
 - `src/fastapi_template/entrypoints/` - FastAPI app construction.
 - `src/fastapi_template/ioc/` - dependency injection setup.
 - `migrations/` - Alembic migration environment and versions.
-- `management/` - setup wizard and maintenance scripts.
+- `management/` - maintenance scripts.
 - `tests/` - unit, integration, architecture, and style tests.
 
 ## Commands

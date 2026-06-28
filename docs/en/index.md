@@ -5,7 +5,7 @@ FastAPI Template is a Python 3.14 application template for building API services
 It includes:
 
 - FastAPI HTTP delivery with full `/api/v1/...` route paths.
-- SQLAlchemy async persistence and Alembic migrations.
+- Async SQLAlchemy database access and Alembic migrations.
 - `diwire` dependency injection.
 - Pydantic settings backed by environment variables.
 - JWT authentication, refresh-token rotation, user endpoints, health checks, and Redis-backed rate limiting.
@@ -13,6 +13,6 @@ It includes:
 
 ## Runtime Shape
 
-Application behavior lives in vertical business modules under `src/fastapi_template/core`. Domain-specific FastAPI delivery and SQLAlchemy persistence adapters live under each business package, while shared technical wiring lives in `src/fastapi_template/infrastructure`. FastAPI app construction lives in `src/fastapi_template/entrypoints`, and dependency registration lives in `src/fastapi_template/ioc`.
+Application behavior lives in vertical business modules under `src/fastapi_template/core`. Domain-specific FastAPI delivery and SQLAlchemy adapters live under each business package, while shared technical wiring lives in `src/fastapi_template/infrastructure`. FastAPI app construction lives in `src/fastapi_template/entrypoints`, and dependency registration lives in `src/fastapi_template/ioc`.
 
-Controllers parse HTTP requests and call use cases. Use cases expose `execute(...)`, open unit-of-work scopes for persistence, and may pass the active `uow` to focused services. SQLAlchemy repositories handle data access inside those scopes.
+Controllers parse HTTP requests and call use cases. Use cases expose `execute(...)`, open unit-of-work scopes for database access, and may pass the active `uow` to focused services. SQLAlchemy repositories handle data access inside those scopes.

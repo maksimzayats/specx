@@ -17,30 +17,30 @@
 
 - Python 3.14+ FastAPI template.
 - Dependency injection uses `diwire`.
-- Persistence uses async SQLAlchemy, Alembic, repositories, and a unit-of-work boundary.
+- Database access uses async SQLAlchemy, Alembic, repositories, and a unit-of-work boundary.
 - `foundation/`: neutral base classes and shared primitives.
 - `core/`: vertical business modules. Inner entities, DTOs, repository ports,
   services, use cases, and exceptions live directly under each business package.
   Local delivery adapters live under paths such as `core/user/delivery/fastapi`.
   Local concrete infrastructure adapters live under paths such as
-  `core/user/infrastructure/persistence/sqlalchemy`.
+  `core/user/infrastructure/sqlalchemy`.
 - `entrypoints/`: FastAPI composition root.
 - `infrastructure/`: SQLAlchemy engine/session setup, unit-of-work transaction wiring, logging, telemetry, throttling, and external adapters.
 - `ioc/`: dependency injection container setup.
 
 ## Layering
 
-- Controllers call use cases or services; controllers do not query persistence directly.
+- Controllers call use cases or services; controllers do not query the database directly.
 - Use cases and services do not import FastAPI, SQLAlchemy, entrypoints, or the IoC container.
 - Use cases expose exactly one public method: `async def execute(...)`.
-- Use cases open persistence scopes through injected `UnitOfWork` with `async with self._uow as uow`.
+- Use cases open unit-of-work scopes through injected `UnitOfWork` with `async with self._uow as uow`.
 - Application actions that need multiple repository operations open one UoW in `execute(...)` and pass the active `uow` to focused collaborators; do not nest UoWs for one workflow.
 - Services may receive an active `uow` when they need repository access, but services must not open transactions.
 - Only files outside `delivery/` and `infrastructure/` are inner core.
 - Repository interfaces live in inner core and must not import SQLAlchemy.
 - SQLAlchemy models, mappers, and concrete repository implementations live in
   local business infrastructure, for example
-  `core/authentication/infrastructure/persistence/sqlalchemy`.
+  `core/authentication/infrastructure/sqlalchemy`.
 - Local infrastructure may import inner entities, DTOs, repository interfaces,
   and exceptions; it must not import delivery.
 - Local delivery may import schemas, DTOs, use cases, and delivery helpers; it

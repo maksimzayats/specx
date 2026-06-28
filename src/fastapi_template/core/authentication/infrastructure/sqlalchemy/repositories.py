@@ -7,10 +7,10 @@ from sqlalchemy.orm import selectinload
 
 from fastapi_template.core.authentication.dtos import CreateRefreshSessionDTO
 from fastapi_template.core.authentication.entities import RefreshSession
-from fastapi_template.core.authentication.infrastructure.persistence.sqlalchemy.mappers import (
+from fastapi_template.core.authentication.infrastructure.sqlalchemy.mappers import (
     refresh_session_from_model,
 )
-from fastapi_template.core.authentication.infrastructure.persistence.sqlalchemy.models import (
+from fastapi_template.core.authentication.infrastructure.sqlalchemy.models import (
     RefreshSessionModel,
 )
 from fastapi_template.core.authentication.repositories import RefreshSessionRepository

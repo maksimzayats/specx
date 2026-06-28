@@ -5,7 +5,6 @@
 | `make dev` | Run the FastAPI development server |
 | `make makemigrations` | Create an Alembic migration from model changes |
 | `make migrate` | Apply Alembic migrations |
-| `make setup` | Run the one-time setup wizard |
 | `make update-dependencies` | Sync dependency bounds and container image references |
 | `make format` | Run formatting hooks |
 | `make lint` | Run Ruff, WPS/flake8, mypy, and repository checks |

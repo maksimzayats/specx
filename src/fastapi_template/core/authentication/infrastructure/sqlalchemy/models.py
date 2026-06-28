@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from fastapi_template.core.user.infrastructure.persistence.sqlalchemy.models import UserModel
+from fastapi_template.core.user.infrastructure.sqlalchemy.models import UserModel
 from fastapi_template.infrastructure.database.base import Base
 
 REFRESH_TOKEN_HASH_LENGTH = 128

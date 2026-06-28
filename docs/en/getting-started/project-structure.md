@@ -12,7 +12,7 @@ src/fastapi_template/
       repositories.py
       services.py
       use_cases.py
-      infrastructure/persistence/sqlalchemy/
+      infrastructure/sqlalchemy/
         models.py
         mappers.py
         repositories.py
@@ -26,7 +26,7 @@ src/fastapi_template/
       repositories.py
       services/
       use_cases.py
-      infrastructure/persistence/sqlalchemy/
+      infrastructure/sqlalchemy/
         models.py
         mappers.py
         repositories.py
@@ -37,7 +37,7 @@ src/fastapi_template/
       exceptions.py
       repositories.py
       use_cases.py
-      infrastructure/persistence/sqlalchemy/
+      infrastructure/sqlalchemy/
         repositories.py
       delivery/fastapi/
         schemas.py
@@ -52,7 +52,7 @@ src/fastapi_template/
   entrypoints/       # FastAPI application construction
   ioc/               # Dependency injection container and registrations
 migrations/          # Alembic migration environment and versions
-management/          # Setup and maintenance scripts
+management/          # Maintenance scripts
 tests/               # Unit, integration, architecture, and style tests
 ```
 
@@ -68,7 +68,7 @@ SQLAlchemy, local infrastructure, delivery modules, or the container.
 Delivery schemas and controllers live under each business package's
 `delivery/fastapi` directory. Concrete SQLAlchemy models, mappers, and
 repository implementations live under each business package's
-`infrastructure/persistence/sqlalchemy` directory.
+`infrastructure/sqlalchemy` directory.
 
 ## Shared Infrastructure
 

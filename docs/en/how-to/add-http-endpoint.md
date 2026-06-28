@@ -11,4 +11,4 @@ Request schemas are delivery shapes, not DTOs. The controller maps request
 schema fields into a DTO, calls one use case, and maps the result to a response
 schema.
 
-Use cases open persistence scopes in `execute(...)` with `async with self._uow as uow` when persistence is needed. Pass the active `uow` to focused services when needed, and keep SQLAlchemy work inside the local infrastructure repository implementation.
+Use cases open unit-of-work scopes in `execute(...)` with `async with self._uow as uow` when database access is needed. Pass the active `uow` to focused services when needed, and keep SQLAlchemy work inside the local infrastructure repository implementation.

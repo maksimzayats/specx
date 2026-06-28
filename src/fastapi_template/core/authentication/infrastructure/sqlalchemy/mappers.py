@@ -1,11 +1,11 @@
 from datetime import UTC, datetime
 
 from fastapi_template.core.authentication.entities import RefreshSession
-from fastapi_template.core.authentication.infrastructure.persistence.sqlalchemy.models import (
+from fastapi_template.core.authentication.infrastructure.sqlalchemy.models import (
     RefreshSessionModel,
 )
 from fastapi_template.core.user.entities import User
-from fastapi_template.core.user.infrastructure.persistence.sqlalchemy.mappers import user_from_model
+from fastapi_template.core.user.infrastructure.sqlalchemy.mappers import user_from_model
 
 
 def refresh_session_from_model(

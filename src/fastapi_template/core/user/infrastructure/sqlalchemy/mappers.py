@@ -1,5 +1,5 @@
 from fastapi_template.core.user.entities import User
-from fastapi_template.core.user.infrastructure.persistence.sqlalchemy.models import UserModel
+from fastapi_template.core.user.infrastructure.sqlalchemy.models import UserModel
 
 
 def user_from_model(*, model: UserModel) -> User:

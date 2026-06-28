@@ -7,16 +7,16 @@ from types import TracebackType
 from diwire import Injected
 from sqlalchemy.ext.asyncio import AsyncSession, AsyncSessionTransaction
 
-from fastapi_template.core.authentication.infrastructure.persistence.sqlalchemy.repositories import (
+from fastapi_template.core.authentication.infrastructure.sqlalchemy.repositories import (
     SQLAlchemyRefreshSessionRepository,
 )
 from fastapi_template.core.authentication.repositories import RefreshSessionRepository
-from fastapi_template.core.health.infrastructure.persistence.sqlalchemy.repositories import (
+from fastapi_template.core.health.infrastructure.sqlalchemy.repositories import (
     SQLAlchemyHealthRepository,
 )
 from fastapi_template.core.health.repositories import HealthRepository
 from fastapi_template.core.unit_of_work import UnitOfWork
-from fastapi_template.core.user.infrastructure.persistence.sqlalchemy.repositories import (
+from fastapi_template.core.user.infrastructure.sqlalchemy.repositories import (
     SQLAlchemyUserRepository,
 )
 from fastapi_template.core.user.repositories import UserRepository

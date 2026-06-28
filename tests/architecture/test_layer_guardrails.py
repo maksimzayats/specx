@@ -24,15 +24,8 @@ DATABASE_INFRASTRUCTURE_MODULES = {
     "unit_of_work.py",
 }
 DATABASE_DOMAIN_MODEL_SOURCE_PARTS = {
-    (
-        "core",
-        "authentication",
-        "infrastructure",
-        "persistence",
-        "sqlalchemy",
-        "models.py",
-    ),
-    ("core", "user", "infrastructure", "persistence", "sqlalchemy", "models.py"),
+    ("core", "authentication", "infrastructure", "sqlalchemy", "models.py"),
+    ("core", "user", "infrastructure", "sqlalchemy", "models.py"),
 }
 FRAMEWORK_IMPORT_PREFIXES = ("fastapi", "starlette")
 DATABASE_QUERY_FUNCTION_NAMES = {"delete", "insert", "select", "text", "update"}
@@ -73,7 +66,7 @@ def test_sqlalchemy_imports_stay_in_application_database_boundaries() -> None:
 
     assert violations == [], (
         "SQLAlchemy imports are allowed only in shared database wiring or local "
-        "core persistence adapters."
+        "core SQLAlchemy adapters."
     )
 
 
@@ -85,7 +78,17 @@ def test_database_infrastructure_keeps_only_shared_database_wiring() -> None:
     assert database_infrastructure_modules <= DATABASE_INFRASTRUCTURE_MODULES
 
 
-def test_sqlalchemy_domain_models_live_in_local_persistence_modules() -> None:
+def test_local_infrastructure_does_not_use_persistence_nesting() -> None:
+    """Ensure local adapters do not reintroduce an extra persistence package."""
+    persistence_paths = [
+        path.relative_to(SOURCE_ROOT)
+        for path in sorted(SOURCE_ROOT.glob("core/*/infrastructure/persistence"))
+    ]
+
+    assert persistence_paths == []
+
+
+def test_sqlalchemy_domain_models_live_in_local_sqlalchemy_adapters() -> None:
     model_modules = {
         module.source_parts
         for module in iter_source_modules()
@@ -182,7 +185,7 @@ def test_delivery_modules_do_not_import_local_infrastructure() -> None:
     assert violations == [], "Delivery adapters must not import local infrastructure modules."
 
 
-def test_controllers_do_not_import_persistence_or_uow_implementations() -> None:
+def test_controllers_do_not_import_sqlalchemy_or_uow_implementations() -> None:
     violations = [
         _format_import_violation(module, import_reference.module_name, import_reference.line_number)
         for module in iter_source_modules()
@@ -260,7 +263,7 @@ def test_container_access_stays_in_composition_roots() -> None:
     assert violations == [], "Only composition roots may access the IoC container."
 
 
-def test_services_and_use_cases_depend_on_unit_of_work_for_persistence() -> None:
+def test_services_and_use_cases_depend_on_unit_of_work_for_database_access() -> None:
     violations = [
         f"{module.relative_path}:{node.lineno} injects {dependency_name}"
         for module in iter_source_modules()
@@ -286,7 +289,7 @@ def _format_import_violation(
 def _can_import_sqlalchemy(module: SourceModule) -> bool:
     return (
         module.source_parts in SHARED_DATABASE_SOURCE_PARTS
-        or _is_local_sqlalchemy_persistence_module(module)
+        or _is_local_sqlalchemy_adapter_module(module)
     )
 
 
@@ -307,17 +310,13 @@ def _is_core_delivery_module(module: SourceModule) -> bool:
     return module.source_parts[0] == "core" and "delivery" in module.source_parts
 
 
-def _is_local_sqlalchemy_persistence_module(module: SourceModule) -> bool:
+def _is_local_sqlalchemy_adapter_module(module: SourceModule) -> bool:
     parts = module.source_parts
-    return (
-        len(parts) >= 6
-        and parts[0] == "core"
-        and parts[2:5] == ("infrastructure", "persistence", "sqlalchemy")
-    )
+    return len(parts) >= 5 and parts[0] == "core" and parts[2:4] == ("infrastructure", "sqlalchemy")
 
 
 def _is_local_sqlalchemy_repository_module(module: SourceModule) -> bool:
-    return _is_local_sqlalchemy_persistence_module(module) and module.path.name == "repositories.py"
+    return _is_local_sqlalchemy_adapter_module(module) and module.path.name == "repositories.py"
 
 
 def _is_repository_port_module(module: SourceModule) -> bool:

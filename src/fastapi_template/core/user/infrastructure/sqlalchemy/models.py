@@ -12,7 +12,7 @@ NAME_MAX_LENGTH = 150
 PASSWORD_HASH_MAX_LENGTH = 255
 
 if TYPE_CHECKING:
-    from fastapi_template.core.authentication.infrastructure.persistence.sqlalchemy.models import (
+    from fastapi_template.core.authentication.infrastructure.sqlalchemy.models import (
         RefreshSessionModel,
     )
 

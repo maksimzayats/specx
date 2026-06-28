@@ -24,6 +24,16 @@ FOCUSED_REPOSITORY_HOOK_IDS = {
     "zizmor",
 }
 WORKFLOWS_WITH_CONTENT_WRITE_PERMISSIONS: set[str] = set()
+REMOVED_PROJECT_CUSTOMIZER_MODULE = "setup_" + "wiz" + "ard"
+REMOVED_PROJECT_CUSTOMIZER_PATHS = {
+    REPO_ROOT / "management" / REMOVED_PROJECT_CUSTOMIZER_MODULE,
+    REPO_ROOT / "tests" / REMOVED_PROJECT_CUSTOMIZER_MODULE,
+}
+REMOVED_PROJECT_CUSTOMIZER_MARKERS = {
+    f"management/{REMOVED_PROJECT_CUSTOMIZER_MODULE}",
+    f"tests/{REMOVED_PROJECT_CUSTOMIZER_MODULE}",
+    "--group " + "setup",
+}
 
 
 def test_prek_quality_hooks_run_against_the_whole_project() -> None:
@@ -82,6 +92,24 @@ def test_makefile_quality_targets_use_prek() -> None:
 
     assert any(command.startswith("uv run prek run") for command in format_recipe)
     assert "uv run prek run --all-files" in lint_recipe
+
+
+def test_removed_project_customizer_tooling_surface_stays_removed() -> None:
+    pyproject = _read_toml(REPO_ROOT / "pyproject.toml")
+    dependency_groups = cast(dict[str, Any], pyproject["dependency-groups"])
+    makefile = (REPO_ROOT / "Makefile").read_text(encoding="utf-8")
+    checked_text = "\n".join(
+        [
+            makefile,
+            (REPO_ROOT / "setup.cfg").read_text(encoding="utf-8"),
+            (REPO_ROOT / "prek.toml").read_text(encoding="utf-8"),
+        ],
+    )
+
+    assert "setup" not in dependency_groups
+    assert _make_target_recipe(makefile=makefile, target="setup") == []
+    assert not any(path.exists() for path in REMOVED_PROJECT_CUSTOMIZER_PATHS)
+    assert not any(marker in checked_text for marker in REMOVED_PROJECT_CUSTOMIZER_MARKERS)
 
 
 def test_ci_workflows_use_content_write_permissions_only_when_needed() -> None:

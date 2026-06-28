@@ -6,8 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from fastapi_template.core.user.dtos import CreateUserDTO
 from fastapi_template.core.user.entities import User
-from fastapi_template.core.user.infrastructure.persistence.sqlalchemy.mappers import user_from_model
-from fastapi_template.core.user.infrastructure.persistence.sqlalchemy.models import UserModel
+from fastapi_template.core.user.infrastructure.sqlalchemy.mappers import user_from_model
+from fastapi_template.core.user.infrastructure.sqlalchemy.models import UserModel
 from fastapi_template.core.user.repositories import UserRepository
 
 

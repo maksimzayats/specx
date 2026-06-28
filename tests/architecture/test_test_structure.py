@@ -45,8 +45,20 @@ def test_sqlalchemy_repository_tests_mirror_concrete_adapters() -> None:
 
     assert stale_repository_tests == [], (
         "SQLAlchemy repository integration tests must mirror the concrete adapter path under "
-        "tests/integration/core/<domain>/infrastructure/persistence/sqlalchemy/."
+        "tests/integration/core/<domain>/infrastructure/sqlalchemy/."
     )
+
+
+def test_integration_tests_do_not_use_persistence_nesting() -> None:
+    """Ensure integration tests mirror the flat local SQLAlchemy adapter path."""
+    persistence_paths = [
+        path.relative_to(REPO_ROOT)
+        for path in sorted(
+            (TESTS_ROOT / "integration" / "core").glob("*/infrastructure/persistence"),
+        )
+    ]
+
+    assert persistence_paths == []
 
 
 def _iter_mirrored_test_files() -> list[Path]:
@@ -72,7 +84,7 @@ def _iter_important_source_modules() -> list[Path]:
 
     source_modules.extend(sorted(SOURCE_ROOT.glob("core/*/delivery/fastapi/controllers.py")))
     source_modules.extend(
-        sorted(SOURCE_ROOT.glob("core/*/infrastructure/persistence/sqlalchemy/repositories.py")),
+        sorted(SOURCE_ROOT.glob("core/*/infrastructure/sqlalchemy/repositories.py")),
     )
     source_modules.extend(
         source_path
