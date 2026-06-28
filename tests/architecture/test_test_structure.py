@@ -8,7 +8,9 @@ MIRRORED_TEST_LAYER_NAMES = ("integration", "unit")
 AGGREGATE_TEST_FILENAMES = {
     "test_auth.py",
     "test_controllers.py",
+    "test_entities.py",
     "test_factories.py",
+    "test_mappers.py",
     "test_repositories.py",
     "test_services.py",
     "test_throttler.py",
