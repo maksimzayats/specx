@@ -20,7 +20,7 @@ from fastapi_template.core.user.infrastructure.sqlalchemy.repositories import (
     SQLAlchemyUserRepository,
 )
 from fastapi_template.core.user.repositories import UserRepository
-from fastapi_template.infrastructure.database.session import SQLAlchemySessionFactory
+from fastapi_template.infrastructure.sqlalchemy.session import SQLAlchemySessionFactory
 
 _INACTIVE_UOW_ERROR = "Unit of work is not active."
 

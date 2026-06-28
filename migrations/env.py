@@ -5,8 +5,8 @@ from alembic import context
 from sqlalchemy import Connection, pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from fastapi_template.infrastructure.database.metadata import target_metadata
-from fastapi_template.infrastructure.database.session import DatabaseSettings
+from fastapi_template.infrastructure.sqlalchemy.metadata import target_metadata
+from fastapi_template.infrastructure.sqlalchemy.session import DatabaseSettings
 
 config = context.config
 

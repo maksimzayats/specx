@@ -5,8 +5,8 @@ from diwire import Container
 
 from fastapi_template.core.unit_of_work import UnitOfWork
 from fastapi_template.core.user.dtos import CreateUserDTO
-from fastapi_template.infrastructure.database.session import SQLAlchemySessionFactory
-from fastapi_template.infrastructure.database.unit_of_work import SQLAlchemyUnitOfWork
+from fastapi_template.infrastructure.sqlalchemy.session import SQLAlchemySessionFactory
+from fastapi_template.infrastructure.sqlalchemy.unit_of_work import SQLAlchemyUnitOfWork
 
 _VALID_TEST_PASSWORD = "S3cure-test-password-123!"  # noqa: S105
 

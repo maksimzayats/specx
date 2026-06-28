@@ -44,7 +44,7 @@ src/fastapi_template/
         controllers.py
   foundation/        # Small base classes and shared primitives
   infrastructure/    # Shared SQLAlchemy wiring, logging, telemetry, throttling
-    database/
+    sqlalchemy/
       base.py
       metadata.py
       session.py
@@ -72,7 +72,7 @@ repository implementations live under each business package's
 
 ## Shared Infrastructure
 
-`infrastructure/database` builds the SQLAlchemy base, metadata, engine/session
+`infrastructure/sqlalchemy` builds the SQLAlchemy base, metadata, engine/session
 factory, and unit-of-work transaction wiring. Application decisions stay in
 core use cases and services; SQLAlchemy query work stays in local repository
 adapter implementations.

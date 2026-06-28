@@ -45,10 +45,10 @@
   and exceptions; it must not import delivery.
 - Local delivery may import schemas, DTOs, use cases, and delivery helpers; it
   must not import local infrastructure or repositories.
-- `infrastructure/database/unit_of_work.py` may import local SQLAlchemy repository
+- `infrastructure/sqlalchemy/unit_of_work.py` may import local SQLAlchemy repository
   implementations to assemble one transaction boundary.
 - `ioc/registry.py` may register concrete adapters.
-- `infrastructure/database` is shared SQLAlchemy base, metadata,
+- `infrastructure/sqlalchemy` is shared SQLAlchemy base, metadata,
   engine/session creation, and unit-of-work transaction wiring.
 - Infrastructure adapters must not define application rules such as
   normalization, duplicate decisions, token rotation decisions, or permission

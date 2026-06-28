@@ -1,4 +1,4 @@
-from fastapi_template.infrastructure.database.metadata import target_metadata
+from fastapi_template.infrastructure.sqlalchemy.metadata import target_metadata
 
 
 def test_database_metadata_contains_application_tables() -> None:

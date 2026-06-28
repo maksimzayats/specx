@@ -10,13 +10,13 @@ from tests.architecture._source import (
 )
 
 FORBIDDEN_RUNTIME_IMPORT_PREFIXES = ("cel" + "ery", "djan" + "go")
-SHARED_DATABASE_SOURCE_PARTS = {
-    ("infrastructure", "database", "base.py"),
-    ("infrastructure", "database", "metadata.py"),
-    ("infrastructure", "database", "session.py"),
-    ("infrastructure", "database", "unit_of_work.py"),
+SHARED_SQLALCHEMY_SOURCE_PARTS = {
+    ("infrastructure", "sqlalchemy", "base.py"),
+    ("infrastructure", "sqlalchemy", "metadata.py"),
+    ("infrastructure", "sqlalchemy", "session.py"),
+    ("infrastructure", "sqlalchemy", "unit_of_work.py"),
 }
-DATABASE_INFRASTRUCTURE_MODULES = {
+SHARED_SQLALCHEMY_MODULES = {
     "__init__.py",
     "base.py",
     "metadata.py",
@@ -38,7 +38,7 @@ REPOSITORY_TRANSACTION_METHODS = {
 REPOSITORY_SESSION_FACTORY_CALLS = {"async_sessionmaker", "create_async_engine"}
 FORBIDDEN_CONTROLLER_IMPORT_PREFIXES = (
     "sqlalchemy",
-    "fastapi_template.infrastructure.database.unit_of_work",
+    "fastapi_template.infrastructure.sqlalchemy.unit_of_work",
 )
 FORBIDDEN_CONTROLLER_IMPORT_SUFFIXES = (".repositories", ".models")
 
@@ -70,12 +70,12 @@ def test_sqlalchemy_imports_stay_in_application_database_boundaries() -> None:
     )
 
 
-def test_database_infrastructure_keeps_only_shared_database_wiring() -> None:
-    database_infrastructure_modules = {
-        path.name for path in (SOURCE_ROOT / "infrastructure" / "database").glob("*.py")
+def test_sqlalchemy_infrastructure_keeps_only_shared_wiring() -> None:
+    sqlalchemy_infrastructure_modules = {
+        path.name for path in (SOURCE_ROOT / "infrastructure" / "sqlalchemy").glob("*.py")
     }
 
-    assert database_infrastructure_modules <= DATABASE_INFRASTRUCTURE_MODULES
+    assert sqlalchemy_infrastructure_modules <= SHARED_SQLALCHEMY_MODULES
 
 
 def test_local_infrastructure_does_not_use_persistence_nesting() -> None:
@@ -288,7 +288,7 @@ def _format_import_violation(
 
 def _can_import_sqlalchemy(module: SourceModule) -> bool:
     return (
-        module.source_parts in SHARED_DATABASE_SOURCE_PARTS
+        module.source_parts in SHARED_SQLALCHEMY_SOURCE_PARTS
         or _is_local_sqlalchemy_adapter_module(module)
     )
 

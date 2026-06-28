@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import Boolean, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from fastapi_template.infrastructure.database.base import Base
+from fastapi_template.infrastructure.sqlalchemy.base import Base
 
 EMAIL_MAX_LENGTH = 320
 NAME_MAX_LENGTH = 150

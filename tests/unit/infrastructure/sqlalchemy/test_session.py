@@ -1,6 +1,6 @@
 from pydantic import SecretStr
 
-from fastapi_template.infrastructure.database.session import DatabaseSettings
+from fastapi_template.infrastructure.sqlalchemy.session import DatabaseSettings
 
 
 def test_database_settings_converts_postgres_urls_to_async_driver() -> None:
