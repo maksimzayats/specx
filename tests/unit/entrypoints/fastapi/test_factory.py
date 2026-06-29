@@ -148,6 +148,27 @@ def test_fastapi_factory_adds_docs_and_default_middlewares_outside_production() 
     assert PreBodyIPThrottlingMiddleware.__name__ in middleware_names
 
 
+def test_fastapi_factory_rejects_invalid_hosts_before_pre_body_ip_throttling() -> None:
+    ip_throttler_factory = RejectingIPThrottlerFactory()
+    app = _build_factory(
+        application_settings=ApplicationSettings(environment=Environment.DEVELOPMENT),
+        instrumentor=FakeTelemetryInstrumentor(),
+        ip_throttler_factory=cast(IPThrottlerFactory, ip_throttler_factory),
+    )(
+        add_cors_middleware=False,
+    )
+
+    with TestClient(app) as test_client:
+        response = test_client.post(
+            "/api/v1/users",
+            content="{",
+            headers={"content-type": "application/json", "host": "invalid.test"},
+        )
+
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert ip_throttler_factory.called_paths == []
+
+
 def test_fastapi_factory_applies_pre_body_ip_throttling_to_post_routes() -> None:
     ip_throttler_factory = RejectingIPThrottlerFactory()
     post_controllers = _post_controllers()

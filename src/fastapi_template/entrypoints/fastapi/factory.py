@@ -96,12 +96,12 @@ class FastAPIFactory(BaseFactory):
         )
 
         self._telemetry_instrumentor.instrument_fastapi(app=app)
+        self._add_pre_body_ip_throttling_middleware(app=app)
         self._add_middlewares(
             app=app,
             add_trusted_hosts_middleware=add_trusted_hosts_middleware,
             add_cors_middleware=add_cors_middleware,
         )
-        self._add_pre_body_ip_throttling_middleware(app=app)
         self._register_controllers(app=app)
 
         return app
