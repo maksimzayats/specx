@@ -1,6 +1,7 @@
 import ast
+from collections.abc import Iterable
 
-from tests.architecture._source import SourceModule, iter_source_modules
+from tests.architecture._source import SOURCE_ROOT, SourceModule, iter_source_modules
 
 AGGREGATE_SOURCE_FILENAMES = {
     "auth.py",
@@ -84,17 +85,41 @@ def test_source_modules_have_at_most_one_public_function() -> None:
 
 
 def test_source_modules_do_not_use_import_only_public_alias_shims() -> None:
-    violations = [
+    violations = _import_only_public_alias_shim_violations(modules=iter_source_modules())
+
+    assert violations == [], "Source files must not be import-only public alias shims."
+
+
+def test_import_only_public_alias_shim_guardrail_rejects_all_exports() -> None:
+    module = SourceModule(
+        path=SOURCE_ROOT / "core" / "user" / "alias.py",
+        tree=ast.parse(
+            """
+from fastapi_template.core.user.entities.user import User
+
+__all__ = ("User",)
+""".lstrip(),
+        ),
+    )
+
+    assert _import_only_public_alias_shim_violations(modules=[module]) == [
+        str(module.relative_path),
+    ]
+
+
+def _import_only_public_alias_shim_violations(
+    *,
+    modules: Iterable[SourceModule],
+) -> list[str]:
+    return [
         str(module.relative_path)
-        for module in iter_source_modules()
+        for module in modules
         if module.path.name != "__init__.py"
         if _has_public_import_from_alias(module=module)
         if not _public_classes(module=module)
         if not _public_functions(module=module)
         if _is_import_only_module(module=module)
     ]
-
-    assert violations == [], "Source files must not be import-only public alias shims."
 
 
 def _public_classes(*, module: SourceModule) -> list[ast.ClassDef]:
@@ -130,9 +155,20 @@ def _has_public_import_from_alias(*, module: SourceModule) -> bool:
 
 def _is_import_only_module(*, module: SourceModule) -> bool:
     return all(
-        isinstance(node, ast.Import | ast.ImportFrom)
+        isinstance(node, ast.Import | ast.ImportFrom) or _is_all_assignment(node=node)
         for node in _non_docstring_nodes(module=module)
     )
+
+
+def _is_all_assignment(*, node: ast.stmt) -> bool:
+    if isinstance(node, ast.Assign):
+        return any(_is_all_target(target=target) for target in node.targets)
+
+    return isinstance(node, ast.AnnAssign) and _is_all_target(target=node.target)
+
+
+def _is_all_target(*, target: ast.expr) -> bool:
+    return isinstance(target, ast.Name) and target.id == "__all__"
 
 
 def _non_docstring_nodes(*, module: SourceModule) -> list[ast.stmt]:

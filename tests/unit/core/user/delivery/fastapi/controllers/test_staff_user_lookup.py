@@ -57,6 +57,8 @@ async def test_staff_user_lookup_controller_translates_domain_errors(
 
     assert exc_info.value.status_code == status_code
     assert exc_info.value.detail == detail
+    if status_code == 401:
+        assert exc_info.value.headers == {"WWW-Authenticate": "Bearer"}
 
 
 def _build_controller(

@@ -1,8 +1,13 @@
+from collections.abc import Awaitable, Callable, Sequence
+from http import HTTPStatus
 from typing import Any, cast
 
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, FastAPI, HTTPException
+from fastapi.testclient import TestClient
+from pydantic import BaseModel
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
+from starlette.requests import Request
 
 from fastapi_template.core.authentication.delivery.fastapi.controllers.issue_token import (
     IssueTokenController,
@@ -18,6 +23,12 @@ from fastapi_template.core.health.delivery.fastapi.controllers.health_check impo
 )
 from fastapi_template.core.health.delivery.fastapi.controllers.health_check_websocket import (
     HealthCheckWebSocketController,
+)
+from fastapi_template.core.shared.delivery.fastapi.throttling.ip_throttler_factory import (
+    IPThrottlerFactory,
+)
+from fastapi_template.core.shared.delivery.fastapi.throttling.pre_body_ip_throttling_middleware import (
+    PreBodyIPThrottlingMiddleware,
 )
 from fastapi_template.core.user.delivery.fastapi.controllers.create_user import (
     CreateUserController,
@@ -36,6 +47,13 @@ from fastapi_template.entrypoints.fastapi.settings.fastapi import FastAPISetting
 from fastapi_template.infrastructure.environment import Environment
 from fastapi_template.infrastructure.logfire.instrumentor import OpenTelemetryInstrumentor
 from fastapi_template.infrastructure.settings import ApplicationSettings
+
+PRE_BODY_THROTTLED_POST_PATHS = (
+    "/api/v1/auth/token",
+    "/api/v1/auth/token/refresh",
+    "/api/v1/auth/token/revoke",
+    "/api/v1/users",
+)
 
 
 class FakeTelemetryInstrumentor:
@@ -56,6 +74,48 @@ class FakeController:
         return {"ok": True}
 
 
+class BodyPayload(BaseModel):
+    value: str
+
+
+class FakePostController:
+    def __init__(self, *, path: str) -> None:
+        self._path = path
+        self.called = False
+        self.registered = False
+
+    def register(self, registry: APIRouter) -> None:
+        self.registered = True
+        registry.add_api_route(self._path, self.endpoint, methods=["POST"])
+
+    async def endpoint(self, body: BodyPayload) -> dict[str, bool]:
+        self.called = True
+        return {"ok": bool(body.value)}
+
+
+class PassingIPThrottlerFactory:
+    def __call__(self, *, quota: object) -> Callable[[Request], Awaitable[None]]:
+        return self.throttle
+
+    async def throttle(self, request: Request) -> None:
+        return None
+
+
+class RejectingIPThrottlerFactory:
+    def __init__(self) -> None:
+        self.called_paths: list[str] = []
+
+    def __call__(self, *, quota: object) -> Callable[[Request], Awaitable[None]]:
+        return self.throttle
+
+    async def throttle(self, request: Request) -> None:
+        self.called_paths.append(request.url.path)
+        raise HTTPException(
+            status_code=HTTPStatus.TOO_MANY_REQUESTS,
+            detail="Too many requests",
+        )
+
+
 def test_fastapi_factory_disables_docs_and_optional_middlewares_in_production() -> None:
     instrumentor = FakeTelemetryInstrumentor()
     controllers = [FakeController() for _ in range(8)]
@@ -69,7 +129,8 @@ def test_fastapi_factory_disables_docs_and_optional_middlewares_in_production() 
     )
 
     assert app.docs_url is None
-    assert app.user_middleware == []
+    middleware_names = {cast(Any, middleware.cls).__name__ for middleware in app.user_middleware}
+    assert middleware_names == {PreBodyIPThrottlingMiddleware.__name__}
     assert instrumentor.instrumented_app is app
     assert all(controller.registered for controller in controllers)
 
@@ -84,13 +145,52 @@ def test_fastapi_factory_adds_docs_and_default_middlewares_outside_production() 
     assert app.docs_url == "/docs"
     assert TrustedHostMiddleware.__name__ in middleware_names
     assert CORSMiddleware.__name__ in middleware_names
+    assert PreBodyIPThrottlingMiddleware.__name__ in middleware_names
+
+
+def test_fastapi_factory_applies_pre_body_ip_throttling_to_post_routes() -> None:
+    ip_throttler_factory = RejectingIPThrottlerFactory()
+    post_controllers = _post_controllers()
+    app = _build_factory(
+        application_settings=ApplicationSettings(environment=Environment.DEVELOPMENT),
+        instrumentor=FakeTelemetryInstrumentor(),
+        controllers=[
+            FakeController(),
+            FakeController(),
+            post_controllers[0],
+            post_controllers[1],
+            post_controllers[2],
+            post_controllers[3],
+            FakeController(),
+            FakeController(),
+        ],
+        ip_throttler_factory=cast(IPThrottlerFactory, ip_throttler_factory),
+    )(
+        add_trusted_hosts_middleware=False,
+        add_cors_middleware=False,
+    )
+
+    with TestClient(app) as test_client:
+        responses = [
+            test_client.post(
+                path,
+                content="{",
+                headers={"content-type": "application/json"},
+            )
+            for path in PRE_BODY_THROTTLED_POST_PATHS
+        ]
+
+    assert {response.status_code for response in responses} == {HTTPStatus.TOO_MANY_REQUESTS}
+    assert ip_throttler_factory.called_paths == list(PRE_BODY_THROTTLED_POST_PATHS)
+    assert not any(controller.called for controller in post_controllers)
 
 
 def _build_factory(
     *,
     application_settings: ApplicationSettings,
     instrumentor: FakeTelemetryInstrumentor,
-    controllers: list[FakeController] | None = None,
+    controllers: Sequence[FakeController | FakePostController] | None = None,
+    ip_throttler_factory: IPThrottlerFactory | None = None,
 ) -> FastAPIFactory:
     (
         health_check_controller,
@@ -107,6 +207,8 @@ def _build_factory(
         _fastapi_settings=FastAPISettings(),
         _cors_settings=CORSSettings(),
         _telemetry_instrumentor=cast(OpenTelemetryInstrumentor, instrumentor),
+        _ip_throttler_factory=ip_throttler_factory
+        or cast(IPThrottlerFactory, PassingIPThrottlerFactory()),
         _health_check_controller=cast(HealthCheckController, health_check_controller),
         _health_check_websocket_controller=cast(
             HealthCheckWebSocketController,
@@ -122,3 +224,7 @@ def _build_factory(
             staff_user_lookup_controller,
         ),
     )
+
+
+def _post_controllers() -> list[FakePostController]:
+    return [FakePostController(path=path) for path in PRE_BODY_THROTTLED_POST_PATHS]

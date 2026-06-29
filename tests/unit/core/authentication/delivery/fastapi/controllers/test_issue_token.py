@@ -16,9 +16,6 @@ from fastapi_template.core.authentication.exceptions.invalid_credentials import 
 )
 from fastapi_template.core.authentication.use_cases.issue_token import IssueTokenUseCase
 from fastapi_template.core.shared.delivery.fastapi.request import RequestInfoService
-from fastapi_template.core.shared.delivery.fastapi.throttling.ip_throttler_factory import (
-    IPThrottlerFactory,
-)
 
 _TEST_PASSWORD = "secret"  # noqa: S105
 _ACCESS_TOKEN = "access-token"  # noqa: S105
@@ -87,7 +84,6 @@ def _build_controller(
 ) -> IssueTokenController:
     return IssueTokenController(
         _request_info_service=request_info_service or cast(RequestInfoService, object()),
-        _ip_throttler_factory=cast(IPThrottlerFactory, object()),
         _issue_token_use_case=issue_token_use_case or cast(IssueTokenUseCase, object()),
     )
 

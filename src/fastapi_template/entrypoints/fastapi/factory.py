@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import fastapi
 from diwire import Injected
 from starlette.middleware import cors, trustedhost
+from throttled import rate_limiter
 
 from fastapi_template.core.authentication.delivery.fastapi.controllers.issue_token import (
     IssueTokenController,
@@ -18,6 +19,15 @@ from fastapi_template.core.health.delivery.fastapi.controllers.health_check impo
 )
 from fastapi_template.core.health.delivery.fastapi.controllers.health_check_websocket import (
     HealthCheckWebSocketController,
+)
+from fastapi_template.core.shared.delivery.fastapi.throttling.ip_throttler_factory import (
+    IPThrottlerFactory,
+)
+from fastapi_template.core.shared.delivery.fastapi.throttling.pre_body_ip_throttling_middleware import (
+    PreBodyIPThrottlingMiddleware,
+)
+from fastapi_template.core.shared.delivery.fastapi.throttling.pre_body_ip_throttling_rule import (
+    PreBodyIPThrottlingRule,
 )
 from fastapi_template.core.user.delivery.fastapi.controllers.create_user import (
     CreateUserController,
@@ -35,6 +45,14 @@ from fastapi_template.infrastructure.environment import Environment
 from fastapi_template.infrastructure.logfire.instrumentor import OpenTelemetryInstrumentor
 from fastapi_template.infrastructure.settings import ApplicationSettings
 
+_POST_METHOD = "POST"
+PRE_BODY_IP_THROTTLED_ROUTES = (
+    (_POST_METHOD, "/api/v1/auth/token"),
+    (_POST_METHOD, "/api/v1/auth/token/refresh"),
+    (_POST_METHOD, "/api/v1/auth/token/revoke"),
+    (_POST_METHOD, "/api/v1/users"),
+)
+
 
 @dataclass(kw_only=True)
 class FastAPIFactory(BaseFactory):
@@ -45,6 +63,7 @@ class FastAPIFactory(BaseFactory):
     _cors_settings: Injected[CORSSettings]
 
     _telemetry_instrumentor: Injected[OpenTelemetryInstrumentor]
+    _ip_throttler_factory: Injected[IPThrottlerFactory]
 
     _health_check_controller: Injected[HealthCheckController]
     _health_check_websocket_controller: Injected[HealthCheckWebSocketController]
@@ -82,6 +101,7 @@ class FastAPIFactory(BaseFactory):
             add_trusted_hosts_middleware=add_trusted_hosts_middleware,
             add_cors_middleware=add_cors_middleware,
         )
+        self._add_pre_body_ip_throttling_middleware(app=app)
         self._register_controllers(app=app)
 
         return app
@@ -107,6 +127,21 @@ class FastAPIFactory(BaseFactory):
                 allow_methods=self._cors_settings.allow_methods,
                 allow_headers=self._cors_settings.allow_headers,
             )
+
+    def _add_pre_body_ip_throttling_middleware(self, *, app: fastapi.FastAPI) -> None:
+        app.add_middleware(
+            PreBodyIPThrottlingMiddleware,
+            rules=tuple(
+                PreBodyIPThrottlingRule(
+                    method=method,
+                    path=path,
+                    throttler=self._ip_throttler_factory(
+                        quota=rate_limiter.per_min(10),
+                    ),
+                )
+                for method, path in PRE_BODY_IP_THROTTLED_ROUTES
+            ),
+        )
 
     def _register_controllers(
         self,

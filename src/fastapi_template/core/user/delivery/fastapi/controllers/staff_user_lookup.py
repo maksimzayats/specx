@@ -8,6 +8,9 @@ from fastapi.security import HTTPBearer
 from fastapi_template.core.authentication.delivery.fastapi.auth.authenticated_request import (
     AuthenticatedRequest,
 )
+from fastapi_template.core.authentication.delivery.fastapi.auth.bearer_authentication_error import (
+    bearer_authentication_error,
+)
 from fastapi_template.core.authentication.delivery.fastapi.auth.jwt_auth_factory import (
     JWTAuthFactory,
 )
@@ -69,10 +72,7 @@ class StaffUserLookupController(BaseAsyncController):
         The operation result.
         """
         if isinstance(exception, StaffUserLookupUseCase.AUTHENTICATED_USER_NOT_FOUND_ERROR):
-            raise HTTPException(
-                status_code=HTTPStatus.UNAUTHORIZED,
-                detail="User not found",
-            ) from exception
+            raise bearer_authentication_error(detail="User not found") from exception
 
         if isinstance(exception, StaffUserLookupUseCase.PERMISSION_DENIED_ERROR):
             raise HTTPException(

@@ -3,8 +3,7 @@ from http import HTTPStatus
 from typing import Any
 
 from diwire import Injected
-from fastapi import APIRouter, Depends, HTTPException
-from throttled import rate_limiter
+from fastapi import APIRouter, HTTPException
 
 from fastapi_template.core.authentication.delivery.fastapi.schemas.refresh_token_request import (
     RefreshTokenRequestSchema,
@@ -14,9 +13,6 @@ from fastapi_template.core.authentication.delivery.fastapi.schemas.token_respons
 )
 from fastapi_template.core.authentication.dtos.refresh_token import RefreshTokenDTO
 from fastapi_template.core.authentication.use_cases.refresh_token import RefreshTokenUseCase
-from fastapi_template.core.shared.delivery.fastapi.throttling.ip_throttler_factory import (
-    IPThrottlerFactory,
-)
 from fastapi_template.foundation.delivery.controller import BaseAsyncController
 
 
@@ -24,7 +20,6 @@ from fastapi_template.foundation.delivery.controller import BaseAsyncController
 class RefreshTokenController(BaseAsyncController):
     """Define RefreshTokenController."""
 
-    _ip_throttler_factory: Injected[IPThrottlerFactory]
     _refresh_token_use_case: Injected[RefreshTokenUseCase]
 
     def register(self, registry: APIRouter) -> None:
@@ -33,9 +28,6 @@ class RefreshTokenController(BaseAsyncController):
             path="/api/v1/auth/token/refresh",
             endpoint=self.refresh_token,
             methods=["POST"],
-            dependencies=[
-                Depends(self._ip_throttler_factory(quota=rate_limiter.per_min(10))),
-            ],
             response_model=TokenResponseSchema,
         )
 

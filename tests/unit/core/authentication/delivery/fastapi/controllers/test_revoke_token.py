@@ -22,9 +22,6 @@ from fastapi_template.core.authentication.delivery.fastapi.throttling.user_throt
 from fastapi_template.core.authentication.dtos.refresh_token import RefreshTokenDTO
 from fastapi_template.core.authentication.exceptions.refresh_token import RefreshTokenError
 from fastapi_template.core.authentication.use_cases.revoke_token import RevokeTokenUseCase
-from fastapi_template.core.shared.delivery.fastapi.throttling.ip_throttler_factory import (
-    IPThrottlerFactory,
-)
 
 _REFRESH_TOKEN = "refresh-token"  # noqa: S105
 
@@ -75,6 +72,8 @@ async def test_revoke_token_controller_translates_domain_errors(
 
     assert exc_info.value.status_code == 401
     assert exc_info.value.detail == detail
+    if detail == "User not found":
+        assert exc_info.value.headers == {"WWW-Authenticate": "Bearer"}
 
 
 @pytest.mark.anyio
@@ -94,7 +93,6 @@ def _build_controller(
 ) -> RevokeTokenController:
     return RevokeTokenController(
         _jwt_auth_factory=cast(JWTAuthFactory, object),
-        _ip_throttler_factory=cast(IPThrottlerFactory, object()),
         _user_throttler_factory=cast(UserThrottlerFactory, object()),
         _revoke_token_use_case=revoke_token_use_case or cast(RevokeTokenUseCase, object()),
     )

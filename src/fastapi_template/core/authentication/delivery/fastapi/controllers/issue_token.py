@@ -3,8 +3,7 @@ from http import HTTPStatus
 from typing import Any
 
 from diwire import Injected
-from fastapi import APIRouter, Depends, HTTPException, Request
-from throttled import rate_limiter
+from fastapi import APIRouter, HTTPException, Request
 
 from fastapi_template.core.authentication.delivery.fastapi.schemas.issue_token_request import (
     IssueTokenRequestSchema,
@@ -16,9 +15,6 @@ from fastapi_template.core.authentication.dtos.issue_token import IssueTokenDTO
 from fastapi_template.core.authentication.dtos.token_request_context import TokenRequestContextDTO
 from fastapi_template.core.authentication.use_cases.issue_token import IssueTokenUseCase
 from fastapi_template.core.shared.delivery.fastapi.request import RequestInfoService
-from fastapi_template.core.shared.delivery.fastapi.throttling.ip_throttler_factory import (
-    IPThrottlerFactory,
-)
 from fastapi_template.foundation.delivery.controller import BaseAsyncController
 
 
@@ -27,7 +23,6 @@ class IssueTokenController(BaseAsyncController):
     """Define IssueTokenController."""
 
     _request_info_service: Injected[RequestInfoService]
-    _ip_throttler_factory: Injected[IPThrottlerFactory]
     _issue_token_use_case: Injected[IssueTokenUseCase]
 
     def register(self, registry: APIRouter) -> None:
@@ -36,9 +31,6 @@ class IssueTokenController(BaseAsyncController):
             path="/api/v1/auth/token",
             endpoint=self.issue_token,
             methods=["POST"],
-            dependencies=[
-                Depends(self._ip_throttler_factory(quota=rate_limiter.per_min(10))),
-            ],
             response_model=TokenResponseSchema,
         )
 

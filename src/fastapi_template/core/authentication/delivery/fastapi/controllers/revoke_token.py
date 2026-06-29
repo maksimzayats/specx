@@ -10,6 +10,9 @@ from throttled import rate_limiter
 from fastapi_template.core.authentication.delivery.fastapi.auth.authenticated_request import (
     AuthenticatedRequest,
 )
+from fastapi_template.core.authentication.delivery.fastapi.auth.bearer_authentication_error import (
+    bearer_authentication_error,
+)
 from fastapi_template.core.authentication.delivery.fastapi.auth.jwt_auth_factory import (
     JWTAuthFactory,
 )
@@ -21,9 +24,6 @@ from fastapi_template.core.authentication.delivery.fastapi.throttling.user_throt
 )
 from fastapi_template.core.authentication.dtos.refresh_token import RefreshTokenDTO
 from fastapi_template.core.authentication.use_cases.revoke_token import RevokeTokenUseCase
-from fastapi_template.core.shared.delivery.fastapi.throttling.ip_throttler_factory import (
-    IPThrottlerFactory,
-)
 from fastapi_template.foundation.delivery.controller import BaseAsyncController
 
 
@@ -32,7 +32,6 @@ class RevokeTokenController(BaseAsyncController):
     """Define RevokeTokenController."""
 
     _jwt_auth_factory: Injected[JWTAuthFactory]
-    _ip_throttler_factory: Injected[IPThrottlerFactory]
     _user_throttler_factory: Injected[UserThrottlerFactory]
     _revoke_token_use_case: Injected[RevokeTokenUseCase]
 
@@ -50,7 +49,6 @@ class RevokeTokenController(BaseAsyncController):
             endpoint=self.revoke_token,
             methods=["POST"],
             dependencies=[
-                Depends(self._ip_throttler_factory(quota=rate_limiter.per_min(10))),
                 Depends(self._jwt_auth),
                 Depends(self._user_throttler_factory(quota=rate_limiter.per_min(10))),
             ],
@@ -92,9 +90,6 @@ class RevokeTokenController(BaseAsyncController):
             ) from exception
 
         if isinstance(exception, RevokeTokenUseCase.AUTHENTICATED_USER_NOT_FOUND_ERROR):
-            raise HTTPException(
-                status_code=HTTPStatus.UNAUTHORIZED,
-                detail="User not found",
-            ) from exception
+            raise bearer_authentication_error(detail="User not found") from exception
 
         return await super().handle_exception(exception)

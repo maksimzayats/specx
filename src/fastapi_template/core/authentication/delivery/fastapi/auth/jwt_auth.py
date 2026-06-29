@@ -1,17 +1,15 @@
-from http import HTTPStatus
 from typing import Any, cast
 
-from fastapi import HTTPException
 from fastapi.requests import Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from fastapi_template.core.authentication.delivery.fastapi.auth.authenticated_request import (
     AuthenticatedRequest,
 )
+from fastapi_template.core.authentication.delivery.fastapi.auth.bearer_authentication_error import (
+    bearer_authentication_error,
+)
 from fastapi_template.core.authentication.services.jwt import JWTService
-
-_AUTHENTICATE_HEADER = "WWW-Authenticate"
-_BEARER_AUTH_SCHEME = "Bearer"
 
 
 class JWTAuth(HTTPBearer):
@@ -45,42 +43,24 @@ class JWTAuth(HTTPBearer):
         return credentials
 
     def _raise_missing_credentials(self) -> None:
-        raise HTTPException(
-            status_code=HTTPStatus.UNAUTHORIZED,
-            detail="Not authenticated",
-            headers={_AUTHENTICATE_HEADER: _BEARER_AUTH_SCHEME},
-        )
+        raise bearer_authentication_error(detail="Not authenticated")
 
     def _get_subject_user_id(self, *, payload: dict[str, Any]) -> int:
         user_id = payload.get("sub")
         if user_id is None:
-            raise HTTPException(
-                status_code=HTTPStatus.UNAUTHORIZED,
-                detail="Token payload missing 'sub' field",
-                headers={_AUTHENTICATE_HEADER: _BEARER_AUTH_SCHEME},
-            )
+            raise bearer_authentication_error(detail="Token payload missing 'sub' field")
 
         try:
             return int(user_id)
         except (TypeError, ValueError) as exception:
-            raise HTTPException(
-                status_code=HTTPStatus.UNAUTHORIZED,
+            raise bearer_authentication_error(
                 detail="Token payload has invalid 'sub' field",
-                headers={_AUTHENTICATE_HEADER: _BEARER_AUTH_SCHEME},
             ) from exception
 
     def _get_token_payload(self, *, token: str) -> dict[str, Any]:
         try:
             return self._jwt_service.decode_token(token=token)
         except self._jwt_service.EXPIRED_SIGNATURE_ERROR as exception:
-            raise HTTPException(
-                status_code=HTTPStatus.UNAUTHORIZED,
-                detail="Token has expired",
-                headers={_AUTHENTICATE_HEADER: _BEARER_AUTH_SCHEME},
-            ) from exception
+            raise bearer_authentication_error(detail="Token has expired") from exception
         except self._jwt_service.INVALID_TOKEN_ERROR as exception:
-            raise HTTPException(
-                status_code=HTTPStatus.UNAUTHORIZED,
-                detail="Invalid token",
-                headers={_AUTHENTICATE_HEADER: _BEARER_AUTH_SCHEME},
-            ) from exception
+            raise bearer_authentication_error(detail="Invalid token") from exception

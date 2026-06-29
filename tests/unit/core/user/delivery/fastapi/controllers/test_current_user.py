@@ -63,6 +63,7 @@ async def test_current_user_controller_rejects_missing_user() -> None:
 
     assert exc_info.value.status_code == 401
     assert exc_info.value.detail == "User not found"
+    assert exc_info.value.headers == {"WWW-Authenticate": "Bearer"}
 
 
 def _build_controller(

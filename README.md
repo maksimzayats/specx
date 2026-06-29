@@ -44,8 +44,8 @@ The API runs at `http://localhost:8000`. Health checks are available at `/api/v1
 | `make dev` | Run the FastAPI development server |
 | `make makemigrations` | Create an Alembic migration |
 | `make migrate` | Apply Alembic migrations |
-| `make test` | Run the test suite |
-| `make lint` | Run formatting, lint, and type checks |
+| `make test` | Run the test suite with a 100% coverage threshold |
+| `make lint` | Run Ruff, WPS/flake8, mypy, and repository checks |
 | `make docs` | Serve documentation |
 
 Read the full documentation at [fastapi-template.zayats.dev](https://fastapi-template.zayats.dev), or run `make docs`.

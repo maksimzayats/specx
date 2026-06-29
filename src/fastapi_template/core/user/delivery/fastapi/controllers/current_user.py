@@ -1,12 +1,14 @@
 from dataclasses import dataclass, field
-from http import HTTPStatus
 
 from diwire import Injected
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from fastapi.security import HTTPBearer
 
 from fastapi_template.core.authentication.delivery.fastapi.auth.authenticated_request import (
     AuthenticatedRequest,
+)
+from fastapi_template.core.authentication.delivery.fastapi.auth.bearer_authentication_error import (
+    bearer_authentication_error,
 )
 from fastapi_template.core.authentication.delivery.fastapi.auth.jwt_auth_factory import (
     JWTAuthFactory,
@@ -52,9 +54,6 @@ class CurrentUserController(BaseAsyncController):
             user_id=request.state.user_id,
         )
         if user is None:
-            raise HTTPException(
-                status_code=HTTPStatus.UNAUTHORIZED,
-                detail="User not found",
-            )
+            raise bearer_authentication_error(detail="User not found")
 
         return UserSchema.model_validate(user, from_attributes=True)

@@ -13,9 +13,6 @@ from fastapi_template.core.authentication.dtos.refresh_token import RefreshToken
 from fastapi_template.core.authentication.dtos.token import TokenDTO
 from fastapi_template.core.authentication.exceptions.refresh_token import RefreshTokenError
 from fastapi_template.core.authentication.use_cases.refresh_token import RefreshTokenUseCase
-from fastapi_template.core.shared.delivery.fastapi.throttling.ip_throttler_factory import (
-    IPThrottlerFactory,
-)
 
 _ACCESS_TOKEN = "access-token"  # noqa: S105
 _REFRESH_TOKEN = "refresh-token"  # noqa: S105
@@ -82,7 +79,6 @@ def _build_controller(
     refresh_token_use_case: RefreshTokenUseCase | None = None,
 ) -> RefreshTokenController:
     return RefreshTokenController(
-        _ip_throttler_factory=cast(IPThrottlerFactory, object()),
         _refresh_token_use_case=refresh_token_use_case or cast(RefreshTokenUseCase, object()),
     )
 
