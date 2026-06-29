@@ -11,7 +11,7 @@ REFRESH_TOKEN_HASH_LENGTH = 128
 
 
 class RefreshSessionModel(Base):
-    """Define RefreshSessionModel."""
+    """SQLAlchemy table mapping for refresh-token sessions."""
 
     __tablename__ = "refresh_sessions"
 

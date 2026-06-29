@@ -11,7 +11,7 @@ from fastapi_template.foundation.service import BaseService
 
 
 class PasswordServiceSettings(BaseSettings):
-    """Define PasswordServiceSettings."""
+    """Password policy bounds loaded from the runtime environment."""
 
     model_config = SettingsConfigDict(env_prefix="PASSWORD_")
 
@@ -21,7 +21,7 @@ class PasswordServiceSettings(BaseSettings):
 
 @dataclass(kw_only=True)
 class PasswordService(BaseService):
-    """Define PasswordService."""
+    """Validate passwords and delegate secure hashing to pwdlib."""
 
     WEAK_PASSWORD_ERROR: ClassVar = WeakPasswordError  # noqa: WPS115
 
@@ -30,27 +30,27 @@ class PasswordService(BaseService):
     _password_hash: PasswordHash = field(init=False)
 
     def __post_init__(self) -> None:
-        """Run post init."""
+        """Create the recommended password-hashing backend once per service."""
         self._password_hash = PasswordHash.recommended()
 
     def validate(self, *, data: CreateUserDTO) -> None:
-        """Run validate."""
+        """Reject passwords that fail the account-creation password policy."""
         if self._is_weak_password(data=data):
             raise self.WEAK_PASSWORD_ERROR
 
     def hash_password(self, *, password: str) -> str:
-        """Run hash password.
+        """Hash a plaintext password with the configured pwdlib backend.
 
         Returns:
-        The operation result.
+            Encoded password hash safe to persist.
         """
         return self._password_hash.hash(password)
 
     def verify_password(self, *, password: str, password_hash: str) -> bool:
-        """Run verify password.
+        """Verify a plaintext password against a persisted hash.
 
         Returns:
-        The operation result.
+            ``True`` when the password matches the hash.
         """
         return self._password_hash.verify(password, password_hash)
 

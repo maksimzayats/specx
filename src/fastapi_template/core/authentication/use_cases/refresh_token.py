@@ -15,7 +15,7 @@ from fastapi_template.foundation.use_case import BaseUseCase
 
 @dataclass(kw_only=True)
 class RefreshTokenUseCase(BaseUseCase):
-    """Define RefreshTokenUseCase."""
+    """Rotate a refresh token and issue a replacement access token."""
 
     INVALID_REFRESH_TOKEN_ERROR: ClassVar = RefreshSessionService.INVALID_REFRESH_TOKEN_ERROR  # noqa: WPS115
     EXPIRED_REFRESH_TOKEN_ERROR: ClassVar = RefreshSessionService.EXPIRED_REFRESH_TOKEN_ERROR  # noqa: WPS115
@@ -26,10 +26,10 @@ class RefreshTokenUseCase(BaseUseCase):
     _uow: Injected[UnitOfWork]
 
     async def execute(self, *, data: RefreshTokenDTO) -> TokenDTO:
-        """Run execute.
+        """Rotate the submitted refresh token inside one unit of work.
 
         Returns:
-        The operation result.
+            Replacement access and refresh tokens for the session user.
         """
         async with self._uow as uow:
             rotated_session = await self._refresh_session_service.rotate_refresh_token(

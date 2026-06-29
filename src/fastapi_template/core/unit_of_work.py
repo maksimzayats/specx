@@ -11,12 +11,12 @@ from fastapi_template.core.user.repositories.user import UserRepository
 
 
 class UnitOfWork(ABC):
-    """Define UnitOfWork."""
+    """Transaction boundary exposing repositories bound to one active scope."""
 
     @property
     @abstractmethod
     def user_repository(self) -> UserRepository:
-        """Return the active user repository.
+        """User repository bound to the current transaction.
 
         Returns:
             The user repository for the current transaction.
@@ -26,7 +26,7 @@ class UnitOfWork(ABC):
     @property
     @abstractmethod
     def refresh_session_repository(self) -> RefreshSessionRepository:
-        """Return the active refresh-session repository.
+        """Refresh-session repository bound to the current transaction.
 
         Returns:
             The refresh-session repository for the current transaction.
@@ -36,7 +36,7 @@ class UnitOfWork(ABC):
     @property
     @abstractmethod
     def health_repository(self) -> HealthRepository:
-        """Return the active health repository.
+        """Health repository bound to the current transaction.
 
         Returns:
             The health repository for the current transaction.

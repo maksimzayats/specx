@@ -9,7 +9,7 @@ from fastapi_template.infrastructure.throttled.settings import ThrottledRedisSet
 
 @dataclass(kw_only=True)
 class AsyncThrottlerStoreFactory(BaseFactory):
-    """Define AsyncThrottlerStoreFactory."""
+    """Factory for async Redis stores used by FastAPI throttling."""
 
     _redis_settings: Injected[ThrottledRedisSettings]
 

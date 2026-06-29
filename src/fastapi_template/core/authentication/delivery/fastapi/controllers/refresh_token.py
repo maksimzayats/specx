@@ -18,12 +18,12 @@ from fastapi_template.foundation.delivery.controller import BaseAsyncController
 
 @dataclass(kw_only=True)
 class RefreshTokenController(BaseAsyncController):
-    """Define RefreshTokenController."""
+    """HTTP adapter for rotating refresh tokens and returning a new token pair."""
 
     _refresh_token_use_case: Injected[RefreshTokenUseCase]
 
     def register(self, registry: APIRouter) -> None:
-        """Run register."""
+        """Attach the refresh-token endpoint to the FastAPI router."""
         registry.add_api_route(
             path="/api/v1/auth/token/refresh",
             endpoint=self.refresh_token,
@@ -35,10 +35,10 @@ class RefreshTokenController(BaseAsyncController):
         self,
         body: RefreshTokenRequestSchema,
     ) -> TokenResponseSchema:
-        """Run refresh token.
+        """Pass a refresh token to the rotation workflow.
 
         Returns:
-        The operation result.
+            Serialized replacement access and refresh tokens.
         """
         token = await self._refresh_token_use_case.execute(
             data=RefreshTokenDTO(refresh_token=body.refresh_token),
@@ -47,10 +47,10 @@ class RefreshTokenController(BaseAsyncController):
         return TokenResponseSchema.model_validate(token)
 
     async def handle_exception(self, exception: Exception) -> Any:
-        """Run handle exception.
+        """Translate refresh-token failures into HTTP authentication responses.
 
         Returns:
-        The operation result.
+            The delegated handler result for unrecognized exceptions.
         """
         if isinstance(exception, RefreshTokenUseCase.INVALID_REFRESH_TOKEN_ERROR):
             raise HTTPException(

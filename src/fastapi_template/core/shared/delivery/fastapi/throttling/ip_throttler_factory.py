@@ -15,7 +15,7 @@ from fastapi_template.foundation.factory import BaseFactory
 
 @dataclass(kw_only=True)
 class IPThrottlerFactory(BaseFactory):
-    """Define IPThrottlerFactory."""
+    """Factory for FastAPI dependencies that throttle by client IP trace."""
 
     _throttler_factory: Injected[BaseAsyncThrottlerFactory]
     _request_info_service: Injected[RequestInfoService]
@@ -26,10 +26,10 @@ class IPThrottlerFactory(BaseFactory):
         using: RateLimiterType = RateLimiterType.TOKEN_BUCKET,
         cost: int = 1,
     ) -> Callable[[Request], Awaitable[None]]:
-        """Run call.
+        """Create an IP-keyed throttling dependency for a route quota.
 
         Returns:
-        The operation result.
+            A FastAPI dependency callable that enforces the configured quota.
         """
         throttler = self._throttler_factory(
             quota=quota,

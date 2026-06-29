@@ -16,12 +16,12 @@ from fastapi_template.foundation.delivery.controller import BaseAsyncController
 
 @dataclass(kw_only=True)
 class CreateUserController(BaseAsyncController):
-    """Define CreateUserController."""
+    """HTTP adapter for creating users from public registration input."""
 
     _create_user_use_case: Injected[CreateUserUseCase]
 
     def register(self, registry: APIRouter) -> None:
-        """Run register."""
+        """Attach the user creation endpoint to the FastAPI router."""
         registry.add_api_route(
             path="/api/v1/users",
             endpoint=self.create_user,
@@ -30,10 +30,10 @@ class CreateUserController(BaseAsyncController):
         )
 
     async def create_user(self, request_body: CreateUserRequestSchema) -> UserSchema:
-        """Run create user.
+        """Map the HTTP request body to the user creation use case.
 
         Returns:
-        The operation result.
+            Serialized user data for the created account.
         """
         user = await self._create_user_use_case.execute(
             data=CreateUserDTO(
@@ -48,10 +48,10 @@ class CreateUserController(BaseAsyncController):
         return UserSchema.model_validate(user, from_attributes=True)
 
     async def handle_exception(self, exception: Exception) -> Any:
-        """Run handle exception.
+        """Translate user creation failures into HTTP responses.
 
         Returns:
-        The operation result.
+            The delegated handler result for unrecognized exceptions.
         """
         if isinstance(exception, CreateUserUseCase.WEAK_PASSWORD_ERROR):
             raise HTTPException(

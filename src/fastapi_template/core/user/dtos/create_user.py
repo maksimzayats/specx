@@ -11,7 +11,7 @@ from fastapi_template.foundation.dto import BaseDTO
 
 
 class CreateUserDTO(BaseDTO):
-    """Define CreateUserDTO."""
+    """Core command data for creating a user account."""
 
     email: EmailStr
     username: Annotated[str, Len(max_length=USER_NAME_MAX_LENGTH)]

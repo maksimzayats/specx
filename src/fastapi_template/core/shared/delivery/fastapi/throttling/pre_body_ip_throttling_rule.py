@@ -8,7 +8,7 @@ type PreBodyIPThrottler = Callable[[Request], Awaitable[None]]
 
 @dataclass(frozen=True, kw_only=True, slots=True)
 class PreBodyIPThrottlingRule:
-    """Define a route-specific pre-body IP throttling rule."""
+    """Route-specific pre-body IP throttling rule."""
 
     method: str
     path: str

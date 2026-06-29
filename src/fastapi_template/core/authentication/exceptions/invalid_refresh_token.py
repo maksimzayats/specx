@@ -2,4 +2,4 @@ from fastapi_template.core.authentication.exceptions.refresh_token import Refres
 
 
 class InvalidRefreshTokenError(RefreshTokenError):
-    """Define InvalidRefreshTokenError."""
+    """Raised when a refresh token cannot be matched to an active session."""

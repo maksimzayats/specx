@@ -7,7 +7,7 @@ from fastapi_template.core.user.entities.user import User
 
 @dataclass(frozen=True, kw_only=True, slots=True)
 class RefreshSession:
-    """Define RefreshSession."""
+    """Core refresh-session state used to rotate and revoke refresh tokens."""
 
     id: uuid.UUID
     refresh_token_hash: str
@@ -22,9 +22,9 @@ class RefreshSession:
 
     @property
     def is_active(self) -> bool:
-        """Run is active.
+        """Report whether the refresh session can still be used.
 
         Returns:
-        The operation result.
+            ``True`` when the session is neither revoked nor expired.
         """
         return self.revoked_at is None and self.expires_at > datetime.now(tz=UTC)

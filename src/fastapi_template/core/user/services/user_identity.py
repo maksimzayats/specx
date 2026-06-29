@@ -7,13 +7,13 @@ from fastapi_template.foundation.service import BaseService
 
 @dataclass(kw_only=True)
 class UserIdentityService(BaseService):
-    """Define UserIdentityService."""
+    """Normalize user identity fields before validation or lookup."""
 
     def normalize_create_user_data(self, *, data: CreateUserDTO) -> CreateUserDTO:
-        """Run normalize create user data.
+        """Normalize identity fields while preserving creation policy flags.
 
         Returns:
-        The operation result.
+            A user creation DTO with normalized username and email.
         """
         return CreateUserDTO(
             username=self.normalize_username(username=data.username),
@@ -27,18 +27,18 @@ class UserIdentityService(BaseService):
         )
 
     def normalize_username(self, *, username: str) -> str:
-        """Run normalize username.
+        """Trim and Unicode-normalize a username for stable comparisons.
 
         Returns:
-        The operation result.
+            Username normalized with NFKC.
         """
         return unicodedata.normalize("NFKC", username.strip())
 
     def normalize_email(self, *, email: str) -> str:
-        """Run normalize email.
+        """Trim an email address and case-fold only the domain part.
 
         Returns:
-        The operation result.
+            Email address normalized for account uniqueness checks.
         """
         local_part, separator, domain = email.strip().partition("@")
         if not separator:

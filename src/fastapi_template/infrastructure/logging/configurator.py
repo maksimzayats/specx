@@ -12,7 +12,7 @@ from fastapi_template.infrastructure.logfire.configurator import LogfireSettings
 
 
 class LoggingSettings(BaseSettings):
-    """Define LoggingSettings."""
+    """Logging settings loaded from the runtime environment."""
 
     model_config = SettingsConfigDict(env_prefix="LOGGING_")
 
@@ -22,12 +22,12 @@ class LoggingSettings(BaseSettings):
 
 @dataclass(kw_only=True)
 class LoggingConfigurator(BaseConfigurator):
-    """Define LoggingConfigurator."""
+    """Configure process logging handlers and noisy third-party log levels."""
 
     _settings: Injected[LoggingSettings]
 
     def configure(self) -> None:
-        """Run configure."""
+        """Apply standard logging configuration for the process."""
         logging.basicConfig(
             level=self._settings.level,
             format="%(asctime)s %(levelname)s %(name)s %(message)s",

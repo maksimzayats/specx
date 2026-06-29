@@ -2,9 +2,9 @@ from abc import ABC, abstractmethod
 
 
 class BaseConfigurator(ABC):
-    """Base class for configurator implementations."""
+    """Contract for bootstrap components that apply process-wide settings."""
 
     @abstractmethod
     def configure(self) -> None:
-        """Configure the component."""
+        """Apply side-effectful configuration during application bootstrap."""
         raise NotImplementedError

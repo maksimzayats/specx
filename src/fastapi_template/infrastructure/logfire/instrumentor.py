@@ -11,7 +11,7 @@ from fastapi_template.infrastructure.logfire.configurator import LogfireSettings
 
 
 class InstrumentorSettings(BaseSettings):
-    """Define InstrumentorSettings."""
+    """OpenTelemetry instrumentation settings for supported libraries."""
 
     model_config = SettingsConfigDict(env_prefix="INSTRUMENTOR_")
 
@@ -22,13 +22,13 @@ class InstrumentorSettings(BaseSettings):
 
 @dataclass(kw_only=True)
 class OpenTelemetryInstrumentor:
-    """Define OpenTelemetryInstrumentor."""
+    """Register Logfire instrumentation for libraries and FastAPI apps."""
 
     _instrumentor_settings: Injected[InstrumentorSettings]
     _logfire_settings: Injected[LogfireSettings]
 
     def instrument_libraries(self) -> None:
-        """Run instrument libraries."""
+        """Enable telemetry hooks for outbound clients and data libraries."""
         if not self._logfire_settings.is_enabled:
             return
 
@@ -45,7 +45,7 @@ class OpenTelemetryInstrumentor:
         logfire.instrument_pydantic()
 
     def instrument_fastapi(self, app: FastAPI) -> None:
-        """Run instrument fastapi."""
+        """Attach FastAPI request instrumentation to an application instance."""
         if not self._logfire_settings.is_enabled:
             return
 

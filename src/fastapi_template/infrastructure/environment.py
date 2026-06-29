@@ -2,7 +2,7 @@ from enum import StrEnum
 
 
 class Environment(StrEnum):
-    """Define Environment."""
+    """Environment names used by settings and application bootstrap."""
 
     LOCAL = "local"
     DEVELOPMENT = "development"

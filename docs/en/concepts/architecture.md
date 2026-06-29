@@ -16,4 +16,4 @@ Repository interfaces are inner core contracts and do not import SQLAlchemy. Con
 
 Public HTTP routes are registered as full paths such as `/api/v1/users/me`; route prefixes are not split across routers and handlers.
 
-Public classes, functions, methods, and constructors in application code use concise Google-style docstrings. The template keeps Ruff, WPS/flake8, mypy, strict pytest settings, and architecture tests as guardrails for these conventions.
+Public classes, functions, methods, and constructors in application code use concise Google-style docstrings that explain contracts, boundaries, domain meaning, side effects, or failure semantics. Placeholder docstrings such as `Define X.`, `Run X.`, or `Returns: The operation result.` are blocked by style tests. The template keeps Ruff, WPS/flake8, mypy, strict pytest settings, and architecture tests as guardrails for these conventions.

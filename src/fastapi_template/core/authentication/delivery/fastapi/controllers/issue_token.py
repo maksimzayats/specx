@@ -20,13 +20,13 @@ from fastapi_template.foundation.delivery.controller import BaseAsyncController
 
 @dataclass(kw_only=True)
 class IssueTokenController(BaseAsyncController):
-    """Define IssueTokenController."""
+    """HTTP adapter for issuing access and refresh tokens from credentials."""
 
     _request_info_service: Injected[RequestInfoService]
     _issue_token_use_case: Injected[IssueTokenUseCase]
 
     def register(self, registry: APIRouter) -> None:
-        """Run register."""
+        """Attach the token issue endpoint to the FastAPI router."""
         registry.add_api_route(
             path="/api/v1/auth/token",
             endpoint=self.issue_token,
@@ -39,10 +39,10 @@ class IssueTokenController(BaseAsyncController):
         request: Request,
         body: IssueTokenRequestSchema,
     ) -> TokenResponseSchema:
-        """Run issue token.
+        """Convert a token request into the credential-authentication use case.
 
         Returns:
-        The operation result.
+            Serialized access and refresh tokens for the HTTP response.
         """
         token = await self._issue_token_use_case.execute(
             data=IssueTokenDTO(username=body.username, password=body.password),
@@ -57,10 +57,10 @@ class IssueTokenController(BaseAsyncController):
         return TokenResponseSchema.model_validate(token)
 
     async def handle_exception(self, exception: Exception) -> Any:
-        """Run handle exception.
+        """Translate token-issue failures into HTTP authentication responses.
 
         Returns:
-        The operation result.
+            The delegated handler result for unrecognized exceptions.
         """
         if isinstance(exception, IssueTokenUseCase.INVALID_CREDENTIALS_ERROR):
             raise HTTPException(

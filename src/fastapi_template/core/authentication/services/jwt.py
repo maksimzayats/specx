@@ -11,7 +11,7 @@ from fastapi_template.foundation.service import BaseService
 
 
 class JWTServiceSettings(BaseSettings):
-    """Define JWTServiceSettings."""
+    """JWT signing settings loaded from the runtime environment."""
 
     model_config = SettingsConfigDict(env_prefix="JWT_")
 
@@ -22,17 +22,17 @@ class JWTServiceSettings(BaseSettings):
 
     @property
     def access_token_expire(self) -> timedelta:
-        """Run access token expire.
+        """Convert the configured access-token lifetime to a timedelta.
 
         Returns:
-        The operation result.
+            Access-token lifetime used in the JWT ``exp`` claim.
         """
         return timedelta(minutes=self.access_token_expire_minutes)
 
 
 @dataclass(kw_only=True)
 class JWTService(BaseService):
-    """Define JWTService."""
+    """Issue and decode signed access tokens for authenticated users."""
 
     EXPIRED_SIGNATURE_ERROR: ClassVar = jwt.ExpiredSignatureError  # noqa: WPS115
     INVALID_TOKEN_ERROR: ClassVar = jwt.InvalidTokenError  # noqa: WPS115
@@ -45,10 +45,10 @@ class JWTService(BaseService):
         user_id: Any,
         **payload_kwargs: Any,
     ) -> str:
-        """Run issue access token.
+        """Create a signed access token containing the user subject.
 
         Returns:
-        The operation result.
+            Encoded JWT string ready for HTTP responses.
         """
         iat = datetime.now(tz=UTC)
         payload = {
@@ -66,10 +66,10 @@ class JWTService(BaseService):
         )
 
     def decode_token(self, *, token: str) -> dict[str, Any]:
-        """Run decode token.
+        """Verify and decode a JWT using the configured signing settings.
 
         Returns:
-        The operation result.
+            Token payload after signature, expiry, and algorithm validation.
         """
         return jwt.decode(
             jwt=token,

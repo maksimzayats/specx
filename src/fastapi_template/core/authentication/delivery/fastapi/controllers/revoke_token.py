@@ -29,7 +29,7 @@ from fastapi_template.foundation.delivery.controller import BaseAsyncController
 
 @dataclass(kw_only=True)
 class RevokeTokenController(BaseAsyncController):
-    """Define RevokeTokenController."""
+    """HTTP adapter for revoking a refresh token owned by the current user."""
 
     _jwt_auth_factory: Injected[JWTAuthFactory]
     _user_throttler_factory: Injected[UserThrottlerFactory]
@@ -38,12 +38,12 @@ class RevokeTokenController(BaseAsyncController):
     _jwt_auth: HTTPBearer = field(init=False)
 
     def __post_init__(self) -> None:
-        """Run post init."""
+        """Build the reusable JWT dependency before route registration."""
         self._jwt_auth = self._jwt_auth_factory()
         super().__post_init__()
 
     def register(self, registry: APIRouter) -> None:
-        """Run register."""
+        """Attach the authenticated refresh-token revocation endpoint."""
         registry.add_api_route(
             path="/api/v1/auth/token/revoke",
             endpoint=self.revoke_token,
@@ -59,17 +59,17 @@ class RevokeTokenController(BaseAsyncController):
         request: AuthenticatedRequest,
         body: RevokeTokenRequestSchema,
     ) -> None:
-        """Run revoke token."""
+        """Revoke the submitted refresh token for the authenticated user."""
         await self._revoke_token_use_case.execute(
             data=RefreshTokenDTO(refresh_token=body.refresh_token),
             user_id=request.state.user_id,
         )
 
     async def handle_exception(self, exception: Exception) -> Any:
-        """Run handle exception.
+        """Translate revocation failures into HTTP authentication responses.
 
         Returns:
-        The operation result.
+            The delegated handler result for unrecognized exceptions.
         """
         if isinstance(exception, RevokeTokenUseCase.INVALID_REFRESH_TOKEN_ERROR):
             raise HTTPException(

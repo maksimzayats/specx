@@ -56,7 +56,7 @@ PRE_BODY_IP_THROTTLED_ROUTES = (
 
 @dataclass(kw_only=True)
 class FastAPIFactory(BaseFactory):
-    """Define FastAPIFactory."""
+    """Composition root that builds the FastAPI application instance."""
 
     _application_settings: Injected[ApplicationSettings]
     _fastapi_settings: Injected[FastAPISettings]
@@ -80,10 +80,10 @@ class FastAPIFactory(BaseFactory):
         add_trusted_hosts_middleware: bool = True,
         add_cors_middleware: bool = True,
     ) -> fastapi.FastAPI:
-        """Run call.
+        """Create the FastAPI app with middleware, telemetry, and routes.
 
         Returns:
-        The operation result.
+            Configured FastAPI application.
         """
         docs_url: str | None = None
         if self._application_settings.environment is not Environment.PRODUCTION:

@@ -9,7 +9,7 @@ from fastapi_template.core.shared.delivery.fastapi.throttling.base import BaseTh
 
 @dataclass(kw_only=True)
 class UserThrottler(BaseThrottler):
-    """Define UserThrottler."""
+    """Rate limiter keyed by an authenticated user identifier."""
 
     def _build_key(self, request: Any) -> str:
         request = cast(AuthenticatedRequest, request)

@@ -9,7 +9,7 @@ from fastapi_template.core.shared.delivery.fastapi.throttling.base import BaseTh
 
 @dataclass(kw_only=True)
 class IPThrottler(BaseThrottler):
-    """Define IPThrottler."""
+    """Rate limiter keyed by request method, path, and client IP trace."""
 
     _request_info_service: Injected[RequestInfoService]
 

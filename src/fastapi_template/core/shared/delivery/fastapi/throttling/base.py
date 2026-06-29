@@ -13,13 +13,13 @@ logger = logging.getLogger(__name__)
 
 @dataclass(kw_only=True)
 class BaseThrottler(ABC):
-    """Define BaseThrottler."""
+    """Base FastAPI dependency for rejecting requests over a rate limit."""
 
     _throttler: Throttled
     _cost: int = 1
 
     async def __call__(self, request: Request) -> None:
-        """Run call."""
+        """Apply the configured rate limit to the key derived from the request."""
         key = self._build_key(request=request)
         limit_result = await self._throttler.limit(key=key, cost=self._cost)
         if limit_result.limited:

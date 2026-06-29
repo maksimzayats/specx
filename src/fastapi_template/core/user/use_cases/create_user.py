@@ -18,7 +18,7 @@ from fastapi_template.foundation.use_case import BaseUseCase
 
 @dataclass(kw_only=True)
 class CreateUserUseCase(BaseUseCase):
-    """Define CreateUserUseCase."""
+    """Create a normalized user account with a validated hashed password."""
 
     WEAK_PASSWORD_ERROR: ClassVar = WeakPasswordError  # noqa: WPS115
     USER_ALREADY_EXISTS_ERROR: ClassVar = UserAlreadyExistsError  # noqa: WPS115
@@ -29,10 +29,10 @@ class CreateUserUseCase(BaseUseCase):
     _uow: Injected[UnitOfWork]
 
     async def execute(self, *, data: CreateUserDTO) -> User:
-        """Run execute.
+        """Validate and persist a user account inside one unit of work.
 
         Returns:
-        The operation result.
+            The created user entity.
         """
         normalized_data = self._identity_service.normalize_create_user_data(data=data)
         self._password_service.validate(data=normalized_data)

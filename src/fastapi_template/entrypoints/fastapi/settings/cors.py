@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class CORSSettings(BaseSettings):
-    """Define CORSSettings."""
+    """CORS middleware settings loaded from the runtime environment."""
 
     model_config = SettingsConfigDict(env_prefix="CORS_")
 

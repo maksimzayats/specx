@@ -1,2 +1,2 @@
 class BaseFactory:
-    """Base class for factory implementations."""
+    """Marker for dependency-injected objects that create configured instances."""

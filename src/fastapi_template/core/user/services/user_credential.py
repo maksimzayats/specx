@@ -11,7 +11,7 @@ from fastapi_template.foundation.service import BaseService
 
 @dataclass(kw_only=True)
 class UserCredentialService(BaseService):
-    """Define UserCredentialService."""
+    """Authenticate users through repository lookup and password verification."""
 
     _identity_service: Injected[UserIdentityService]
     _password_service: Injected[PasswordService]
@@ -23,10 +23,10 @@ class UserCredentialService(BaseService):
         username: str,
         password: str,
     ) -> User | None:
-        """Run authenticate user.
+        """Return an active user when the supplied credentials are valid.
 
         Returns:
-        The operation result.
+            The authenticated user, or ``None`` for invalid credentials.
         """
         normalized_username = self._identity_service.normalize_username(username=username)
         user = await uow.user_repository.get_by_username(username=normalized_username)

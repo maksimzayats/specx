@@ -19,14 +19,14 @@ from fastapi_template.infrastructure.throttled.async_store_factory import (
 
 @dataclass(kw_only=True)
 class AsyncThrottlerFactory(BaseAsyncThrottlerFactory):
-    """Define AsyncThrottlerFactory."""
+    """Create async throttled rate-limiters backed by Redis."""
 
     _store_factory: Injected[AsyncThrottlerStoreFactory]
 
     _store: AsyncRedisStore = field(init=False)
 
     def __post_init__(self) -> None:
-        """Run post init."""
+        """Create the shared async Redis store once per factory instance."""
         self._store = self._store_factory()
 
     def __call__(
@@ -34,10 +34,10 @@ class AsyncThrottlerFactory(BaseAsyncThrottlerFactory):
         quota: AsyncQuota,
         using: AsyncRateLimiterType = AsyncRateLimiterType.TOKEN_BUCKET,
     ) -> AsyncThrottled:
-        """Build an async throttler.
+        """Provide an async Redis-backed rate limiter for a quota.
 
         Returns:
-        A configured async throttler.
+            A configured async throttler.
         """
         return AsyncThrottled(
             using=using.value,

@@ -2,4 +2,4 @@ from fastapi_template.core.user.exceptions.user import UserError
 
 
 class UserAlreadyExistsError(UserError):
-    """Define UserAlreadyExistsError."""
+    """Raised when a username or email is already assigned to another user."""

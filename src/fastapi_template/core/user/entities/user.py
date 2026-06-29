@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True, kw_only=True, slots=True)
 class User:
-    """Define User."""
+    """Core user account state used by authentication and authorization rules."""
 
     id: int
     username: str

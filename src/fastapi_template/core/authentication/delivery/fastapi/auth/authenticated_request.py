@@ -6,6 +6,6 @@ from fastapi_template.core.authentication.delivery.fastapi.auth.authenticated_re
 
 
 class AuthenticatedRequest(Request):
-    """Define AuthenticatedRequest."""
+    """FastAPI request variant with authentication state populated by JWT auth."""
 
     state: AuthenticatedRequestState

@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class ThrottledRedisSettings(BaseSettings):
-    """Define ThrottledRedisSettings."""
+    """Redis connection settings used only by request throttling."""
 
     model_config = SettingsConfigDict(env_prefix="REDIS_")
 

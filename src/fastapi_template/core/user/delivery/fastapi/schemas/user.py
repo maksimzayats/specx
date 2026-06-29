@@ -2,7 +2,7 @@ from fastapi_template.foundation.delivery.fastapi.schema import BaseFastAPISchem
 
 
 class UserSchema(BaseFastAPISchema):
-    """Define UserSchema."""
+    """HTTP response body exposing public user account fields."""
 
     id: int
     username: str

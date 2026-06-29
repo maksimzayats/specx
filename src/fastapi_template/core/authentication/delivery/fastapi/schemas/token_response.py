@@ -2,7 +2,7 @@ from fastapi_template.foundation.delivery.fastapi.schema import BaseFastAPISchem
 
 
 class TokenResponseSchema(BaseFastAPISchema):
-    """Define TokenResponseSchema."""
+    """HTTP response body containing the access token and refresh token pair."""
 
     access_token: str
     refresh_token: str

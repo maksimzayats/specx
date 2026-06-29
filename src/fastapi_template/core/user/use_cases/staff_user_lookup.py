@@ -23,10 +23,10 @@ class StaffUserLookupUseCase(BaseUseCase):
     _uow: Injected[UnitOfWork]
 
     async def execute(self, *, user_id: int, actor_user_id: int) -> User | None:
-        """Run execute.
+        """Check staff access and load the requested user in one UoW.
 
         Returns:
-        The operation result.
+            The requested user, if one exists.
         """
         async with self._uow as uow:
             actor = await uow.user_repository.get_active_by_id(user_id=actor_user_id)

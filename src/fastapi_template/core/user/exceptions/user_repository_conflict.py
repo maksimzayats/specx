@@ -2,4 +2,4 @@ from fastapi_template.core.user.exceptions.user import UserError
 
 
 class UserRepositoryConflictError(UserError):
-    """Define UserRepositoryConflictError."""
+    """Raised when persistence reports a duplicate user constraint."""

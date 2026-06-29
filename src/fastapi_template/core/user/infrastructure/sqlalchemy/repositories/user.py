@@ -20,16 +20,16 @@ SQLITE_USER_UNIQUE_MESSAGES = frozenset(
 
 
 class SQLAlchemyUserRepository(UserRepository):
-    """Define SQLAlchemyUserRepository."""
+    """User repository backed by the active SQLAlchemy transaction."""
 
     INTEGRITY_ERROR: ClassVar = IntegrityError  # noqa: WPS115
 
     def __init__(self, *, session: AsyncSession) -> None:
-        """Initialize the instance."""
+        """Bind repository queries to an existing unit-of-work session."""
         self._session = session
 
     async def get_by_id(self, *, user_id: int) -> User | None:
-        """Get a user by identifier.
+        """Load a user account by primary key.
 
         Returns:
             The matching user, if one exists.
@@ -42,7 +42,7 @@ class SQLAlchemyUserRepository(UserRepository):
         return user_from_model(model=model)
 
     async def get_active_by_id(self, *, user_id: int) -> User | None:
-        """Get an active user by identifier.
+        """Load a user only when the account is active.
 
         Returns:
             The matching active user, if one exists.
@@ -61,7 +61,7 @@ class SQLAlchemyUserRepository(UserRepository):
         return user_from_model(model=model)
 
     async def get_by_username(self, *, username: str) -> User | None:
-        """Get a user by username.
+        """Load a user account by normalized username.
 
         Returns:
             The matching user, if one exists.
@@ -77,7 +77,7 @@ class SQLAlchemyUserRepository(UserRepository):
         return user_from_model(model=model)
 
     async def get_by_username_or_email(self, *, username: str, email: str) -> User | None:
-        """Get a user by username or email.
+        """Load the first user matching normalized username or email.
 
         Returns:
             A matching user, if one exists.
@@ -100,7 +100,7 @@ class SQLAlchemyUserRepository(UserRepository):
         return user_from_model(model=model)
 
     async def create(self, *, data: CreateUserDTO, password_hash: str) -> User:
-        """Create a user.
+        """Persist a user and translate duplicate constraints to core errors.
 
         Returns:
             The created user.
@@ -134,7 +134,7 @@ class SQLAlchemyUserRepository(UserRepository):
         is_staff: bool,
         is_superuser: bool,
     ) -> User | None:
-        """Set staff and superuser flags.
+        """Update access flags without committing the transaction.
 
         Returns:
             The updated user, if one exists.

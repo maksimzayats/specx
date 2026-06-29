@@ -26,14 +26,14 @@ from fastapi_template.core.authentication.repositories.refresh_session import (
 
 
 class SQLAlchemyRefreshSessionRepository(RefreshSessionRepository):
-    """Define SQLAlchemyRefreshSessionRepository."""
+    """Refresh-session repository backed by the active SQLAlchemy transaction."""
 
     def __init__(self, *, session: AsyncSession) -> None:
-        """Initialize the instance."""
+        """Bind repository queries to an existing unit-of-work session."""
         self._session = session
 
     async def create(self, *, data: CreateRefreshSessionDTO) -> RefreshSession:
-        """Create a refresh session.
+        """Persist a refresh session without committing the transaction.
 
         Returns:
             The created refresh session.
@@ -57,7 +57,7 @@ class SQLAlchemyRefreshSessionRepository(RefreshSessionRepository):
         return refresh_session_from_model(model=model, user=data.user)
 
     async def get_by_token_hash(self, *, refresh_token_hash: str) -> RefreshSession | None:
-        """Get a refresh session by token hash.
+        """Lock and load a refresh session by its hashed token value.
 
         Returns:
             The matching refresh session, if one exists.
@@ -80,7 +80,7 @@ class SQLAlchemyRefreshSessionRepository(RefreshSessionRepository):
         *,
         data: ReplaceRefreshSessionTokenDTO,
     ) -> RefreshSession | None:
-        """Replace a matching refresh token hash.
+        """Rotate a refresh token only if the stored hash still matches.
 
         Returns:
             The updated refresh session, if a matching session exists.
@@ -114,7 +114,7 @@ class SQLAlchemyRefreshSessionRepository(RefreshSessionRepository):
         return refresh_session_from_model(model=model)
 
     async def revoke(self, *, session_id: uuid.UUID, revoked_at: datetime) -> None:
-        """Revoke a refresh session."""
+        """Mark a refresh session revoked inside the current transaction."""
         query_result = await self._session.execute(
             select(RefreshSessionModel)
             .where(RefreshSessionModel.id == session_id)

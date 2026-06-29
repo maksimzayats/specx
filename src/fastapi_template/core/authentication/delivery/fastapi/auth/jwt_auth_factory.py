@@ -9,14 +9,14 @@ from fastapi_template.foundation.factory import BaseFactory
 
 @dataclass(kw_only=True)
 class JWTAuthFactory(BaseFactory):
-    """Factory for creating JWT auth instances."""
+    """Factory for auth dependencies that share the configured JWT service."""
 
     _jwt_service: Injected[JWTService]
 
     def __call__(self) -> JWTAuth:
-        """Create a JWT auth instance.
+        """Create a required bearer-auth dependency for protected routes.
 
         Returns:
-            A JWTAuth instance.
+            JWT auth dependency backed by the injected JWT service.
         """
         return JWTAuth(jwt_service=self._jwt_service)

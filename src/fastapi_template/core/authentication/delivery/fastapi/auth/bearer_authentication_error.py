@@ -7,7 +7,7 @@ BEARER_AUTH_SCHEME = "Bearer"
 
 
 def bearer_authentication_error(*, detail: str) -> HTTPException:
-    """Build a bearer-authentication HTTP error.
+    """HTTP 401 error factory with the bearer challenge header attached.
 
     Returns:
         An HTTP 401 error with the bearer challenge header.

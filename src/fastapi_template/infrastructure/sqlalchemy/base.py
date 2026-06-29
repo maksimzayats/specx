@@ -2,4 +2,4 @@ from sqlalchemy.orm import DeclarativeBase
 
 
 class Base(DeclarativeBase):
-    """Define SQLAlchemy declarative base."""
+    """Declarative base used by all SQLAlchemy table mappings."""

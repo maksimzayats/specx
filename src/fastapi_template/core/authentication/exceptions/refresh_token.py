@@ -2,4 +2,4 @@ from fastapi_template.core.authentication.exceptions.authentication import Authe
 
 
 class RefreshTokenError(AuthenticationError):
-    """Define RefreshTokenError."""
+    """Base application error for refresh-token lifecycle failures."""

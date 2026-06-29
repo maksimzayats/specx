@@ -25,7 +25,7 @@ class HealthCheckController(BaseAsyncController):
         )
 
     async def health_check(self) -> HealthCheckResponseSchema:
-        """Run the health check.
+        """Return service readiness after the database health use case succeeds.
 
         Returns:
             The health-check response.

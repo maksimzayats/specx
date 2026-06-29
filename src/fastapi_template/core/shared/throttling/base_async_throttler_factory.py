@@ -6,7 +6,7 @@ from fastapi_template.foundation.factory import BaseFactory
 
 
 class BaseAsyncThrottlerFactory(BaseFactory, ABC):
-    """Define BaseAsyncThrottlerFactory."""
+    """Factory contract for async throttled rate-limiters."""
 
     @abstractmethod
     def __call__(
@@ -14,7 +14,7 @@ class BaseAsyncThrottlerFactory(BaseFactory, ABC):
         quota: Quota,
         using: RateLimiterType = RateLimiterType.TOKEN_BUCKET,
     ) -> Throttled:
-        """Build an async throttler.
+        """Provide an async rate limiter for a quota and algorithm.
 
         Returns:
             A configured async throttler.

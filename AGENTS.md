@@ -9,8 +9,9 @@
 - Prefer the smallest readable fix that matches the current codebase.
 - Do not commit, push, reset, or revert unless explicitly asked.
 - Use `prek` through `make format` and `make lint` for checks.
-- Public classes, functions, methods, and constructors in `src/` and `management/`
-  need concise Google-style docstrings.
+- Public classes, functions, methods, and constructors in `src/` and
+  `management/` need concise Google-style docstrings that explain contract,
+  boundary behavior, domain meaning, side effects, or failure semantics.
 - Validate changes before the final response and report exact checks.
 
 ## Project Shape
@@ -103,6 +104,10 @@
 - Do not invent local `Protocol` types when a concrete project type or core ABC exists.
 - Use casts only at real third-party or protocol typing boundaries.
 - Add comments only for non-obvious behavior.
+- Do not write placeholder docstrings such as `Define X.`, `Run X.`, or
+  `Returns: The operation result.` A docstring must help a future reader or
+  agent understand why the object exists or how to use it. Remove private
+  helper docstrings when no meaningful contract exists.
 - Keep Ruff, wemake-python-styleguide, mypy, and pytest strictness passing.
 - Tests should cover behavior or architectural contracts, not framework internals.
 - Coverage must remain at 100% for counted source files; omit only genuinely

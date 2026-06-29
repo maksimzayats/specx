@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True, kw_only=True)
 class UpdateOptions:
-    """Configure dependency updater behavior."""
+    """Execution switches controlling which dependency update steps run."""
 
     dry_run: bool = False
     upgrade_lock: bool = True

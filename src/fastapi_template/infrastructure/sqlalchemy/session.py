@@ -14,7 +14,7 @@ from fastapi_template.foundation.factory import BaseFactory
 
 
 class DatabaseSettings(BaseSettings):
-    """Define DatabaseSettings."""
+    """Database connection settings for async SQLAlchemy."""
 
     model_config = SettingsConfigDict(env_prefix="DATABASE_")
 
@@ -23,10 +23,10 @@ class DatabaseSettings(BaseSettings):
 
     @property
     def async_url(self) -> str:
-        """Run async url.
+        """Convert common database URLs to async SQLAlchemy driver URLs.
 
         Returns:
-        The operation result.
+            Database URL using an async-compatible driver.
         """
         raw_url = self.url.get_secret_value()
         if raw_url.startswith("postgres://"):
@@ -43,7 +43,7 @@ class DatabaseSettings(BaseSettings):
 
 @dataclass(kw_only=True)
 class SQLAlchemySessionFactory(BaseFactory):
-    """Define SQLAlchemySessionFactory."""
+    """Lazy async SQLAlchemy engine and session factory."""
 
     _database_settings: Injected[DatabaseSettings]
 
@@ -51,10 +51,10 @@ class SQLAlchemySessionFactory(BaseFactory):
     _session_factory: async_sessionmaker[AsyncSession] | None = field(default=None, init=False)
 
     def __call__(self) -> AsyncSession:
-        """Run call.
+        """Create an async session from the cached session factory.
 
         Returns:
-        The operation result.
+            A new SQLAlchemy async session.
         """
         if self._session_factory is None:
             self._engine = create_async_engine(

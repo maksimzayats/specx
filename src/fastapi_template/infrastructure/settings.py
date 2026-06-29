@@ -4,7 +4,7 @@ from fastapi_template.infrastructure.environment import Environment
 
 
 class ApplicationSettings(BaseSettings):
-    """Define ApplicationSettings."""
+    """Application-wide runtime settings shared by entrypoints."""
 
     environment: Environment = Environment.PRODUCTION
     version: str = "0.1.0"

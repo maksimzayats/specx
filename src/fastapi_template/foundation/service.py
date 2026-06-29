@@ -1,2 +1,2 @@
 class BaseService:
-    """Base class for service implementations."""
+    """Marker for focused application services that own reusable behavior."""

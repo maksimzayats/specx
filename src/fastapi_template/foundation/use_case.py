@@ -3,11 +3,11 @@ from typing import Any
 
 
 class BaseUseCase(ABC):
-    """Define BaseUseCase."""
+    """Base contract for application actions exposed through ``execute``."""
 
     @abstractmethod
     async def execute(self, *args: Any, **kwargs: Any) -> Any:
-        """Execute the use case.
+        """Public contract for one application action.
 
         Returns:
             The use-case result.

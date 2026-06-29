@@ -13,19 +13,20 @@ from fastapi_template.core.authentication.services.jwt import JWTService
 
 
 class JWTAuth(HTTPBearer):
-    """Define JWTAuth."""
+    """FastAPI bearer dependency that validates JWTs and stores user identity."""
 
     def __init__(self, *, jwt_service: JWTService, required: bool = True) -> None:
-        """Initialize the instance."""
+        """Configure whether missing credentials should reject the request."""
         super().__init__(auto_error=False)
         self._jwt_service = jwt_service
         self._required = required
 
     async def __call__(self, request: Request) -> HTTPAuthorizationCredentials | None:
-        """Run call.
+        """Authenticate the request and attach JWT payload details to state.
 
         Returns:
-        The operation result.
+            Bearer credentials when a token is present, otherwise ``None`` for
+            optional authentication.
         """
         credentials = await super().__call__(request)
         if credentials is None:

@@ -8,10 +8,10 @@ from typing import Any
 
 @dataclass(kw_only=True)
 class BaseAsyncController(ABC):
-    """Define BaseAsyncController."""
+    """Base controller that wraps async endpoints with exception translation."""
 
     def __post_init__(self) -> None:
-        """Run post init."""
+        """Wrap public endpoint methods after dataclass initialization."""
         self._wrap_methods()
 
     @abstractmethod
@@ -20,7 +20,7 @@ class BaseAsyncController(ABC):
         raise NotImplementedError
 
     async def handle_exception(self, exception: Exception) -> Any:
-        """Run handle exception."""
+        """Translate a domain exception or re-raise it by default."""
         raise exception
 
     def _wrap_methods(self) -> None:
@@ -44,10 +44,10 @@ class BaseAsyncController(ABC):
 
         @wraps(method)
         async def wrapper(*args: Any, **kwargs: Any) -> Any:
-            """Run wrapper.
+            """Invoke an endpoint and delegate exception handling.
 
             Returns:
-            The operation result.
+                The wrapped endpoint result.
             """
             try:
                 return await method(*args, **kwargs)

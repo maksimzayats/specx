@@ -64,7 +64,7 @@ async def _close_scope(
 
 @dataclass(kw_only=True)
 class SQLAlchemyUnitOfWork(UnitOfWork):
-    """Define SQLAlchemyUnitOfWork."""
+    """SQLAlchemy implementation of the application unit-of-work boundary."""
 
     _session_factory: Injected[SQLAlchemySessionFactory]
 
@@ -75,28 +75,28 @@ class SQLAlchemyUnitOfWork(UnitOfWork):
 
     @property
     def user_repository(self) -> UserRepository:
-        """Run user repository.
+        """Expose the user repository bound to the active transaction.
 
         Returns:
-        The operation result.
+            User repository for the current unit-of-work scope.
         """
         return self._current_scope.user_repository
 
     @property
     def refresh_session_repository(self) -> RefreshSessionRepository:
-        """Run refresh session repository.
+        """Expose the refresh-session repository bound to the active transaction.
 
         Returns:
-        The operation result.
+            Refresh-session repository for the current unit-of-work scope.
         """
         return self._current_scope.refresh_session_repository
 
     @property
     def health_repository(self) -> HealthRepository:
-        """Run health repository.
+        """Expose the health repository bound to the active transaction.
 
         Returns:
-        The operation result.
+            Health repository for the current unit-of-work scope.
         """
         return self._current_scope.health_repository
 
@@ -155,7 +155,7 @@ class SQLAlchemyUnitOfWork(UnitOfWork):
 
     @property
     def _current_scope(self) -> _SQLAlchemyUnitOfWorkScope:
-        """Return the current unit-of-work scope.
+        """Active SQLAlchemy session, transaction, and repositories.
 
         Returns:
             The active SQLAlchemy unit-of-work scope.

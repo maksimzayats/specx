@@ -2,7 +2,7 @@ from fastapi_template.foundation.delivery.fastapi.schema import BaseFastAPISchem
 
 
 class IssueTokenRequestSchema(BaseFastAPISchema):
-    """Define IssueTokenRequestSchema."""
+    """HTTP request body accepted by the token issue endpoint."""
 
     username: str
     password: str

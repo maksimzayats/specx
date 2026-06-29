@@ -2,6 +2,6 @@ from fastapi_template.foundation.delivery.fastapi.schema import BaseFastAPISchem
 
 
 class RefreshTokenRequestSchema(BaseFastAPISchema):
-    """Define RefreshTokenRequestSchema."""
+    """HTTP request body carrying the refresh token to rotate."""
 
     refresh_token: str

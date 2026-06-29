@@ -9,6 +9,6 @@ from fastapi_template.infrastructure.throttled.async_throttler_factory import As
 
 
 def register_dependencies(container: Container) -> None:
-    """Run register dependencies."""
+    """Register core abstractions that need explicit concrete adapters."""
     container.add(SQLAlchemyUnitOfWork, provides=UnitOfWork)
     container.add(AsyncThrottlerFactory, provides=BaseAsyncThrottlerFactory)

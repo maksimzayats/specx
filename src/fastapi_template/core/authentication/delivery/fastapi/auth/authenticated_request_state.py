@@ -4,7 +4,7 @@ from starlette.datastructures import State
 
 
 class AuthenticatedRequestState(State):
-    """Define AuthenticatedRequestState."""
+    """Request-local authentication values attached after bearer-token validation."""
 
     jwt_payload: dict[str, Any]
     user_id: int

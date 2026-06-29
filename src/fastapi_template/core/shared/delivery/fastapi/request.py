@@ -15,7 +15,7 @@ type IPAddressTrace = tuple[str, ...]
 
 
 class RequestInfoServiceSettings(BaseSettings):
-    """Define RequestInfoServiceSettings."""
+    """Header settings used to derive request identity metadata."""
 
     ip_header: str = "x-forwarded-for"
     """Header containing the forwarded IP address trace when behind proxies."""
@@ -29,25 +29,25 @@ class RequestInfoServiceSettings(BaseSettings):
 
 @dataclass(kw_only=True)
 class RequestInfoService(BaseService):
-    """Define RequestInfoService."""
+    """Extract user-agent and client IP trace from FastAPI requests."""
 
     INVALID_IP_ADDRESS_ERROR: ClassVar = ValueError  # noqa: WPS115
 
     _settings: Injected[RequestInfoServiceSettings]
 
     def get_user_agent(self, *, request: Request) -> str:
-        """Run get user agent.
+        """Read the configured user-agent header from a request.
 
         Returns:
-        The operation result.
+            User-agent header value, or an empty string when absent.
         """
         return request.headers.get(self._settings.user_agent_header, "")
 
     def get_user_ip_trace(self, *, request: Request) -> str | None:
-        """Run get user ip trace.
+        """Resolve the trusted client IP trace for throttling and audit data.
 
         Returns:
-        The operation result.
+            Normalized comma-separated IP trace, or ``None`` when unavailable.
         """
         if not self._settings.trust_forwarded_ip_header:
             return self._get_remote_address(request=request)

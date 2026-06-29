@@ -16,7 +16,7 @@ from fastapi_template.foundation.factory import BaseFactory
 
 @dataclass(kw_only=True)
 class UserThrottlerFactory(BaseFactory):
-    """Define UserThrottlerFactory."""
+    """Factory for FastAPI dependencies that throttle per authenticated user."""
 
     _throttler_factory: Injected[BaseAsyncThrottlerFactory]
 
@@ -26,10 +26,10 @@ class UserThrottlerFactory(BaseFactory):
         using: RateLimiterType = RateLimiterType.TOKEN_BUCKET,
         cost: int = 1,
     ) -> Callable[[Request], Awaitable[None]]:
-        """Run call.
+        """Create a user-keyed throttling dependency for a route quota.
 
         Returns:
-        The operation result.
+            A FastAPI dependency callable that enforces the configured quota.
         """
         throttler = self._throttler_factory(
             quota=quota,

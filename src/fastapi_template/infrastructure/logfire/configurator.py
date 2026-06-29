@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class LogfireSettings(BaseSettings):
-    """Define LogfireSettings."""
+    """Logfire telemetry settings loaded from the runtime environment."""
 
     model_config = SettingsConfigDict(env_prefix="LOGFIRE_")
 
@@ -26,22 +26,22 @@ class LogfireSettings(BaseSettings):
 
     @property
     def is_enabled(self) -> bool:
-        """Run is enabled.
+        """Report whether Logfire has enough configuration to run.
 
         Returns:
-        The operation result.
+            ``True`` when telemetry is enabled and a token is configured.
         """
         return self.enabled and self.token is not None
 
 
 @dataclass(kw_only=True)
 class LogfireConfigurator(BaseConfigurator):
-    """Define LogfireConfigurator."""
+    """Configure Logfire telemetry and token scrubbing during bootstrap."""
 
     _logfire_settings: Injected[LogfireSettings]
 
     def configure(self) -> None:
-        """Run configure."""
+        """Apply Logfire configuration when telemetry is enabled."""
         token = self._logfire_settings.token
         if not self._logfire_settings.is_enabled or token is None:
             logger.debug("Logfire is disabled; skipping configuration")

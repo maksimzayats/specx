@@ -11,7 +11,7 @@ from fastapi_template.foundation.delivery.fastapi.schema import BaseFastAPISchem
 
 
 class CreateUserRequestSchema(BaseFastAPISchema):
-    """Define CreateUserRequestSchema."""
+    """HTTP request body accepted by the user creation endpoint."""
 
     email: EmailStr
     username: Annotated[str, Len(max_length=USER_NAME_MAX_LENGTH)]

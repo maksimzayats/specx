@@ -15,7 +15,7 @@ from fastapi_template.foundation.use_case import BaseUseCase
 
 @dataclass(kw_only=True)
 class RevokeTokenUseCase(BaseUseCase):
-    """Define RevokeTokenUseCase."""
+    """Revoke a refresh token for an authenticated user."""
 
     INVALID_REFRESH_TOKEN_ERROR: ClassVar = RefreshSessionService.INVALID_REFRESH_TOKEN_ERROR  # noqa: WPS115
     EXPIRED_REFRESH_TOKEN_ERROR: ClassVar = RefreshSessionService.EXPIRED_REFRESH_TOKEN_ERROR  # noqa: WPS115
@@ -26,7 +26,7 @@ class RevokeTokenUseCase(BaseUseCase):
     _uow: Injected[UnitOfWork]
 
     async def execute(self, *, data: RefreshTokenDTO, user_id: int) -> None:
-        """Run execute."""
+        """Load the current user and revoke the submitted refresh token in one UoW."""
         async with self._uow as uow:
             user = await uow.user_repository.get_active_by_id(user_id=user_id)
             if user is None:

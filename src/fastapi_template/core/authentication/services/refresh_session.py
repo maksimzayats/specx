@@ -30,24 +30,24 @@ from fastapi_template.foundation.service import BaseService
 
 
 class RefreshSessionServiceSettings(BaseSettings):
-    """Define RefreshSessionServiceSettings."""
+    """Refresh-token generation and lifetime settings."""
 
     refresh_token_nbytes: int = 32
     refresh_token_ttl_days: int = 30
 
     @property
     def refresh_token_ttl(self) -> timedelta:
-        """Run refresh token ttl.
+        """Convert the configured refresh-token lifetime to a timedelta.
 
         Returns:
-        The operation result.
+            Refresh-session lifetime used when issuing new tokens.
         """
         return timedelta(days=self.refresh_token_ttl_days)
 
 
 @dataclass(kw_only=True)
 class RefreshSessionService(BaseService):
-    """Define RefreshSessionService."""
+    """Own refresh-token issuance, hashing, rotation, and revocation rules."""
 
     INVALID_REFRESH_TOKEN_ERROR: ClassVar = InvalidRefreshTokenError  # noqa: WPS115
     EXPIRED_REFRESH_TOKEN_ERROR: ClassVar = ExpiredRefreshTokenError  # noqa: WPS115
@@ -62,10 +62,10 @@ class RefreshSessionService(BaseService):
         user_agent: str,
         ip_address_trace: str | None,
     ) -> RefreshSessionResult:
-        """Run create refresh session.
+        """Issue a refresh token and store its hashed session record.
 
         Returns:
-        The operation result.
+            The plaintext refresh token and persisted session entity.
         """
         refresh_token = self._issue_refresh_token()
         created_at = datetime.now(tz=UTC)
@@ -91,10 +91,10 @@ class RefreshSessionService(BaseService):
         uow: UnitOfWork,
         refresh_token: str,
     ) -> RefreshSessionResult:
-        """Run rotate refresh token.
+        """Replace a valid refresh token with a newly issued token.
 
         Returns:
-        The operation result.
+            The replacement refresh token and rotated session entity.
         """
         expected_refresh_token_hash = self._hash_refresh_token(refresh_token=refresh_token)
         session = await self._get_active_refresh_session(
@@ -124,7 +124,7 @@ class RefreshSessionService(BaseService):
         refresh_token: str,
         user: User,
     ) -> None:
-        """Run revoke refresh token."""
+        """Revoke a refresh token after confirming ownership by the user."""
         session = await self._get_active_refresh_session(
             repository=uow.refresh_session_repository,
             refresh_token_hash=self._hash_refresh_token(refresh_token=refresh_token),
@@ -162,7 +162,7 @@ class RefreshSessionService(BaseService):
 
 
 class RefreshSessionResult(NamedTuple):
-    """Define RefreshSessionResult."""
+    """Plain refresh token paired with its core session entity."""
 
     refresh_token: str
     session: RefreshSession

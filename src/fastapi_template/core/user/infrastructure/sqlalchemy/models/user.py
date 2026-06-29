@@ -9,7 +9,7 @@ PASSWORD_HASH_MAX_LENGTH = 255
 
 
 class UserModel(Base):
-    """Define UserModel."""
+    """SQLAlchemy table mapping for core user accounts."""
 
     __tablename__ = "users"
 

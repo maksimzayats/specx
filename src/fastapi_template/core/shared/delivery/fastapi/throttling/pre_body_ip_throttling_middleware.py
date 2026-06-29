@@ -21,7 +21,7 @@ class PreBodyIPThrottlingMiddleware:
         *,
         rules: tuple[PreBodyIPThrottlingRule, ...],
     ) -> None:
-        """Initialize the middleware."""
+        """Index route-specific throttling rules before ASGI request handling."""
         self._app = app
         self._rules_by_key = {(rule.method.upper(), rule.path): rule for rule in rules}
 

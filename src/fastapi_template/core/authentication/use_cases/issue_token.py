@@ -19,7 +19,7 @@ from fastapi_template.foundation.use_case import BaseUseCase
 
 @dataclass(kw_only=True)
 class IssueTokenUseCase(BaseUseCase):
-    """Define IssueTokenUseCase."""
+    """Authenticate credentials and issue a fresh access/refresh token pair."""
 
     INVALID_CREDENTIALS_ERROR: ClassVar = InvalidCredentialsError  # noqa: WPS115
 
@@ -34,10 +34,10 @@ class IssueTokenUseCase(BaseUseCase):
         data: IssueTokenDTO,
         context: TokenRequestContextDTO,
     ) -> TokenDTO:
-        """Run execute.
+        """Authenticate the user and create one refresh session in one UoW.
 
         Returns:
-        The operation result.
+            Access and refresh tokens for the authenticated user.
         """
         async with self._uow as uow:
             user = await self._user_credential_service.authenticate_user(

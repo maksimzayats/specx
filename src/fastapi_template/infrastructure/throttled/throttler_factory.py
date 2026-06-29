@@ -10,14 +10,14 @@ from fastapi_template.infrastructure.throttled.store_factory import ThrottlerSto
 
 @dataclass(kw_only=True)
 class ThrottlerFactory(BaseFactory):
-    """Define ThrottlerFactory."""
+    """Create synchronous throttled rate-limiters backed by Redis."""
 
     _store_factory: Injected[ThrottlerStoreFactory]
 
     _store: RedisStore = field(init=False)
 
     def __post_init__(self) -> None:
-        """Run post init."""
+        """Create the shared Redis store once per factory instance."""
         self._store = self._store_factory()
 
     def __call__(
@@ -25,10 +25,10 @@ class ThrottlerFactory(BaseFactory):
         quota: Quota,
         using: RateLimiterType = RateLimiterType.TOKEN_BUCKET,
     ) -> Throttled:
-        """Build a synchronous throttler.
+        """Provide a synchronous Redis-backed rate limiter for a quota.
 
         Returns:
-        A configured throttler.
+            A configured throttler.
         """
         return Throttled(
             using=using.value,

@@ -12,7 +12,7 @@ _STORE_TRUE_ACTION = "store_true"
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Run the dependency updater CLI.
+    """Parse dependency-updater arguments and execute the selected updates.
 
     Args:
         argv: Optional command-line arguments.

@@ -2,4 +2,4 @@ from fastapi_template.core.authentication.exceptions.authentication import Authe
 
 
 class InvalidCredentialsError(AuthenticationError):
-    """Define InvalidCredentialsError."""
+    """Raised when username and password authentication fails."""

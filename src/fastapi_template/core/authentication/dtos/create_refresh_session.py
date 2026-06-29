@@ -6,7 +6,7 @@ from fastapi_template.foundation.dto import BaseDTO
 
 
 class CreateRefreshSessionDTO(BaseDTO):
-    """Define CreateRefreshSessionDTO."""
+    """Core command data for persisting a newly issued refresh session."""
 
     id: uuid.UUID
     user: User

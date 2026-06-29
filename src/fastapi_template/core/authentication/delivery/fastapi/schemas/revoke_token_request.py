@@ -2,6 +2,6 @@ from fastapi_template.foundation.delivery.fastapi.schema import BaseFastAPISchem
 
 
 class RevokeTokenRequestSchema(BaseFastAPISchema):
-    """Define RevokeTokenRequestSchema."""
+    """HTTP request body carrying the refresh token to revoke."""
 
     refresh_token: str

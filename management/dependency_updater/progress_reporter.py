@@ -14,11 +14,11 @@ class ProgressReporter:
     """Report dependency updater progress to standard output."""
 
     def __init__(self, *, enabled: bool = True) -> None:
-        """Initialize the progress reporter."""
+        """Store whether progress messages should be emitted."""
         self._enabled = enabled
 
     def step(self, message: str, *, spinner: bool = True) -> _ProgressStep:
-        """Create a progress step context manager.
+        """Create a context manager that reports one updater step.
 
         Args:
             message: Progress message to show.

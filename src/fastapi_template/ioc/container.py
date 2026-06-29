@@ -12,10 +12,10 @@ def get_container(
     configure_logfire: bool = True,
     instrument_libraries: bool = True,
 ) -> Container:
-    """Run get container.
+    """Build the dependency injection container and bootstrap integrations.
 
     Returns:
-    The operation result.
+        Configured ``diwire`` container for the application.
     """
     container = Container(
         missing_policy=MissingPolicy.REGISTER_RECURSIVE,

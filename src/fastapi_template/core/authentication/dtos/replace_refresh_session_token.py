@@ -5,7 +5,7 @@ from fastapi_template.foundation.dto import BaseDTO
 
 
 class ReplaceRefreshSessionTokenDTO(BaseDTO):
-    """Define ReplaceRefreshSessionTokenDTO."""
+    """Optimistic refresh-token replacement data for session rotation."""
 
     session_id: uuid.UUID
     expected_refresh_token_hash: str

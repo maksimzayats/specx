@@ -12,11 +12,11 @@ from fastapi_template.core.authentication.entities.refresh_session import Refres
 
 
 class RefreshSessionRepository(ABC):
-    """Define RefreshSessionRepository."""
+    """Persistence port for refresh-session lifecycle operations."""
 
     @abstractmethod
     async def create(self, *, data: CreateRefreshSessionDTO) -> RefreshSession:
-        """Create a refresh session.
+        """Persist a refresh session within the caller's unit of work.
 
         Returns:
             The created refresh session.
@@ -25,7 +25,7 @@ class RefreshSessionRepository(ABC):
 
     @abstractmethod
     async def get_by_token_hash(self, *, refresh_token_hash: str) -> RefreshSession | None:
-        """Get a refresh session by token hash.
+        """Find a refresh session by hashed token value.
 
         Returns:
             The matching refresh session, if one exists.
@@ -38,7 +38,7 @@ class RefreshSessionRepository(ABC):
         *,
         data: ReplaceRefreshSessionTokenDTO,
     ) -> RefreshSession | None:
-        """Replace a matching refresh token hash.
+        """Replace the token hash when the expected old hash still matches.
 
         Returns:
             The updated refresh session, if a matching session exists.
@@ -47,5 +47,5 @@ class RefreshSessionRepository(ABC):
 
     @abstractmethod
     async def revoke(self, *, session_id: uuid.UUID, revoked_at: datetime) -> None:
-        """Revoke a refresh session."""
+        """Mark a refresh session as revoked in the caller's unit of work."""
         raise NotImplementedError

@@ -21,7 +21,7 @@ from fastapi_template.foundation.delivery.controller import BaseAsyncController
 
 @dataclass(kw_only=True)
 class StaffUserLookupController(BaseAsyncController):
-    """Define StaffUserLookupController."""
+    """HTTP adapter for staff-only lookup of users by identifier."""
 
     _jwt_auth_factory: Injected[JWTAuthFactory]
     _staff_user_lookup_use_case: Injected[StaffUserLookupUseCase]
@@ -29,12 +29,12 @@ class StaffUserLookupController(BaseAsyncController):
     _staff_jwt_auth: HTTPBearer = field(init=False)
 
     def __post_init__(self) -> None:
-        """Run post init."""
+        """Build the reusable staff JWT dependency before route registration."""
         self._staff_jwt_auth = self._jwt_auth_factory()
         super().__post_init__()
 
     def register(self, registry: APIRouter) -> None:
-        """Run register."""
+        """Attach the staff user lookup endpoint to the FastAPI router."""
         registry.add_api_route(
             path="/api/v1/users/{user_id}",
             endpoint=self.staff_user_lookup,
@@ -48,10 +48,10 @@ class StaffUserLookupController(BaseAsyncController):
         request: AuthenticatedRequest,
         user_id: int,
     ) -> UserSchema:
-        """Run staff user lookup.
+        """Load a target user after checking the authenticated actor's access.
 
         Returns:
-        The operation result.
+            Serialized user data for the requested user.
         """
         user = await self._staff_user_lookup_use_case.execute(
             user_id=user_id,
@@ -66,10 +66,10 @@ class StaffUserLookupController(BaseAsyncController):
         return UserSchema.model_validate(user, from_attributes=True)
 
     async def handle_exception(self, exception: Exception) -> object:
-        """Run handle exception.
+        """Translate staff lookup failures into HTTP responses.
 
         Returns:
-        The operation result.
+            The delegated handler result for unrecognized exceptions.
         """
         if isinstance(exception, StaffUserLookupUseCase.AUTHENTICATED_USER_NOT_FOUND_ERROR):
             raise bearer_authentication_error(detail="User not found") from exception

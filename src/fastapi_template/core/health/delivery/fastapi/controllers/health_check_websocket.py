@@ -23,7 +23,7 @@ class HealthCheckWebSocketController(BaseAsyncController):
         )
 
     async def health_check_websocket(self, websocket: WebSocket) -> None:
-        """Run the websocket health check."""
+        """Send websocket readiness status and close the connection."""
         await websocket.accept()
 
         try:

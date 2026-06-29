@@ -4,6 +4,6 @@ from fastapi_template.foundation.delivery.fastapi.schema import BaseFastAPISchem
 
 
 class HealthCheckResponseSchema(BaseFastAPISchema):
-    """Define HealthCheckResponseSchema."""
+    """HTTP and websocket payload returned by successful health checks."""
 
     status: Literal["ok"]
