@@ -17,9 +17,9 @@ from fastapi_template.foundation.use_case import BaseUseCase
 class RefreshTokenUseCase(BaseUseCase):
     """Define RefreshTokenUseCase."""
 
-    INVALID_REFRESH_TOKEN_ERROR: ClassVar = RefreshSessionService.INVALID_REFRESH_TOKEN_ERROR
-    EXPIRED_REFRESH_TOKEN_ERROR: ClassVar = RefreshSessionService.EXPIRED_REFRESH_TOKEN_ERROR
-    REFRESH_TOKEN_ERROR: ClassVar = RefreshTokenError
+    INVALID_REFRESH_TOKEN_ERROR: ClassVar = RefreshSessionService.INVALID_REFRESH_TOKEN_ERROR  # noqa: WPS115
+    EXPIRED_REFRESH_TOKEN_ERROR: ClassVar = RefreshSessionService.EXPIRED_REFRESH_TOKEN_ERROR  # noqa: WPS115
+    REFRESH_TOKEN_ERROR: ClassVar = RefreshTokenError  # noqa: WPS115
 
     _jwt_service: Injected[JWTService]
     _refresh_session_service: Injected[RefreshSessionService]

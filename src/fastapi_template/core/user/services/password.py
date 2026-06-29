@@ -23,7 +23,7 @@ class PasswordServiceSettings(BaseSettings):
 class PasswordService(BaseService):
     """Define PasswordService."""
 
-    WEAK_PASSWORD_ERROR: ClassVar = WeakPasswordError
+    WEAK_PASSWORD_ERROR: ClassVar = WeakPasswordError  # noqa: WPS115
 
     _settings: Injected[PasswordServiceSettings]
 

@@ -49,8 +49,8 @@ class RefreshSessionServiceSettings(BaseSettings):
 class RefreshSessionService(BaseService):
     """Define RefreshSessionService."""
 
-    INVALID_REFRESH_TOKEN_ERROR: ClassVar = InvalidRefreshTokenError
-    EXPIRED_REFRESH_TOKEN_ERROR: ClassVar = ExpiredRefreshTokenError
+    INVALID_REFRESH_TOKEN_ERROR: ClassVar = InvalidRefreshTokenError  # noqa: WPS115
+    EXPIRED_REFRESH_TOKEN_ERROR: ClassVar = ExpiredRefreshTokenError  # noqa: WPS115
 
     _settings: Injected[RefreshSessionServiceSettings]
 

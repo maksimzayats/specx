@@ -31,7 +31,7 @@ class RequestInfoServiceSettings(BaseSettings):
 class RequestInfoService(BaseService):
     """Define RequestInfoService."""
 
-    INVALID_IP_ADDRESS_ERROR: ClassVar = ValueError
+    INVALID_IP_ADDRESS_ERROR: ClassVar = ValueError  # noqa: WPS115
 
     _settings: Injected[RequestInfoServiceSettings]
 

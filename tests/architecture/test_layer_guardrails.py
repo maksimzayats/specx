@@ -173,6 +173,39 @@ def test_route_path_guardrail_catches_positional_paths_and_router_prefixes() -> 
     assert _route_prefix_values(include_prefix) == ["/api/v1"]
 
 
+def test_database_query_guardrail_catches_sqlalchemy_alias_calls() -> None:
+    module = _source_module_from_text(
+        source_parts=(
+            "core",
+            "billing",
+            "infrastructure",
+            "sqlalchemy",
+            "mappers",
+            "invoice.py",
+        ),
+        source="""
+import sqlalchemy
+import sqlalchemy as sa
+from sqlalchemy import delete as sa_delete
+
+sqlalchemy.select(InvoiceModel)
+sa.update(InvoiceModel)
+sa_delete(InvoiceModel)
+""",
+    )
+    query_calls = [
+        _database_query_call_name(
+            node,
+            query_function_names=_database_query_function_names(module=module),
+            sqlalchemy_module_names=_sqlalchemy_module_names(module=module),
+        )
+        for node in ast.walk(module.tree)
+        if isinstance(node, ast.Call)
+    ]
+
+    assert query_calls == ["select", "update", "sa_delete"]
+
+
 def test_unit_of_work_scope_guardrail_catches_renamed_dependencies() -> None:
     module = _source_module_from_text(
         source_parts=("core", "user", "services", "example.py"),
@@ -214,7 +247,14 @@ def test_database_query_execution_stays_in_local_sqlalchemy_repositories() -> No
         if not _is_local_sqlalchemy_repository_module(module)
         for node in ast.walk(module.tree)
         if isinstance(node, ast.Call)
-        if (call_name := _database_query_call_name(node)) is not None
+        if (
+            call_name := _database_query_call_name(
+                node,
+                query_function_names=_database_query_function_names(module=module),
+                sqlalchemy_module_names=_sqlalchemy_module_names(module=module),
+            )
+        )
+        is not None
     ]
 
     assert violations == [], (
@@ -592,12 +632,23 @@ def _model_file_stem(*, model_name: str) -> str:
     return snake_name
 
 
-def _database_query_call_name(node: ast.Call) -> str | None:
-    if isinstance(node.func, ast.Name) and node.func.id in DATABASE_QUERY_FUNCTION_NAMES:
+def _database_query_call_name(
+    node: ast.Call,
+    *,
+    query_function_names: set[str],
+    sqlalchemy_module_names: set[str],
+) -> str | None:
+    if isinstance(node.func, ast.Name) and node.func.id in query_function_names:
         return node.func.id
 
     if not isinstance(node.func, ast.Attribute):
         return None
+
+    if (
+        node.func.attr in DATABASE_QUERY_FUNCTION_NAMES
+        and name_for_expression(node.func.value) in sqlalchemy_module_names
+    ):
+        return node.func.attr
 
     if node.func.attr == "execute" and name_for_expression(node.func.value) in {
         "_connection",
@@ -611,6 +662,29 @@ def _database_query_call_name(node: ast.Call) -> str | None:
         return "session.get"
 
     return None
+
+
+def _database_query_function_names(*, module: SourceModule) -> set[str]:
+    query_function_names = set(DATABASE_QUERY_FUNCTION_NAMES)
+    query_function_names.update(
+        alias.asname or alias.name
+        for node in module.tree.body
+        if isinstance(node, ast.ImportFrom)
+        if node.module == "sqlalchemy"
+        for alias in node.names
+        if alias.name in DATABASE_QUERY_FUNCTION_NAMES
+    )
+    return query_function_names
+
+
+def _sqlalchemy_module_names(*, module: SourceModule) -> set[str]:
+    return {
+        alias.asname or alias.name
+        for node in module.tree.body
+        if isinstance(node, ast.Import)
+        for alias in node.names
+        if alias.name == "sqlalchemy"
+    }
 
 
 def _repository_lifecycle_call_name(node: ast.Call) -> str | None:

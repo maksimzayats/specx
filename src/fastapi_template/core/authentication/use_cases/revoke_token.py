@@ -17,10 +17,10 @@ from fastapi_template.foundation.use_case import BaseUseCase
 class RevokeTokenUseCase(BaseUseCase):
     """Define RevokeTokenUseCase."""
 
-    INVALID_REFRESH_TOKEN_ERROR: ClassVar = RefreshSessionService.INVALID_REFRESH_TOKEN_ERROR
-    EXPIRED_REFRESH_TOKEN_ERROR: ClassVar = RefreshSessionService.EXPIRED_REFRESH_TOKEN_ERROR
-    REFRESH_TOKEN_ERROR: ClassVar = RefreshTokenError
-    AUTHENTICATED_USER_NOT_FOUND_ERROR: ClassVar = AuthenticatedUserNotFoundError
+    INVALID_REFRESH_TOKEN_ERROR: ClassVar = RefreshSessionService.INVALID_REFRESH_TOKEN_ERROR  # noqa: WPS115
+    EXPIRED_REFRESH_TOKEN_ERROR: ClassVar = RefreshSessionService.EXPIRED_REFRESH_TOKEN_ERROR  # noqa: WPS115
+    REFRESH_TOKEN_ERROR: ClassVar = RefreshTokenError  # noqa: WPS115
+    AUTHENTICATED_USER_NOT_FOUND_ERROR: ClassVar = AuthenticatedUserNotFoundError  # noqa: WPS115
 
     _refresh_session_service: Injected[RefreshSessionService]
     _uow: Injected[UnitOfWork]

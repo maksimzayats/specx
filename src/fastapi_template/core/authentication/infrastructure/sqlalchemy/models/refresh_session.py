@@ -24,7 +24,7 @@ class RefreshSessionModel(Base):
         unique=True,
         index=True,
     )
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     user_agent: Mapped[str] = mapped_column(Text)
     ip_address_trace: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

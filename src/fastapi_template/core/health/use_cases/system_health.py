@@ -15,8 +15,8 @@ logger = logging.getLogger(__name__)
 class SystemHealthUseCase(BaseUseCase):
     """Define SystemHealthUseCase."""
 
-    HEALTH_CHECK_ERROR: ClassVar = HealthCheckError
-    UNEXPECTED_ERROR: ClassVar = Exception
+    HEALTH_CHECK_ERROR: ClassVar = HealthCheckError  # noqa: WPS115
+    UNEXPECTED_ERROR: ClassVar = Exception  # noqa: WPS115
 
     _uow: Injected[UnitOfWork]
 

@@ -10,7 +10,7 @@ from fastapi_template.foundation.service import BaseService
 class UserPermissionService(BaseService):
     """Check user access flags for application-level permissions."""
 
-    PERMISSION_DENIED_ERROR: ClassVar = UserPermissionDeniedError
+    PERMISSION_DENIED_ERROR: ClassVar = UserPermissionDeniedError  # noqa: WPS115
 
     def check_access(
         self,

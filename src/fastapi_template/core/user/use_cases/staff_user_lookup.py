@@ -16,8 +16,8 @@ from fastapi_template.foundation.use_case import BaseUseCase
 class StaffUserLookupUseCase(BaseUseCase):
     """Look up a user for an authenticated staff actor."""
 
-    AUTHENTICATED_USER_NOT_FOUND_ERROR: ClassVar = AuthenticatedUserNotFoundError
-    PERMISSION_DENIED_ERROR: ClassVar = UserPermissionService.PERMISSION_DENIED_ERROR
+    AUTHENTICATED_USER_NOT_FOUND_ERROR: ClassVar = AuthenticatedUserNotFoundError  # noqa: WPS115
+    PERMISSION_DENIED_ERROR: ClassVar = UserPermissionService.PERMISSION_DENIED_ERROR  # noqa: WPS115
 
     _user_permission_service: Injected[UserPermissionService]
     _uow: Injected[UnitOfWork]

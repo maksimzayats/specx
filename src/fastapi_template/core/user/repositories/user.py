@@ -11,7 +11,7 @@ from fastapi_template.core.user.exceptions.user_repository_conflict import (
 class UserRepository(ABC):
     """Define UserRepository."""
 
-    USER_REPOSITORY_CONFLICT_ERROR: ClassVar = UserRepositoryConflictError
+    USER_REPOSITORY_CONFLICT_ERROR: ClassVar = UserRepositoryConflictError  # noqa: WPS115
 
     @abstractmethod
     async def get_by_id(self, *, user_id: int) -> User | None:

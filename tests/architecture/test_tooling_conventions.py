@@ -1,3 +1,4 @@
+import ast
 import configparser
 import tomllib
 from collections.abc import Mapping
@@ -8,6 +9,7 @@ import yaml
 
 from tests.architecture._source import REPO_ROOT
 
+SOURCE_ROOT = REPO_ROOT / "src" / "fastapi_template"
 QUALITY_HOOK_NAMES = {
     "mypy",
     "ruff check",
@@ -48,11 +50,7 @@ STALE_DOCUMENTATION_MARKERS = {
     "setup " + "wizard",
     "setup_" + "wizard",
 }
-ALLOWED_WPS_WILDCARD_IGNORES = {
-    "src/fastapi_template/core/**/repositories/*.py": {"WPS115"},
-    "src/fastapi_template/core/**/services/*.py": {"WPS115"},
-    "src/fastapi_template/core/**/use_cases/*.py": {"WPS115"},
-}
+EXCEPTION_CONTRACT_SUFFIXES = ("_ERROR", "_EXCEPTION")
 
 
 def test_prek_quality_hooks_run_against_the_whole_project() -> None:
@@ -88,6 +86,7 @@ def test_ruff_config_keeps_broad_rule_selection_and_safe_preview() -> None:
     tidy_imports_config = cast(dict[str, Any], lint_config["flake8-tidy-imports"])
 
     assert lint_config["select"] == ["ALL"]
+    assert lint_config["external"] == ["WPS"]
     assert lint_config["preview"] is True
     assert lint_config["explicit-preview-rules"] is True
     assert ruff_lint_config["strictly-empty-init-modules"] is True
@@ -106,22 +105,35 @@ def test_wemake_styleguide_config_is_strict_but_scoped() -> None:
     assert flake8_config["max-arguments"] == "6"
     assert "tests" not in _normalized_words(flake8_config["per-file-ignores"])
     assert not any(code == "WPS" for code in _wps_ignore_codes(flake8_config["per-file-ignores"]))
-    assert (
-        _wildcard_wps_ignores(
-            value=flake8_config["per-file-ignores"],
-        )
-        == ALLOWED_WPS_WILDCARD_IGNORES
-    )
+    assert _wildcard_wps_ignores(value=flake8_config["per-file-ignores"]) == {}
 
 
-def test_wemake_wildcard_ignore_check_rejects_extra_codes() -> None:
+def test_wemake_wildcard_ignore_check_rejects_wps115() -> None:
     value = """
 src/fastapi_template/core/**/repositories/*.py:
-  WPS115,
-  WPS210
+  WPS115
 """.strip()
 
-    assert _wildcard_wps_ignores(value=value) != ALLOWED_WPS_WILDCARD_IGNORES
+    assert _wildcard_wps_ignores(value=value) != {}
+
+
+def test_wps115_suppressions_only_mark_exception_contracts() -> None:
+    violations = [
+        f"{path.relative_to(REPO_ROOT)}:{line_number} contains WPS115"
+        for path in sorted(SOURCE_ROOT.rglob("*.py"))
+        for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1)
+        if "WPS115" in line
+        if line_number not in _exception_contract_line_numbers(path=path)
+    ]
+
+    assert violations == [], "WPS115 suppressions must stay on exception contract ClassVars."
+
+
+def test_wps115_suppression_check_rejects_non_contracts(tmp_path: Path) -> None:
+    source_file = tmp_path / "example.py"
+    source_file.write_text("class Example:\n    SETTING = 1  # noqa: WPS115\n", encoding="utf-8")
+
+    assert _exception_contract_line_numbers(path=source_file) == set()
 
 
 def test_makefile_quality_targets_use_prek() -> None:
@@ -281,6 +293,30 @@ def _wildcard_wps_ignores(*, value: str) -> dict[str, set[str]]:
                 wildcard_ignores.setdefault(active_path, set()).update(codes)
 
     return wildcard_ignores
+
+
+def _exception_contract_line_numbers(*, path: Path) -> set[int]:
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    return {
+        statement.lineno
+        for class_node in ast.walk(tree)
+        if isinstance(class_node, ast.ClassDef)
+        for statement in class_node.body
+        if isinstance(statement, ast.AnnAssign)
+        if isinstance(statement.target, ast.Name)
+        if statement.target.id.endswith(EXCEPTION_CONTRACT_SUFFIXES)
+        if _is_classvar_annotation(statement.annotation)
+    }
+
+
+def _is_classvar_annotation(annotation: ast.expr) -> bool:
+    if isinstance(annotation, ast.Name):
+        return annotation.id == "ClassVar"
+
+    if isinstance(annotation, ast.Subscript) and isinstance(annotation.value, ast.Name):
+        return annotation.value.id == "ClassVar"
+
+    return False
 
 
 def _workflow_requests_content_write_permissions(*, path: Path) -> bool:

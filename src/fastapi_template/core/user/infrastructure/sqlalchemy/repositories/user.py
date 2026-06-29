@@ -22,7 +22,7 @@ SQLITE_USER_UNIQUE_MESSAGES = frozenset(
 class SQLAlchemyUserRepository(UserRepository):
     """Define SQLAlchemyUserRepository."""
 
-    INTEGRITY_ERROR: ClassVar = IntegrityError
+    INTEGRITY_ERROR: ClassVar = IntegrityError  # noqa: WPS115
 
     def __init__(self, *, session: AsyncSession) -> None:
         """Initialize the instance."""

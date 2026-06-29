@@ -20,9 +20,9 @@ from fastapi_template.foundation.use_case import BaseUseCase
 class CreateUserUseCase(BaseUseCase):
     """Define CreateUserUseCase."""
 
-    WEAK_PASSWORD_ERROR: ClassVar = WeakPasswordError
-    USER_ALREADY_EXISTS_ERROR: ClassVar = UserAlreadyExistsError
-    USER_REPOSITORY_CONFLICT_ERROR: ClassVar = UserRepositoryConflictError
+    WEAK_PASSWORD_ERROR: ClassVar = WeakPasswordError  # noqa: WPS115
+    USER_ALREADY_EXISTS_ERROR: ClassVar = UserAlreadyExistsError  # noqa: WPS115
+    USER_REPOSITORY_CONFLICT_ERROR: ClassVar = UserRepositoryConflictError  # noqa: WPS115
 
     _identity_service: Injected[UserIdentityService]
     _password_service: Injected[PasswordService]

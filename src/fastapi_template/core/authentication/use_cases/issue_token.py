@@ -21,7 +21,7 @@ from fastapi_template.foundation.use_case import BaseUseCase
 class IssueTokenUseCase(BaseUseCase):
     """Define IssueTokenUseCase."""
 
-    INVALID_CREDENTIALS_ERROR: ClassVar = InvalidCredentialsError
+    INVALID_CREDENTIALS_ERROR: ClassVar = InvalidCredentialsError  # noqa: WPS115
 
     _jwt_service: Injected[JWTService]
     _refresh_session_service: Injected[RefreshSessionService]

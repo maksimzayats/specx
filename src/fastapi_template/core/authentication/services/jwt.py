@@ -34,8 +34,8 @@ class JWTServiceSettings(BaseSettings):
 class JWTService(BaseService):
     """Define JWTService."""
 
-    EXPIRED_SIGNATURE_ERROR: ClassVar = jwt.ExpiredSignatureError
-    INVALID_TOKEN_ERROR: ClassVar = jwt.InvalidTokenError
+    EXPIRED_SIGNATURE_ERROR: ClassVar = jwt.ExpiredSignatureError  # noqa: WPS115
+    INVALID_TOKEN_ERROR: ClassVar = jwt.InvalidTokenError  # noqa: WPS115
 
     _settings: Injected[JWTServiceSettings]
 
