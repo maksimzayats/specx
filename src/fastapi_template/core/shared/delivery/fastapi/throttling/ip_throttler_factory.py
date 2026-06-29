@@ -7,17 +7,17 @@ from throttled.asyncio import Quota, RateLimiterType
 
 from fastapi_template.core.shared.delivery.fastapi.request import RequestInfoService
 from fastapi_template.core.shared.delivery.fastapi.throttling.ip_throttler import IPThrottler
-from fastapi_template.foundation.factory import BaseFactory
-from fastapi_template.infrastructure.throttled.async_throttler_factory import (
-    AsyncThrottlerFactory,
+from fastapi_template.core.shared.throttling.base_async_throttler_factory import (
+    BaseAsyncThrottlerFactory,
 )
+from fastapi_template.foundation.factory import BaseFactory
 
 
 @dataclass(kw_only=True)
 class IPThrottlerFactory(BaseFactory):
     """Define IPThrottlerFactory."""
 
-    _throttler_factory: Injected[AsyncThrottlerFactory]
+    _throttler_factory: Injected[BaseAsyncThrottlerFactory]
     _request_info_service: Injected[RequestInfoService]
 
     def __call__(

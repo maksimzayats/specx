@@ -30,10 +30,11 @@ async def test_refresh_session_repository_returns_none_for_missing_session(
         assert (
             await active_uow.refresh_session_repository.replace_token_hash(
                 data=ReplaceRefreshSessionTokenDTO(
+                    session_id=_missing_uuid(),
                     expected_refresh_token_hash=_refresh_hash("old"),
                     refresh_token_hash=_refresh_hash("new"),
                     last_used_at=datetime.now(tz=UTC),
-                    expires_after=datetime.now(tz=UTC),
+                    rotation_counter=1,
                 ),
             )
             is None
@@ -56,7 +57,7 @@ async def test_refresh_session_repository_creates_and_updates_session(
             data=_create_user_data(username="session_user", email="session@example.com"),
             password_hash=_password_hash(),
         )
-        await active_uow.refresh_session_repository.create(
+        session = await active_uow.refresh_session_repository.create(
             data=CreateRefreshSessionDTO(
                 user=user,
                 refresh_token_hash=_refresh_hash("old"),
@@ -67,18 +68,20 @@ async def test_refresh_session_repository_creates_and_updates_session(
         )
         updated_session = await active_uow.refresh_session_repository.replace_token_hash(
             data=ReplaceRefreshSessionTokenDTO(
+                session_id=session.id,
                 expected_refresh_token_hash=_refresh_hash("old"),
                 refresh_token_hash=_refresh_hash("new"),
                 last_used_at=datetime.now(tz=UTC),
-                expires_after=datetime.now(tz=UTC),
+                rotation_counter=session.rotation_counter + 1,
             ),
         )
         stale_session = await active_uow.refresh_session_repository.replace_token_hash(
             data=ReplaceRefreshSessionTokenDTO(
+                session_id=session.id,
                 expected_refresh_token_hash=_refresh_hash("old"),
                 refresh_token_hash=_refresh_hash("stale"),
                 last_used_at=datetime.now(tz=UTC),
-                expires_after=datetime.now(tz=UTC),
+                rotation_counter=2,
             ),
         )
 
@@ -89,7 +92,7 @@ async def test_refresh_session_repository_creates_and_updates_session(
 
 
 @pytest.mark.anyio
-async def test_refresh_session_repository_rejects_inactive_rotation(
+async def test_refresh_session_repository_updates_matching_session_without_active_policy(
     container: Container,
 ) -> None:
     uow = container.resolve(UnitOfWork)
@@ -124,23 +127,25 @@ async def test_refresh_session_repository_rejects_inactive_rotation(
 
         expired_result = await active_uow.refresh_session_repository.replace_token_hash(
             data=ReplaceRefreshSessionTokenDTO(
+                session_id=expired_session.id,
                 expected_refresh_token_hash=expired_session.refresh_token_hash,
                 refresh_token_hash=_refresh_hash("expired-new"),
                 last_used_at=datetime.now(tz=UTC),
-                expires_after=datetime.now(tz=UTC),
+                rotation_counter=expired_session.rotation_counter + 1,
             ),
         )
         revoked_result = await active_uow.refresh_session_repository.replace_token_hash(
             data=ReplaceRefreshSessionTokenDTO(
+                session_id=revoked_session.id,
                 expected_refresh_token_hash=revoked_session.refresh_token_hash,
                 refresh_token_hash=_refresh_hash("revoked-new"),
                 last_used_at=datetime.now(tz=UTC),
-                expires_after=datetime.now(tz=UTC),
+                rotation_counter=revoked_session.rotation_counter + 1,
             ),
         )
 
-    assert expired_result is None
-    assert revoked_result is None
+    assert expired_result is not None
+    assert revoked_result is not None
 
 
 def _create_user_data(

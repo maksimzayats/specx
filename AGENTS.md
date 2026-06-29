@@ -64,6 +64,7 @@
 
 ## Scoped Files
 
+- These rules apply to `src/` and `management/`.
 - Use packages with scoped files instead of aggregate modules. Do not add
   `use_cases.py`, `dtos.py`, `services.py`, `repositories.py`, `schemas.py`,
   `controllers.py`, `models.py`, `exceptions.py`, or similar bucket files.

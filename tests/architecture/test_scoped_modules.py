@@ -1,7 +1,7 @@
 import ast
 from collections.abc import Iterable
 
-from tests.architecture._source import SOURCE_ROOT, SourceModule, iter_source_modules
+from tests.architecture._source import REPO_ROOT, SOURCE_ROOT, SourceModule, iter_source_modules
 
 AGGREGATE_SOURCE_FILENAMES = {
     "auth.py",
@@ -25,12 +25,13 @@ AUXILIARY_CLASS_SUFFIXES = {
     "Settings",
     "State",
 }
+MANAGEMENT_ROOT = REPO_ROOT / "management"
 
 
 def test_source_modules_do_not_use_aggregate_filenames() -> None:
     violations = [
         str(module.relative_path)
-        for module in iter_source_modules()
+        for module in _iter_scoped_modules()
         if module.path.name in AGGREGATE_SOURCE_FILENAMES
     ]
 
@@ -40,7 +41,7 @@ def test_source_modules_do_not_use_aggregate_filenames() -> None:
 def test_source_modules_have_one_primary_public_class() -> None:
     violations = [
         f"{module.relative_path}: {', '.join(primary_class_names)}"
-        for module in iter_source_modules()
+        for module in _iter_scoped_modules()
         if (
             primary_class_names := [
                 class_node.name
@@ -57,7 +58,7 @@ def test_source_modules_have_one_primary_public_class() -> None:
 def test_source_modules_do_not_mix_public_classes_and_functions() -> None:
     violations = [
         f"{module.relative_path}: classes={class_names}; functions={function_names}"
-        for module in iter_source_modules()
+        for module in _iter_scoped_modules()
         if (class_names := [class_node.name for class_node in _public_classes(module=module)])
         if (
             function_names := [
@@ -72,7 +73,7 @@ def test_source_modules_do_not_mix_public_classes_and_functions() -> None:
 def test_source_modules_have_at_most_one_public_function() -> None:
     violations = [
         f"{module.relative_path}: {', '.join(function_names)}"
-        for module in iter_source_modules()
+        for module in _iter_scoped_modules()
         if (
             function_names := [
                 function_node.name for function_node in _public_functions(module=module)
@@ -85,7 +86,7 @@ def test_source_modules_have_at_most_one_public_function() -> None:
 
 
 def test_source_modules_do_not_use_import_only_public_alias_shims() -> None:
-    violations = _import_only_public_alias_shim_violations(modules=iter_source_modules())
+    violations = _import_only_public_alias_shim_violations(modules=_iter_scoped_modules())
 
     assert violations == [], "Source files must not be import-only public alias shims."
 
@@ -172,6 +173,18 @@ def _import_only_public_alias_shim_violations(
         if not _public_functions(module=module)
         if _is_import_only_module(module=module)
     ]
+
+
+def _iter_scoped_modules() -> Iterable[SourceModule]:
+    yield from iter_source_modules()
+    for source_file in sorted(MANAGEMENT_ROOT.rglob("*.py")):
+        yield SourceModule(
+            path=source_file,
+            tree=ast.parse(
+                source_file.read_text(encoding="utf-8"),
+                filename=str(source_file),
+            ),
+        )
 
 
 def _public_classes(*, module: SourceModule) -> list[ast.ClassDef]:

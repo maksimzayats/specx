@@ -7,6 +7,9 @@ from fastapi_template.core.unit_of_work import UnitOfWork
 from fastapi_template.core.user.dtos.create_user import CreateUserDTO
 from fastapi_template.core.user.entities.user import User
 from fastapi_template.core.user.exceptions.user_already_exists import UserAlreadyExistsError
+from fastapi_template.core.user.exceptions.user_repository_conflict import (
+    UserRepositoryConflictError,
+)
 from fastapi_template.core.user.exceptions.weak_password import WeakPasswordError
 from fastapi_template.core.user.services.password import PasswordService
 from fastapi_template.core.user.services.user_identity import UserIdentityService
@@ -19,6 +22,7 @@ class CreateUserUseCase(BaseUseCase):
 
     WEAK_PASSWORD_ERROR: ClassVar = WeakPasswordError
     USER_ALREADY_EXISTS_ERROR: ClassVar = UserAlreadyExistsError
+    USER_REPOSITORY_CONFLICT_ERROR: ClassVar = UserRepositoryConflictError
 
     _identity_service: Injected[UserIdentityService]
     _password_service: Injected[PasswordService]
@@ -48,5 +52,5 @@ class CreateUserUseCase(BaseUseCase):
                     data=normalized_data,
                     password_hash=password_hash,
                 )
-            except self.USER_ALREADY_EXISTS_ERROR as exception:
+            except self.USER_REPOSITORY_CONFLICT_ERROR as exception:
                 raise self.USER_ALREADY_EXISTS_ERROR from exception

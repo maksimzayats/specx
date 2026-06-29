@@ -3,17 +3,22 @@ from __future__ import annotations
 import textwrap
 from pathlib import Path
 
+import management.dependency_updater.update_container_image_versions as container_updater
+import management.dependency_updater.update_dependencies as dependency_runner
 import pytest
-from management.dependency_updater import (
-    ProgressReporter,
-    UpdateOptions,
+from management.dependency_updater.dependency_update import DependencyUpdate
+from management.dependency_updater.progress_reporter import ProgressReporter
+from management.dependency_updater.sync_pyproject_dependency_versions import (
     sync_pyproject_dependency_versions,
+)
+from management.dependency_updater.update_container_image_versions import (
     update_container_image_versions,
-    update_dependencies,
+)
+from management.dependency_updater.update_dependencies import update_dependencies
+from management.dependency_updater.update_github_action_versions import (
     update_github_action_versions,
 )
-
-from management import dependency_updater
+from management.dependency_updater.update_options import UpdateOptions
 
 
 def test_update_dependencies_prints_progress(
@@ -21,11 +26,11 @@ def test_update_dependencies_prints_progress(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    def sync_stub(**_: object) -> tuple[dependency_updater.DependencyUpdate, ...]:
+    def sync_stub(**_: object) -> tuple[DependencyUpdate, ...]:
         return ()
 
     monkeypatch.setattr(
-        dependency_updater,
+        dependency_runner,
         "sync_pyproject_dependency_versions",
         sync_stub,
     )
@@ -288,14 +293,14 @@ def test_update_container_image_versions_ignores_arch_only_tags_for_latest(
         encoding="utf-8",
     )
     monkeypatch.setattr(
-        dependency_updater,
+        container_updater,
         "_container_registry_tags",
         lambda *, repository: (
             ("32bit-buster", "8.6.2-trixie", "8.6.2") if repository == "redis" else ()
         ),
     )
 
-    updates = dependency_updater.update_container_image_versions(repo_root=tmp_path)
+    updates = container_updater.update_container_image_versions(repo_root=tmp_path)
 
     assert [(update.old_ref, update.new_ref) for update in updates] == [
         ("redis:latest", "redis:8.6.2"),
@@ -315,14 +320,14 @@ def test_update_container_image_versions_does_not_downgrade_dotted_versions(
         encoding="utf-8",
     )
     monkeypatch.setattr(
-        dependency_updater,
+        container_updater,
         "_container_registry_tags",
         lambda *, repository: (
             ("0.11.8", "0.10.1", "0.9.28") if repository == "ghcr.io/astral-sh/uv" else ()
         ),
     )
 
-    updates = dependency_updater.update_container_image_versions(repo_root=tmp_path)
+    updates = container_updater.update_container_image_versions(repo_root=tmp_path)
 
     assert updates == ()
     assert "ghcr.io/astral-sh/uv:0.11.8" in dockerfile_path.read_text(encoding="utf-8")
@@ -351,9 +356,9 @@ def test_update_container_image_versions_uses_library_namespace_for_docker_io(
         requested_paths.append(repository_path)
         return ("3.14.4-slim-bookworm",)
 
-    monkeypatch.setattr(dependency_updater, "_docker_hub_tags", docker_hub_tags_stub)
+    monkeypatch.setattr(container_updater, "_docker_hub_tags", docker_hub_tags_stub)
 
-    updates = dependency_updater.update_container_image_versions(repo_root=tmp_path)
+    updates = container_updater.update_container_image_versions(repo_root=tmp_path)
 
     assert requested_paths == ["library/python"]
     assert [(update.old_ref, update.new_ref) for update in updates] == [

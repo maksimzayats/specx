@@ -67,7 +67,7 @@ async def test_user_repository_maps_duplicate_create_error(container: Container)
 
     async with uow as active_uow:
         user_data = _create_user_data()
-        duplicate_error = active_uow.user_repository.USER_ALREADY_EXISTS_ERROR
+        duplicate_error = active_uow.user_repository.USER_REPOSITORY_CONFLICT_ERROR
         await active_uow.user_repository.create(data=user_data, password_hash=_password_hash())
 
     with pytest.raises(duplicate_error):
@@ -101,7 +101,7 @@ async def test_user_repository_maps_postgres_unique_constraint_error() -> None:
         ),
     )
 
-    with pytest.raises(repository.USER_ALREADY_EXISTS_ERROR):
+    with pytest.raises(repository.USER_REPOSITORY_CONFLICT_ERROR):
         await repository.create(data=_create_user_data(), password_hash=_password_hash())
 
 

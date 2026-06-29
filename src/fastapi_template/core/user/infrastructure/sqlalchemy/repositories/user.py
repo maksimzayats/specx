@@ -120,7 +120,7 @@ class SQLAlchemyUserRepository(UserRepository):
             if not _is_duplicate_user_integrity_error(exception=exception):
                 raise
 
-            raise self.USER_ALREADY_EXISTS_ERROR from exception
+            raise self.USER_REPOSITORY_CONFLICT_ERROR from exception
 
         return user_from_model(model=model)
 

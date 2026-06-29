@@ -30,6 +30,7 @@ EXCLUDED_TOP_LEVEL_DIRS = {
     "dist",
     "htmlcov",
     "node_modules",
+    "site",
     "venv",
 }
 DOCKERFILE_REQUIRED_IGNORES = {

@@ -3,6 +3,7 @@ import ast
 from tests.architecture._source import (
     SOURCE_ROOT,
     SourceModule,
+    has_base,
     is_injected_annotation,
     iter_imports,
     iter_source_modules,
@@ -43,10 +44,24 @@ REPOSITORY_TRANSACTION_METHODS = {
     "rollback",
 }
 REPOSITORY_SESSION_FACTORY_CALLS = {"async_sessionmaker", "create_async_engine"}
-FORBIDDEN_CONTROLLER_IMPORT_PREFIXES = (
+FORBIDDEN_DELIVERY_IMPORT_PREFIXES = (
     "sqlalchemy",
     "fastapi_template.infrastructure.sqlalchemy.unit_of_work",
 )
+SQLALCHEMY_TRANSACTION_LIFECYCLE_SOURCE_PARTS = {
+    ("infrastructure", "sqlalchemy", "session.py"),
+    ("infrastructure", "sqlalchemy", "unit_of_work.py"),
+}
+TRANSACTION_LIFECYCLE_RECEIVER_NAMES = {
+    "_connection",
+    "_engine",
+    "_session",
+    "connection",
+    "engine",
+    "session",
+    "transaction",
+}
+USE_CASE_BASES = {"BaseUseCase"}
 
 
 def test_runtime_code_does_not_import_removed_frameworks() -> None:
@@ -136,19 +151,19 @@ def test_repository_ports_do_not_import_sqlalchemy() -> None:
     assert violations == [], "Repository port modules must not import SQLAlchemy."
 
 
-def test_repositories_do_not_manage_transaction_lifecycle() -> None:
+def test_transaction_lifecycle_stays_in_sqlalchemy_wiring() -> None:
     violations = [
         f"{module.relative_path}:{node.lineno} calls {call_name}"
         for module in iter_source_modules()
-        if _is_repository_module(module)
+        if module.source_parts not in SQLALCHEMY_TRANSACTION_LIFECYCLE_SOURCE_PARTS
         for node in ast.walk(module.tree)
         if isinstance(node, ast.Call)
         if (call_name := _repository_lifecycle_call_name(node)) is not None
     ]
 
     assert violations == [], (
-        "Repositories may flush, but only the UnitOfWork may commit, rollback, close "
-        "sessions, begin transactions, or create session factories."
+        "Only shared SQLAlchemy session and UnitOfWork wiring may commit, rollback, "
+        "close sessions, begin transactions, or create session factories."
     )
 
 
@@ -179,6 +194,18 @@ def test_local_infrastructure_modules_do_not_import_delivery() -> None:
     assert violations == [], "Local infrastructure adapters must not import delivery modules."
 
 
+def test_shared_infrastructure_modules_do_not_import_core_delivery() -> None:
+    violations = [
+        _format_import_violation(module, import_reference.module_name, import_reference.line_number)
+        for module in iter_source_modules()
+        if _is_shared_infrastructure_module(module)
+        for import_reference in iter_imports(module)
+        if _is_core_delivery_import(import_reference.module_name)
+    ]
+
+    assert violations == [], "Shared infrastructure must not import core delivery modules."
+
+
 def test_delivery_modules_do_not_import_local_infrastructure() -> None:
     violations = [
         _format_import_violation(module, import_reference.module_name, import_reference.line_number)
@@ -191,17 +218,17 @@ def test_delivery_modules_do_not_import_local_infrastructure() -> None:
     assert violations == [], "Delivery adapters must not import local infrastructure modules."
 
 
-def test_controllers_do_not_import_sqlalchemy_or_uow_implementations() -> None:
+def test_delivery_modules_do_not_import_repositories_or_uow_implementations() -> None:
     violations = [
         _format_import_violation(module, import_reference.module_name, import_reference.line_number)
         for module in iter_source_modules()
-        if _is_controller_module(module)
+        if _is_core_delivery_module(module)
         for import_reference in iter_imports(module)
-        if _is_forbidden_controller_import(import_reference.module_name)
+        if _is_forbidden_delivery_import(import_reference.module_name)
     ]
 
     assert violations == [], (
-        "Controllers must not import repositories, UoW implementations, SQLAlchemy, "
+        "Delivery modules must not import repositories, UoW implementations, SQLAlchemy, "
         "SQLAlchemy models, or local infrastructure."
     )
 
@@ -218,6 +245,19 @@ def test_services_do_not_open_unit_of_work_scopes() -> None:
     ]
 
     assert violations == [], "Services may receive an active UoW, but must not open UoW scopes."
+
+
+def test_use_cases_open_at_most_one_unit_of_work_scope_inside_execute() -> None:
+    violations = [
+        violation
+        for module in iter_source_modules()
+        if _is_use_case_module(module)
+        for violation in _use_case_uow_scope_violations(module=module)
+    ]
+
+    assert violations == [], (
+        "Use cases may open at most one self._uow scope, and only inside execute()."
+    )
 
 
 def test_framework_imports_stay_in_delivery_entrypoints_or_infrastructure() -> None:
@@ -291,9 +331,9 @@ def test_scoped_import_predicates_catch_package_and_module_imports() -> None:
     assert _is_core_local_infrastructure_import(
         "fastapi_template.core.user.infrastructure.sqlalchemy",
     )
-    assert _is_forbidden_controller_import("fastapi_template.core.user.repositories")
-    assert _is_forbidden_controller_import("fastapi_template.core.user.repositories.user")
-    assert _is_forbidden_controller_import(
+    assert _is_forbidden_delivery_import("fastapi_template.core.user.repositories")
+    assert _is_forbidden_delivery_import("fastapi_template.core.user.repositories.user")
+    assert _is_forbidden_delivery_import(
         "fastapi_template.core.user.infrastructure.sqlalchemy.models.user",
     )
 
@@ -326,6 +366,10 @@ def _is_core_local_infrastructure_module(module: SourceModule) -> bool:
     return module.source_parts[0] == "core" and "infrastructure" in module.source_parts
 
 
+def _is_shared_infrastructure_module(module: SourceModule) -> bool:
+    return module.source_parts[0] == "infrastructure"
+
+
 def _is_core_delivery_module(module: SourceModule) -> bool:
     return module.source_parts[0] == "core" and "delivery" in module.source_parts
 
@@ -345,10 +389,6 @@ def _is_repository_port_module(module: SourceModule) -> bool:
         and "repositories" in module.source_parts
         and "infrastructure" not in module.source_parts
     )
-
-
-def _is_repository_module(module: SourceModule) -> bool:
-    return module.source_parts[0] == "core" and "repositories" in module.source_parts
 
 
 def _is_forbidden_core_internal_import(module_name: str) -> bool:
@@ -437,7 +477,11 @@ def _repository_lifecycle_call_name(node: ast.Call) -> str | None:
     if isinstance(node.func, ast.Name) and node.func.id in REPOSITORY_SESSION_FACTORY_CALLS:
         return node.func.id
 
-    if isinstance(node.func, ast.Attribute) and node.func.attr in REPOSITORY_TRANSACTION_METHODS:
+    if (
+        isinstance(node.func, ast.Attribute)
+        and node.func.attr in REPOSITORY_TRANSACTION_METHODS
+        and name_for_expression(node.func.value) in TRANSACTION_LIFECYCLE_RECEIVER_NAMES
+    ):
         return node.func.attr
 
     return None
@@ -452,13 +496,59 @@ def _is_service_module(module: SourceModule) -> bool:
     )
 
 
-def _is_controller_module(module: SourceModule) -> bool:
-    return _is_core_delivery_module(module) and "controllers" in module.source_parts
-
-
-def _is_forbidden_controller_import(module_name: str) -> bool:
+def _is_use_case_module(module: SourceModule) -> bool:
     return (
-        module_name.startswith(FORBIDDEN_CONTROLLER_IMPORT_PREFIXES)
+        module.source_parts[0] == "core"
+        and "infrastructure" not in module.source_parts
+        and "delivery" not in module.source_parts
+        and "use_cases" in module.source_parts
+    )
+
+
+def _use_case_uow_scope_violations(*, module: SourceModule) -> list[str]:
+    violations: list[str] = []
+    for class_node in (
+        node
+        for node in ast.walk(module.tree)
+        if isinstance(node, ast.ClassDef) and has_base(node, USE_CASE_BASES)
+    ):
+        scope_count = 0
+        for method_node in _class_methods(class_node=class_node):
+            method_scope_count = _method_uow_scope_count(method_node=method_node)
+            scope_count += method_scope_count
+            if method_scope_count and method_node.name != "execute":
+                violations.append(
+                    f"{module.relative_path}:{method_node.lineno} "
+                    f"{class_node.name}.{method_node.name} opens self._uow",
+                )
+
+        if scope_count > 1:
+            violations.append(
+                f"{module.relative_path}:{class_node.lineno} opens {scope_count} UoWs",
+            )
+
+    return violations
+
+
+def _class_methods(*, class_node: ast.ClassDef) -> list[ast.FunctionDef | ast.AsyncFunctionDef]:
+    return [
+        node for node in class_node.body if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
+    ]
+
+
+def _method_uow_scope_count(*, method_node: ast.FunctionDef | ast.AsyncFunctionDef) -> int:
+    return sum(
+        1
+        for node in ast.walk(method_node)
+        if isinstance(node, ast.AsyncWith)
+        for item in node.items
+        if name_for_expression(item.context_expr) == "_uow"
+    )
+
+
+def _is_forbidden_delivery_import(module_name: str) -> bool:
+    return (
+        module_name.startswith(FORBIDDEN_DELIVERY_IMPORT_PREFIXES)
         or module_name == "fastapi_template.core.unit_of_work"
         or _is_core_local_infrastructure_import(module_name)
         or _has_core_package_part(module_name=module_name, package_part="repositories")

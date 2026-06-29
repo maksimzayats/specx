@@ -10,7 +10,9 @@ from fastapi_template.core.health.repositories.health import HealthRepository
 from fastapi_template.core.unit_of_work import UnitOfWork
 from fastapi_template.core.user.dtos.create_user import CreateUserDTO
 from fastapi_template.core.user.entities.user import User
-from fastapi_template.core.user.exceptions.user_already_exists import UserAlreadyExistsError
+from fastapi_template.core.user.exceptions.user_repository_conflict import (
+    UserRepositoryConflictError,
+)
 from fastapi_template.core.user.repositories.user import UserRepository
 from fastapi_template.core.user.services.password import PasswordService, PasswordServiceSettings
 from fastapi_template.core.user.services.user_identity import UserIdentityService
@@ -119,7 +121,7 @@ async def test_create_user_rejects_weak_password() -> None:
 @pytest.mark.anyio
 async def test_create_user_maps_repository_duplicate_error() -> None:
     use_case = _build_use_case(
-        repository=FakeUserRepository(create_error=UserAlreadyExistsError()),
+        repository=FakeUserRepository(create_error=UserRepositoryConflictError()),
     )
 
     with pytest.raises(CreateUserUseCase.USER_ALREADY_EXISTS_ERROR):

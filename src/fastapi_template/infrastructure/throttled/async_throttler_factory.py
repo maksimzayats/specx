@@ -9,14 +9,16 @@ from throttled.asyncio import (
     Throttled as AsyncThrottled,
 )
 
-from fastapi_template.foundation.factory import BaseFactory
+from fastapi_template.core.shared.throttling.base_async_throttler_factory import (
+    BaseAsyncThrottlerFactory,
+)
 from fastapi_template.infrastructure.throttled.async_store_factory import (
     AsyncThrottlerStoreFactory,
 )
 
 
 @dataclass(kw_only=True)
-class AsyncThrottlerFactory(BaseFactory):
+class AsyncThrottlerFactory(BaseAsyncThrottlerFactory):
     """Define AsyncThrottlerFactory."""
 
     _store_factory: Injected[AsyncThrottlerStoreFactory]

@@ -8,17 +8,17 @@ from throttled.asyncio import Quota, RateLimiterType
 from fastapi_template.core.authentication.delivery.fastapi.throttling.user_throttler import (
     UserThrottler,
 )
-from fastapi_template.foundation.factory import BaseFactory
-from fastapi_template.infrastructure.throttled.async_throttler_factory import (
-    AsyncThrottlerFactory,
+from fastapi_template.core.shared.throttling.base_async_throttler_factory import (
+    BaseAsyncThrottlerFactory,
 )
+from fastapi_template.foundation.factory import BaseFactory
 
 
 @dataclass(kw_only=True)
 class UserThrottlerFactory(BaseFactory):
     """Define UserThrottlerFactory."""
 
-    _throttler_factory: Injected[AsyncThrottlerFactory]
+    _throttler_factory: Injected[BaseAsyncThrottlerFactory]
 
     def __call__(
         self,

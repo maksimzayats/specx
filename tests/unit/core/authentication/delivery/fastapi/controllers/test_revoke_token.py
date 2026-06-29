@@ -13,8 +13,8 @@ from fastapi_template.core.authentication.delivery.fastapi.auth.jwt_auth_factory
 from fastapi_template.core.authentication.delivery.fastapi.controllers.revoke_token import (
     RevokeTokenController,
 )
-from fastapi_template.core.authentication.delivery.fastapi.schemas.refresh_token_request import (
-    RefreshTokenRequestSchema,
+from fastapi_template.core.authentication.delivery.fastapi.schemas.revoke_token_request import (
+    RevokeTokenRequestSchema,
 )
 from fastapi_template.core.authentication.delivery.fastapi.throttling.user_throttler_factory import (
     UserThrottlerFactory,
@@ -44,7 +44,7 @@ async def test_revoke_token_controller_maps_revoke_schema_to_dto() -> None:
 
     await controller.revoke_token(
         request=cast(AuthenticatedRequest, SimpleNamespace(state=SimpleNamespace(user_id=1))),
-        body=RefreshTokenRequestSchema(refresh_token=_REFRESH_TOKEN),
+        body=RevokeTokenRequestSchema(refresh_token=_REFRESH_TOKEN),
     )
 
     assert revoke_token_use_case.data == RefreshTokenDTO(refresh_token=_REFRESH_TOKEN)

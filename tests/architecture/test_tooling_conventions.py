@@ -34,6 +34,17 @@ REMOVED_PROJECT_CUSTOMIZER_MARKERS = {
     f"tests/{REMOVED_PROJECT_CUSTOMIZER_MODULE}",
     "--group " + "setup",
 }
+STALE_DOCUMENTATION_MARKERS = {
+    "backward " + "compat",
+    "backward-" + "compatible",
+    "backwards " + "compat",
+    "compat " + "shim",
+    "compatibility " + "shim",
+    "old " + "stack",
+    "old-" + "stack",
+    "setup " + "wizard",
+    "setup_" + "wizard",
+}
 ALLOWED_WPS_WILDCARD_IGNORE_PATHS = {
     "src/fastapi_template/core/**/repositories/*.py",
     "src/fastapi_template/core/**/services/*.py",
@@ -127,6 +138,17 @@ def test_removed_project_customizer_tooling_surface_stays_removed() -> None:
     assert not any(marker in checked_text for marker in REMOVED_PROJECT_CUSTOMIZER_MARKERS)
 
 
+def test_removed_stack_terms_stay_out_of_docs_and_instructions() -> None:
+    violations = [
+        f"{path.relative_to(REPO_ROOT)} contains {marker!r}"
+        for path in _documentation_scan_paths()
+        for marker in STALE_DOCUMENTATION_MARKERS
+        if marker in path.read_text(encoding="utf-8").lower()
+    ]
+
+    assert violations == [], "Docs and agent instructions must not mention removed stack terms."
+
+
 def test_ci_workflows_use_content_write_permissions_only_when_needed() -> None:
     violations = [
         path.name
@@ -206,6 +228,14 @@ def _make_target_recipe(*, makefile: str, target: str) -> list[str]:
 
 def _read_toml(path: Path) -> dict[str, Any]:
     return tomllib.loads(path.read_text(encoding="utf-8"))
+
+
+def _documentation_scan_paths() -> tuple[Path, ...]:
+    return (
+        REPO_ROOT / "AGENTS.md",
+        REPO_ROOT / "README.md",
+        *sorted((REPO_ROOT / "docs").rglob("*.md")),
+    )
 
 
 def _normalized_words(value: str) -> set[str]:

@@ -63,7 +63,7 @@ site/
 Makefile
 build/
 dist/
-management/dependency_updater.py
+management/
 
 # Static files (collected during build)
 staticfiles/

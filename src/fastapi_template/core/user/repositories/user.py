@@ -3,13 +3,15 @@ from typing import ClassVar
 
 from fastapi_template.core.user.dtos.create_user import CreateUserDTO
 from fastapi_template.core.user.entities.user import User
-from fastapi_template.core.user.exceptions.user_already_exists import UserAlreadyExistsError
+from fastapi_template.core.user.exceptions.user_repository_conflict import (
+    UserRepositoryConflictError,
+)
 
 
 class UserRepository(ABC):
     """Define UserRepository."""
 
-    USER_ALREADY_EXISTS_ERROR: ClassVar = UserAlreadyExistsError
+    USER_REPOSITORY_CONFLICT_ERROR: ClassVar = UserRepositoryConflictError
 
     @abstractmethod
     async def get_by_id(self, *, user_id: int) -> User | None:

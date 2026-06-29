@@ -16,8 +16,8 @@ from fastapi_template.core.authentication.delivery.fastapi.auth.bearer_authentic
 from fastapi_template.core.authentication.delivery.fastapi.auth.jwt_auth_factory import (
     JWTAuthFactory,
 )
-from fastapi_template.core.authentication.delivery.fastapi.schemas.refresh_token_request import (
-    RefreshTokenRequestSchema,
+from fastapi_template.core.authentication.delivery.fastapi.schemas.revoke_token_request import (
+    RevokeTokenRequestSchema,
 )
 from fastapi_template.core.authentication.delivery.fastapi.throttling.user_throttler_factory import (
     UserThrottlerFactory,
@@ -57,7 +57,7 @@ class RevokeTokenController(BaseAsyncController):
     async def revoke_token(
         self,
         request: AuthenticatedRequest,
-        body: RefreshTokenRequestSchema,
+        body: RevokeTokenRequestSchema,
     ) -> None:
         """Run revoke token."""
         await self._revoke_token_use_case.execute(

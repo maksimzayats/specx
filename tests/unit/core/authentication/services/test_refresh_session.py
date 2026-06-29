@@ -38,7 +38,8 @@ class FakeRefreshSessionRepository(RefreshSessionRepository):
     replace_returns_none: bool = False
     replaced_expected_hash: str | None = None
     replaced_hash: str | None = None
-    replaced_expires_after: datetime | None = None
+    replaced_session_id: uuid.UUID | None = None
+    replaced_rotation_counter: int | None = None
     revoked_session_id: uuid.UUID | None = None
 
     async def create(self, *, data: CreateRefreshSessionDTO) -> RefreshSession:
@@ -63,14 +64,15 @@ class FakeRefreshSessionRepository(RefreshSessionRepository):
         *,
         data: ReplaceRefreshSessionTokenDTO,
     ) -> RefreshSession | None:
+        self.replaced_session_id = data.session_id
         self.replaced_expected_hash = data.expected_refresh_token_hash
         self.replaced_hash = data.refresh_token_hash
-        self.replaced_expires_after = data.expires_after
+        self.replaced_rotation_counter = data.rotation_counter
         if (
             self.replace_returns_none
             or self.session is None
+            or self.session.id != data.session_id
             or self.session.refresh_token_hash != data.expected_refresh_token_hash
-            or not self.session.is_active
         ):
             return None
 
@@ -78,7 +80,7 @@ class FakeRefreshSessionRepository(RefreshSessionRepository):
             session_id=self.session.id,
             user=self.session.user,
             refresh_token_hash=data.refresh_token_hash,
-            rotation_counter=self.session.rotation_counter + 1,
+            rotation_counter=data.rotation_counter,
             last_used_at=data.last_used_at,
         )
         return self.session
@@ -144,7 +146,8 @@ async def test_rotate_refresh_token_replaces_stored_hash() -> None:
     assert repository.replaced_expected_hash == session.refresh_token_hash
     assert repository.replaced_hash is not None
     assert repository.replaced_hash != session.refresh_token_hash
-    assert repository.replaced_expires_after is not None
+    assert repository.replaced_session_id == session.id
+    assert repository.replaced_rotation_counter == session.rotation_counter + 1
     assert result.session.rotation_counter == 1
 
 
