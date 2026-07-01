@@ -1,7 +1,3 @@
-<picture>
-  <img src="docs/assets/modern-python-template-readme-banner.svg" alt="Modern Python Template service architecture banner" width="100%">
-</picture>
-
 # Modern Python Template
 
 **A FastAPI service template with clean boundaries, async persistence, and strict guardrails.**
