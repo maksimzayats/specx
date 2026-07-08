@@ -48,11 +48,27 @@ def main() -> int:
         parser.error("--package must be one Python package identifier, such as task_db_service")
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
+    for directory in _test_package_directories(args.output):
+        (directory / "__init__.py").touch(exist_ok=True)
     args.output.write_text(
         WRAPPER_TEMPLATE.format(package_name=args.package),
         encoding="utf-8",
     )
     return 0
+
+
+def _test_package_directories(output: Path) -> tuple[Path, ...]:
+    resolved_output = output.resolve()
+    directories = (resolved_output.parent, *resolved_output.parents)
+    tests_root = next((directory for directory in directories if directory.name == "tests"), None)
+    if tests_root is None:
+        return ()
+
+    return tuple(
+        directory
+        for directory in reversed(directories)
+        if directory == tests_root or tests_root in directory.parents
+    )
 
 
 if __name__ == "__main__":

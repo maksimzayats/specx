@@ -66,7 +66,7 @@ from specx.testing.architecture import SpecxArchitectureConfig, assert_specx_arc
 def test_specx_architecture() -> None:
     assert_specx_architecture(
         SpecxArchitectureConfig(
-            project_root=Path(__file__).resolve().parents[2],
+            project_root=Path(__file__).resolve().parents[3],
             package_name="order_service",
         )
     )

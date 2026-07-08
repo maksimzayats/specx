@@ -43,16 +43,6 @@ src/order_service/
     container.py
 tests/
   __init__.py
-  _support/
-    __init__.py
-    bases/
-      __init__.py
-    clients/
-      __init__.py
-    db/
-      __init__.py
-    fakes/
-      __init__.py
   unit/
     __init__.py
     core/
@@ -67,13 +57,6 @@ tests/
           test_check_health.py
   integration/
     __init__.py
-    core/
-      __init__.py
-      health/
-        __init__.py
-        use_cases/
-          __init__.py
-          test_check_health.py
     delivery/
       __init__.py
       fastapi/
@@ -92,6 +75,10 @@ tests/
 Create only directories that contain real files. Import default bases from
 `specx.foundation`; create `src/<package>/foundation/` only when a real class
 category is missing from the package and current code needs that local base.
+Add `tests/_support/` only when tests need shared fakes, client factories, DB
+helpers, or base test factories. Add `tests/integration/core/...` only when a
+use case has persistence-facing behavior that should be proven against the real
+transactional database.
 Add `core/<scope>/capabilities/` only when the scope
 has small injectable collaborators narrower than services. Add
 `core/<scope>/gateways/` only when the scope has real outbound capabilities such

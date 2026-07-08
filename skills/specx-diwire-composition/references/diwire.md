@@ -135,9 +135,11 @@ def order_summary_gateway(container: Container) -> FakeOrderSummaryGateway:
 ```
 
 ```python
+import pytest
 from fastapi import status
 
 
+@pytest.mark.anyio
 async def test_create_order_route_persists_order(
     transactional_test_async_client_factory: TestAsyncClientFactory,
 ) -> None:

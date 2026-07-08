@@ -30,6 +30,12 @@ def test_compatibility_renderer_outputs_tiny_wrapper(tmp_path: Path) -> None:
 
     text = output.read_text(encoding="utf-8")
 
+    assert "parents[3]" in text
     assert 'package_name="demo_service"' in text
     assert "assert_specx_architecture" in text
     assert len(text.splitlines()) < 25
+    assert (tmp_path / "tests" / "__init__.py").read_text(encoding="utf-8") == ""
+    assert (tmp_path / "tests" / "guardrails" / "__init__.py").read_text(encoding="utf-8") == ""
+    assert (tmp_path / "tests" / "guardrails" / "architecture" / "__init__.py").read_text(
+        encoding="utf-8"
+    ) == ""

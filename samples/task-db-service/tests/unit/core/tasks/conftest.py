@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 
 import pytest
-from diwire import Container
+from diwire import Container, DependencyRegistrationPolicy, MissingPolicy
 
 from task_db_service.core.tasks.repositories.task_unit_of_work import (
     TaskUnitOfWork,
@@ -19,7 +19,6 @@ from task_db_service.core.tasks.use_cases.complete_task import CompleteTaskUseCa
 from task_db_service.core.tasks.use_cases.create_task import CreateTaskUseCase
 from task_db_service.core.tasks.use_cases.get_task import GetTaskUseCase
 from task_db_service.core.tasks.use_cases.list_tasks import ListTasksUseCase
-from task_db_service.ioc.container import get_container
 from tests._support.fakes.core.tasks import (
     InMemoryTaskRepository,
     InMemoryTaskUnitOfWorkManager,
@@ -28,7 +27,10 @@ from tests._support.fakes.core.tasks import (
 
 @pytest.fixture
 def container() -> Container:
-    container = get_container()
+    container = Container(
+        missing_policy=MissingPolicy.REGISTER_RECURSIVE,
+        dependency_registration_policy=DependencyRegistrationPolicy.REGISTER_RECURSIVE,
+    )
     repository = InMemoryTaskRepository()
     unit_of_work_manager = InMemoryTaskUnitOfWorkManager(repository=repository)
     container.add_instance(repository, provides=InMemoryTaskRepository)

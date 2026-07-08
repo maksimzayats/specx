@@ -259,10 +259,10 @@ def register_user_use_case(container: Container) -> RegisterUserUseCase:
     return container.resolve(RegisterUserUseCase)
 
 
+@pytest.mark.anyio
 async def test_register_user_rejects_duplicate_email(
     register_user_use_case: RegisterUserUseCase,
 ) -> None:
-
     with pytest.raises(UserAlreadyExistsError):
         await register_user_use_case.execute(
             command=RegisterUserCommand(

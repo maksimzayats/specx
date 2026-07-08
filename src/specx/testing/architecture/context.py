@@ -41,6 +41,7 @@ BASE_SUFFIXES = (
     "Service",
     "Settings",
     "ValueError",
+    "Enum",
     "Error",
     "DTO",
     "Query",
@@ -55,6 +56,7 @@ BASE_SUFFIX_OVERRIDES = {
     "EffectService": "Service",
     "RuntimeSettings": "Settings",
     "SQLAlchemyModel": "Model",
+    "StrEnum": "Enum",
 }
 USE_CASE_INPUT_BASE_NAMES = {"BaseCommand", "BaseQuery"}
 USE_CASE_INPUT_ARGUMENTS = {"command", "query"}

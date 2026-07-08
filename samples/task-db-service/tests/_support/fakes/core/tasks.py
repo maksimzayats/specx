@@ -72,9 +72,13 @@ class InMemoryTaskUnitOfWorkManager(TaskUnitOfWorkManager):
     committed_count: int = 0
     rolled_back_count: int = 0
     exited_count: int = 0
+    _snapshot_tasks: dict[int, TaskEntity] = field(default_factory=dict)
+    _snapshot_next_id: int = 1
 
     async def __aenter__(self) -> TaskUnitOfWork:
         self.entered_count += 1
+        self._snapshot_tasks = dict(self.repository._tasks)
+        self._snapshot_next_id = self.repository._next_id
         return InMemoryTaskUnitOfWork(_tasks=self.repository)
 
     async def __aexit__(
@@ -89,5 +93,7 @@ class InMemoryTaskUnitOfWorkManager(TaskUnitOfWorkManager):
         if exc_type is None:
             self.committed_count += 1
         else:
+            self.repository._tasks = self._snapshot_tasks
+            self.repository._next_id = self._snapshot_next_id
             self.rolled_back_count += 1
         return False

@@ -141,8 +141,8 @@ migration-check:
   and migration tests are required.
 - Add `redis` only when a Redis adapter exists.
 - Add `httpx` as runtime only when production code performs outbound HTTP.
-- Use `httpx2` in dev when FastAPI `TestClient` is used only by tests. Recent
-  FastAPI/Starlette versions warn when tests rely on legacy `httpx`.
+- Use `httpx2` in dev when route tests need in-process ASGI clients. Prefer
+  `AsyncClient` with `ASGITransport` for FastAPI integration tests.
 - Add `specx` as a runtime dependency when generated projects import packaged
   foundation bases. The standard architecture wrapper in `tests/guardrails`
   uses the same package.

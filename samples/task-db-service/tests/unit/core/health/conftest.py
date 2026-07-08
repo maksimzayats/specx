@@ -1,16 +1,18 @@
 from __future__ import annotations
 
 import pytest
-from diwire import Container
+from diwire import Container, DependencyRegistrationPolicy, MissingPolicy
 
 from task_db_service.core.health.services.health_reporter_service import HealthReporterService
 from task_db_service.core.health.use_cases.check_health import CheckHealthUseCase
-from task_db_service.ioc.container import get_container
 
 
 @pytest.fixture
 def container() -> Container:
-    return get_container()
+    return Container(
+        missing_policy=MissingPolicy.REGISTER_RECURSIVE,
+        dependency_registration_policy=DependencyRegistrationPolicy.REGISTER_RECURSIVE,
+    )
 
 
 @pytest.fixture

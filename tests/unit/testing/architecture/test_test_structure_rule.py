@@ -248,6 +248,60 @@ def test_integration_tests_do_not_mock_internal_use_cases_or_services_rule_accep
     assert report.violations == ()
 
 
+def test_init_files_are_empty_rule_rejects_missing_test_package_init(
+    tmp_path: Path,
+) -> None:
+    _write(tmp_path / "src" / "demo_service" / "__init__.py", "")
+    _write(tmp_path / "tests" / "__init__.py", "")
+    _write(tmp_path / "tests" / "unit" / "__init__.py", "")
+    _write(
+        tmp_path / "tests" / "unit" / "core" / "test_title.py",
+        "def test_title() -> None:\n    assert True\n",
+    )
+
+    report = check_specx_architecture(
+        SpecxArchitectureConfig(
+            project_root=tmp_path,
+            package_name="demo_service",
+            disabled_rules=_disable_all_except(SpecxRuleId.INIT_FILES_ARE_EMPTY),
+        )
+    )
+
+    assert [(violation.rule_id, violation.message) for violation in report.violations] == [
+        (
+            SpecxRuleId.INIT_FILES_ARE_EMPTY,
+            "__init__.py is missing",
+        )
+    ]
+
+
+def test_init_files_are_empty_rule_rejects_non_empty_test_package_init(
+    tmp_path: Path,
+) -> None:
+    _write(tmp_path / "src" / "demo_service" / "__init__.py", "")
+    _write(tmp_path / "tests" / "__init__.py", "")
+    _write(tmp_path / "tests" / "unit" / "__init__.py", "VALUE = 1\n")
+    _write(
+        tmp_path / "tests" / "unit" / "test_title.py",
+        "def test_title() -> None:\n    assert True\n",
+    )
+
+    report = check_specx_architecture(
+        SpecxArchitectureConfig(
+            project_root=tmp_path,
+            package_name="demo_service",
+            disabled_rules=_disable_all_except(SpecxRuleId.INIT_FILES_ARE_EMPTY),
+        )
+    )
+
+    assert [(violation.rule_id, violation.message) for violation in report.violations] == [
+        (
+            SpecxRuleId.INIT_FILES_ARE_EMPTY,
+            "__init__.py is not empty",
+        )
+    ]
+
+
 def _disable_all_except(rule_id: SpecxRuleId) -> frozenset[SpecxRuleId]:
     return frozenset(candidate for candidate in SpecxRuleId if candidate != rule_id)
 

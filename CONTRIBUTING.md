@@ -193,7 +193,7 @@ def test_specx_architecture() -> None:
 
     assert_specx_architecture(
         SpecxArchitectureConfig(
-            project_root=Path(__file__).resolve().parents[2],
+            project_root=Path(__file__).resolve().parents[3],
             package_name="task_db_service",
             disabled_rules=disabled_rules,
         )

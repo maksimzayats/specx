@@ -1166,7 +1166,9 @@ class NonFoundationClassesDoNotUseRawCommonBasesRule(ArchitectureRuleBase):
             "BaseModel",
             "BaseSettings",
             "DeclarativeBase",
+            "Enum",
             "Exception",
+            "StrEnum",
             "ValueError",
             "object",
         }
@@ -1307,8 +1309,6 @@ class RootAgentsMDDocumentsProjectCommandsAndBoundariesRule(ArchitectureRuleBase
             "make check",
             "make lint",
             "make test",
-            "make migration-check",
-            "make makemigrations",
             "BaseCapability",
             "BaseGateway",
             "BasePureService",
@@ -1316,8 +1316,15 @@ class RootAgentsMDDocumentsProjectCommandsAndBoundariesRule(ArchitectureRuleBase
             "BaseEffectService",
             "Use cases return DTOs, not entities",
             "Query use cases must not call repository mutators",
-            "Do not use `create_all()` or `drop_all()`",
         }
+        if _project_uses_alembic(context):
+            required_fragments.update(
+                {
+                    "make migration-check",
+                    "make makemigrations",
+                    "Do not use `create_all()` or `drop_all()`",
+                }
+            )
         violations: list[SpecxArchitectureViolation] = []
         missing_fragments = sorted(
             fragment for fragment in required_fragments if fragment not in text
@@ -1673,12 +1680,37 @@ class InitFilesAreEmptyRule(ArchitectureRuleBase):
 
     def check(self, context: ArchitectureContext) -> tuple[SpecxArchitectureViolation, ...]:
         violations: list[SpecxArchitectureViolation] = []
-        for path in context.src_root.rglob("__init__.py"):
-            if path.read_text(encoding="utf-8") != "":
-                violations.append(
-                    _violation(self.id, path=path, message="__init__.py is not empty")
-                )
+        for package_root in (context.src_root, context.project_root / "tests"):
+            if not package_root.exists():
+                continue
+            for directory in _python_package_directories(package_root):
+                init_path = directory / "__init__.py"
+                if not init_path.exists():
+                    violations.append(
+                        _violation(self.id, path=init_path, message="__init__.py is missing")
+                    )
+                    continue
+                if init_path.read_text(encoding="utf-8") != "":
+                    violations.append(
+                        _violation(self.id, path=init_path, message="__init__.py is not empty")
+                    )
         return tuple(violations)
+
+
+def _python_package_directories(root: Path) -> tuple[Path, ...]:
+    return tuple(
+        directory
+        for directory in sorted((root, *root.rglob("*")))
+        if directory.is_dir()
+        and "__pycache__" not in directory.parts
+        and any(path.suffix == ".py" for path in directory.rglob("*.py"))
+    )
+
+
+def _project_uses_alembic(context: ArchitectureContext) -> bool:
+    return (context.project_root / "alembic.ini").exists() or (
+        context.project_root / "migrations"
+    ).exists()
 
 
 def _mirrored_test_paths(

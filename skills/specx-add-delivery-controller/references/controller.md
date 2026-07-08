@@ -156,9 +156,11 @@ class FastAPIFactory(BaseFactory):
 ## Integration Test
 
 ```python
+import pytest
 from fastapi import status
 
 
+@pytest.mark.anyio
 async def test_register_user_returns_created_user(
     transactional_test_async_client_factory: TestAsyncClientFactory,
 ) -> None:

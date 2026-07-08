@@ -20,8 +20,9 @@ test:
 build:
 	uv build --no-sources
 
-verifytypes:
-	uv run --with ./dist/specx-0.1.0-py3-none-any.whl --with pyright pyright --verifytypes specx --ignoreexternal
+verifytypes: build
+	@wheel="$$(ls -t dist/specx-*.whl | head -n 1)"; \
+	uv run --with "$$wheel" --with pyright pyright --verifytypes specx --ignoreexternal
 
 validate-skills:
 	uv run --with pyyaml python scripts/validate_skills.py skills
