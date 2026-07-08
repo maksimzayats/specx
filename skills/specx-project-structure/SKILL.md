@@ -1,6 +1,6 @@
 ---
 name: specx-project-structure
-description: Create or reshape a Python service repo into the Specx clean core/delivery/foundation layout. Use when starting a new backend repo, converting a template into skills, adding the first src package, or establishing `AGENTS.md`, `foundation/`, `core/`, optional `capabilities/`, `delivery/`, top-level `infrastructure/`, `ioc/`, optional `shared/`, conditional migrations, and test roots for FastAPI, `diwire`, and class-based application code.
+description: Create or reshape a Python service repo into the Specx clean core/delivery architecture using packaged `specx.foundation` bases. Use when starting a backend repo, adding the first src package, or establishing `AGENTS.md`, `core/`, optional local `foundation/`, `delivery/`, infrastructure, `ioc/`, migrations, and tests.
 ---
 
 # Specx Project Structure
@@ -13,7 +13,8 @@ details, read `references/blueprint.md`.
 1. Derive the import package from the project name: lowercase, hyphen to
    underscore, valid Python identifier.
 2. Create `src/<package>/` with empty `__init__.py` files only.
-3. Add `foundation/` with the base classes used by the classes that exist now.
+3. Add `specx` as a runtime dependency and import base classes from
+   `specx.foundation`.
 4. Use `core/<scope>/` as the main boundary. Put application packages at the
    scope root: `capabilities/`, `dtos/`, `entities/`, `exceptions/`,
    `gateways/`, `repositories/`, `services/`, and `use_cases/`. Put
@@ -33,24 +34,30 @@ details, read `references/blueprint.md`.
 11. Create root `AGENTS.md` for every new repo. Include runnable project
    commands from `$specx-project-tooling` and Specx boundaries from
    `$specx-component-architecture`.
-12. Add tests only where there is real code to test. Do not create empty folders
+12. Create `src/<package>/foundation/` only when a real class category is
+   missing from `specx.foundation` and current code needs a local base.
+13. Add tests only where there is real code to test. Do not create empty folders
    just to satisfy the diagram.
 
 ## Hard Rules
 
 - Keep `__init__.py` files empty.
 - Every project class must inherit an explicit base class.
-- Prefer foundation bases such as `BaseDTO`, `BaseEntity`, `BaseCapability`,
-  `BaseGateway`, `BasePureService`, `BaseReadService`, `BaseEffectService`,
-  `BaseCommand`, `BaseQuery`, `BaseUseCase`, `BaseRepository`, `BaseUnitOfWork`,
-  `BaseUnitOfWorkManager`, `BaseController`, `BaseFastAPISchema`, and
-  `BaseFactory`.
-- Do not add `base_` prefixes to foundation module filenames. Class names stay
-  prefixed, for example `capability.py` defines `BaseCapability`.
+- Prefer packaged bases such as `specx.foundation.dto.BaseDTO`,
+  `specx.foundation.command.BaseCommand`,
+  `specx.foundation.use_case.BaseUseCase`,
+  `specx.foundation.pure_service.BasePureService`,
+  `specx.foundation.read_service.BaseReadService`,
+  `specx.foundation.effect_service.BaseEffectService`,
+  `specx.foundation.capability.BaseCapability`,
+  `specx.foundation.gateway.BaseGateway`, and
+  `specx.foundation.delivery.fastapi.schema.BaseFastAPISchema`.
 - Every major class should have a docstring that explains the class scope and
   includes a concrete `Example:`.
-- Extend `foundation/` with a new base class only when a real class category
-  exists and no existing base fits.
+- Add a project-local foundation base only when a real class category exists
+  and no packaged base fits. Do not copy packaged bases locally.
+- Do not add `base_` prefixes to local foundation module filenames. Class names
+  stay prefixed, for example `clock.py` defines `BaseClock`.
 - Core application code (`capabilities/`, `dtos/`, `entities/`, `exceptions/`,
   `gateways/`, `repositories/`, `services/`, `use_cases/`) must not import
   FastAPI, SQLAlchemy, Redis, HTTP clients, `delivery`, or the DI container.
@@ -84,8 +91,11 @@ details, read `references/blueprint.md`.
   layers to compose the app.
 - Prefer one primary public class per file.
 - Prefer class-based use cases, services, controllers, factories, and adapters.
-- Prefer `@dataclass(kw_only=True, slots=True)` for non-Pydantic services, use
-  cases, controllers, factories, adapters, entities, and similar classes.
+- Prefer `@dataclass(frozen=True, kw_only=True, slots=True)` for commands,
+  queries, DTOs, entities, and other core data classes unless the user asks for
+  another model type.
+- Prefer `@dataclass(kw_only=True, slots=True)` for services, use cases,
+  controllers, factories, adapters, and similar non-Pydantic behavior classes.
 - Generated projects must include root `AGENTS.md`. Keep its Commands section
   aligned with the Makefile and include only commands that exist in that
   project.

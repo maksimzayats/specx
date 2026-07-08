@@ -14,7 +14,7 @@ Use this skill to make the repository executable and checkable. Read
    default to Python 3.14.
 2. Use `uv` metadata in `pyproject.toml`.
 3. Add runtime dependencies only for real runtime features. For a starter API,
-   include FastAPI, `diwire`, `pydantic-settings`, and Uvicorn.
+   include `specx`, FastAPI, `diwire`, `pydantic-settings`, and Uvicorn.
 4. Add dev dependencies for pytest, Ruff, mypy, and HTTP testing.
 5. Enable the `diwire.integrations.mypy_plugin` plugin.
 6. Add simple Makefile targets: `check`, `format`, `lint`, `test`, and `dev`

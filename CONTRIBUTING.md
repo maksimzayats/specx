@@ -1,0 +1,231 @@
+# Contributing
+
+Specx is a Codex skill catalog plus a typed Python guardrail package. Changes
+usually touch the package, the skills, and the generated sample service so
+future agents learn the intended architecture and the sample proves it still
+works.
+
+## Repository Layout
+
+```text
+skills/                         # published Codex skills
+  specx-*/SKILL.md              # trigger metadata and workflow
+  specx-*/references/*.md       # detailed generation guidance
+src/specx/                      # reusable architecture guardrail package
+tests/                          # package and sample integration tests
+samples/task-db-service/        # generated reference service
+scripts/validate_skills.py      # skill metadata validator
+AGENTS.md                       # instructions for agents editing this repo
+README.md                       # user-facing catalog overview
+```
+
+The sample service is part of the validation surface. When architecture rules
+change, update the relevant skills and the sample together.
+
+## Prerequisites
+
+- Node.js with `npx`, for `skills add`.
+- `uv`, for Python validation commands.
+- Python available through `uv`.
+
+## Root Commands
+
+Validate the Python package, skill catalog, and installable skill list:
+
+```sh
+make check
+```
+
+Run package checks individually:
+
+```sh
+make lint
+make type
+make test
+make build
+```
+
+Validate skill metadata only:
+
+```sh
+make validate-skills
+```
+
+List local skills:
+
+```sh
+make list-skills
+```
+
+## Sample Commands
+
+Run these from `samples/task-db-service/`:
+
+```sh
+uv sync --all-groups
+make check
+make lint
+make test
+make migration-check
+make makemigrations message="describe change"
+make migrate
+```
+
+Use sample checks when changing generated-project code, generated-project
+instructions, architecture guardrails, migrations, DI, delivery, or core
+patterns.
+
+## Skill Authoring
+
+Each skill has:
+
+- `SKILL.md` with YAML frontmatter containing only `name` and `description`.
+- Optional `references/*.md` files for detailed instructions and examples.
+- Optional `agents/openai.yaml` metadata when the skill is meant to surface in
+  skill UI lists.
+
+Keep `SKILL.md` concise and trigger-oriented. Put reusable patterns, examples,
+and guardrail details in `references/`. Do not add README-style files inside
+individual skill folders.
+
+When changing a rule:
+
+1. Update the skill that teaches the rule.
+2. Update cross-cutting references that repeat the rule.
+3. Update `AGENTS.md` if agents need the rule before loading a skill.
+4. Update `samples/task-db-service/AGENTS.md` if generated projects should carry
+   the rule.
+5. Update the sample implementation when the rule changes generated code.
+6. Run the relevant sample checks and root `make check`.
+
+## Architecture Contract
+
+Generated services should preserve these boundaries:
+
+- `specx.foundation` defines the default reusable base classes for generated
+  services.
+- `foundation/`, when present in a generated service, contains only
+  project-local base classes missing from `specx.foundation`.
+- `core/<scope>/` contains framework-free application behavior.
+- `delivery/` contains framework adapters, controllers, schemas, and
+  delivery-only helpers.
+- `core/<scope>/infrastructure/` contains scope-owned technical adapters.
+- top-level `infrastructure/` contains app-wide technical resources.
+- `ioc/` owns `diwire.Container` composition.
+- `shared/` is optional and only for stable cross-scope primitives.
+
+Project-local foundation module filenames are intentionally unprefixed:
+
+```text
+foundation/clock.py
+foundation/generator.py
+```
+
+Foundation class names stay prefixed:
+
+```python
+class BaseClock: ...
+class BaseGenerator: ...
+```
+
+## Use Cases, Services, And UoW
+
+Use cases are externally meaningful actions. Each `execute(...)` method accepts
+exactly one same-file input:
+
+- `Command` for side-effecting operations.
+- `Query` for read-only operations.
+
+Use cases return DTOs, not entities or raw repository results.
+Commands, queries, DTOs, entities, and other core data classes should use
+`@dataclass(frozen=True, kw_only=True, slots=True)` unless a user explicitly
+asks for another model type. Keep Pydantic at delivery schemas and settings
+edges.
+
+Persistence use cases inject a `UnitOfWorkManager` and open the active
+`UnitOfWork` inside `execute(...)`. Services may accept that active UoW as a
+method argument, but services must not open UoW scopes or own commit/rollback.
+
+Core services use one of:
+
+- `BasePureService` for deterministic helpers with no IO or runtime state.
+- `BaseReadService` for read-only orchestration.
+- `BaseEffectService` for side-effecting helpers that operate inside a use-case
+  owned UoW or call effect gateways.
+
+Do not add a generic `BaseService`.
+
+## Repositories, Gateways, And Capabilities
+
+Use repositories for owned persistence. Repositories may return entities inside
+core boundaries.
+
+Use gateways for outbound business capabilities provided by external systems:
+OpenAI, payments, email, queues, external HTTP APIs, and similar dependencies.
+Gateway ports inherit `BaseGateway`, live under `core/<scope>/gateways/`,
+declare external effects in docstrings, and do not return entities.
+
+Use capabilities for small injectable collaborators that are narrower than
+services. Direct subclasses of `BaseCapability` end with `Capability`. If a
+capability family becomes common or needs stronger checks, introduce a narrower
+project-local foundation base such as `BaseClock` or `BaseGenerator`.
+
+## Architecture Guardrails
+
+Rule-based guardrails live in the `specx` Python package. Each built-in
+architecture check is a concrete `*Rule` subclass with a stable
+`SpecxRuleId` and a useful docstring explaining the rule.
+
+Generated projects should keep a tiny pytest wrapper:
+
+```python
+from pathlib import Path
+
+from specx.testing.architecture import (
+    SpecxArchitectureConfig,
+    SpecxRuleId,
+    assert_specx_architecture,
+)
+
+
+def test_specx_architecture() -> None:
+    disabled_rules: frozenset[SpecxRuleId] = frozenset()
+
+    assert_specx_architecture(
+        SpecxArchitectureConfig(
+            project_root=Path(__file__).resolve().parents[2],
+            package_name="task_db_service",
+            disabled_rules=disabled_rules,
+        )
+    )
+```
+
+The compatibility renderer writes that wrapper for existing workflows:
+
+```sh
+python3 skills/specx-tests/references/render_architecture_guardrails.py \
+  --package task_db_service \
+  --output samples/task-db-service/tests/architecture/test_boundaries.py
+```
+
+When changing guardrail behavior, update the package rule, its focused tests,
+the sample wrapper if needed, and any skill docs that teach the rule.
+
+## Migrations
+
+SQLAlchemy projects use Alembic migrations. Do not introduce source or test
+code that calls `metadata.create_all()` or `drop_all()`.
+
+Model discovery should load every SQLAlchemy model under
+`core/*/infrastructure/sqlalchemy/models` so Alembic drift checks compare
+against complete metadata.
+
+## Pull Request Checklist
+
+- Root `make check` passes.
+- Sample `make check` passes when sample or generated-project rules changed.
+- Skill references and sample `AGENTS.md` agree on architecture rules.
+- Package architecture rules and the compatibility wrapper renderer agree.
+- No placeholder folders, local copies of packaged bases, or speculative
+  foundation bases were added.
+- No unrelated generated caches or local environment files were committed.

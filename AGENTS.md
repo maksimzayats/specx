@@ -2,9 +2,10 @@
 
 ## Repository Purpose
 
-This repo is the Specx skill catalog. It publishes reusable Codex skills for
-creating Python backend services with a clean `foundation` / `core` /
-`delivery` / `infrastructure` / `ioc` architecture.
+This repo is the Specx skill catalog and Python guardrail package. It publishes
+reusable Codex skills and a typed `specx` package for creating Python backend
+services with packaged `specx.foundation` bases, rule-based architecture tests,
+and clean `core` / `delivery` / `infrastructure` / `ioc` boundaries.
 
 ## Repo Map
 
@@ -12,13 +13,23 @@ creating Python backend services with a clean `foundation` / `core` /
 - `skills/<skill-name>/references/*.md` contains detailed implementation
   patterns and examples.
 - `skills/<skill-name>/agents/openai.yaml` contains OpenAI skill UI metadata.
+- `src/specx/foundation/` contains reusable service foundation bases.
+- `src/specx/testing/` contains the public rule-based architecture test API.
+- `src/specx/_internal/` contains package internals that are not public API.
+- `tests/` validates the `specx` package and sample-service integration.
 - `scripts/validate_skills.py` validates the skill catalog.
 - `samples/task-db-service/` is a generated reference service used to validate
   the skills. It may be untracked while iterating.
 
 ## Root Commands
 
-- Validate everything in the catalog: `make check`
+- Validate everything in the catalog and package: `make check`
+- Format package code: `make format`
+- Lint and format-check package code: `make lint`
+- Type-check package code: `make type`
+- Run package tests: `make test`
+- Build package distributions: `make build`
+- Verify installed package typing: `make verifytypes`
 - Validate skill metadata only: `make validate-skills`
 - List local installable skills: `make list-skills`
 - Inspect local skills manually: `npx skills add . --list --full-depth`
@@ -40,8 +51,12 @@ creating Python backend services with a clean `foundation` / `core` /
 
 ## Specx Service Rules To Preserve
 
-- Every non-foundation project class inherits an explicit foundation base.
+- Every project class inherits an explicit packaged `specx.foundation` base or
+  a justified project-local foundation extension.
 - Use cases accept exactly one same-file `Command` or `Query` and return DTOs.
+- Commands, queries, DTOs, entities, and other core data classes use
+  `@dataclass(frozen=True, kw_only=True, slots=True)` unless the user asks for
+  another model type. Keep Pydantic at delivery schemas and settings edges.
 - Small injectable collaborators inherit `BaseCapability`, live under
   `core/<scope>/capabilities/`, and do not pretend to be services,
   repositories, gateways, helpers, managers, or generic dependencies.
@@ -55,8 +70,11 @@ creating Python backend services with a clean `foundation` / `core` /
 - Core services inherit `BasePureService`, `BaseReadService`, or
   `BaseEffectService`, keep the `Service` suffix, and do not open unit-of-work
   scopes.
-- Do not add `base_` prefixes to foundation module filenames; class names stay
-  prefixed, for example `capability.py` defines `BaseCapability`.
+- Do not copy packaged foundation bases into generated projects. Add
+  `src/<package>/foundation/` only when a real class category is missing from
+  `specx.foundation`.
+- Do not add `base_` prefixes to project-local foundation module filenames;
+  class names stay prefixed, for example `clock.py` defines `BaseClock`.
 - Persistence use cases inject a `UnitOfWorkManager`, not an active UoW or
   provider.
 - Delivery schemas live under the delivery layer, usually

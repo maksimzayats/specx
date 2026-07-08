@@ -1,6 +1,6 @@
 ---
 name: specx-component-architecture
-description: Design or review Specx core scope boundaries in Python services. Use when deciding where code belongs across `foundation/`, `core/`, capabilities, top-level `delivery/`, top-level infrastructure, scope infrastructure adapters, `shared/`, and `ioc`; when adding import guardrails; or when splitting use cases, services, capabilities, DTOs, schemas, ports, adapters, and foundation bases.
+description: Design or review Specx core scope boundaries in Python services. Use when deciding where code belongs across packaged `specx.foundation` bases, optional local foundation extensions, `core/`, capabilities, delivery, infrastructure, `shared/`, and `ioc`; when adding guardrails or splitting use cases, services, DTOs, schemas, ports, and adapters.
 ---
 
 # Specx Scope Architecture
@@ -16,9 +16,10 @@ than one layer. Read `references/boundaries.md` for the full rules.
 - `core/<scope>/infrastructure/`: scope-owned external IO adapters such as
   SQLAlchemy repositories, Redis stores, HTTP clients, file storage, and queues.
   Inner core packages must not import it.
-- `foundation/`: stable base classes and cross-layer primitives. Every project
-  class should inherit an explicit foundation base directly or through another
-  project base.
+- `specx.foundation`: packaged stable base classes. Every project class should
+  inherit an explicit packaged base directly or through a project-local base.
+- `foundation/`: optional project-local extension point only when a real class
+  category is missing from `specx.foundation`.
 - `delivery/`: runnable framework apps, controllers, schemas, auth
   dependencies, request parsing, response serialization, HTTP error translation,
   and delivery-only services.
@@ -38,22 +39,25 @@ than one layer. Read `references/boundaries.md` for the full rules.
 - Do not call small collaborators services by default.
 - Core services inherit `BasePureService`, `BaseReadService`, or
   `BaseEffectService`; do not add or use a generic `BaseService`.
-- Do not add `base_` prefixes to foundation module filenames. Class names stay
-  prefixed, for example `capability.py` defines `BaseCapability`.
+- Do not add `base_` prefixes to project-local foundation module filenames.
+  Class names stay prefixed, for example `clock.py` defines `BaseClock`.
 - Use gateway ports under `core/<scope>/gateways/` for outbound business
   capabilities such as OpenAI summaries, payments, email, queues, and external
   APIs. Gateway ports inherit `BaseGateway`, declare external effects, and do
   not return entities.
 - Put concrete gateway implementations under
   `core/<scope>/infrastructure/<technology>/`.
-- Use existing foundation bases before adding new ones.
-- Add a new foundation base only when a real class category exists and no
-  existing base fits.
+- Use packaged `specx.foundation` bases before adding project-local bases.
+- Add a project-local foundation base only when a real class category exists
+  and no packaged base fits.
 - Use a port or ABC only for a real external boundary or multiple
   implementations.
 - Use one delivery controller per scoped set of use cases.
 - Keep request/response schemas in top-level `delivery/`. Keep use-case DTOs in
   `core/<scope>/dtos/`.
+- Prefer `@dataclass(frozen=True, kw_only=True, slots=True)` for commands,
+  queries, DTOs, entities, and other core data classes unless the user asks for
+  another model type. Keep Pydantic at delivery schemas and settings edges.
 - When creating or reshaping a repo, keep root `AGENTS.md` architecture
   guidance aligned with these boundaries.
 - Define each use-case input as a same-file `Command` or `Query`: commands are

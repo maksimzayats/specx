@@ -1,10 +1,11 @@
 from dataclasses import dataclass
 
+from specx.foundation.read_service import BaseReadService
+
 from task_db_service.core.tasks.dtos.task_dto import TaskDTO
 from task_db_service.core.tasks.dtos.task_list_dto import TaskListDTO
 from task_db_service.core.tasks.exceptions.task_not_found_error import TaskNotFoundError
 from task_db_service.core.tasks.repositories.task_unit_of_work import TaskUnitOfWork
-from task_db_service.foundation.read_service import BaseReadService
 
 
 @dataclass(kw_only=True, slots=True)
@@ -19,8 +20,13 @@ class TaskLookupService(BaseReadService):
         task = await unit_of_work.tasks.get(task_id=task_id)
         if task is None:
             raise TaskNotFoundError(task_id=task_id)
-        return TaskDTO.model_validate(task)
+        return TaskDTO(id=task.id, title=task.title, is_completed=task.is_completed)
 
     async def list(self, *, unit_of_work: TaskUnitOfWork) -> TaskListDTO:
         tasks = await unit_of_work.tasks.list()
-        return TaskListDTO(tasks=[TaskDTO.model_validate(task) for task in tasks])
+        return TaskListDTO(
+            tasks=[
+                TaskDTO(id=task.id, title=task.title, is_completed=task.is_completed)
+                for task in tasks
+            ],
+        )

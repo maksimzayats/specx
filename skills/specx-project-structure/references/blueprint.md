@@ -10,37 +10,6 @@ For project `order-service`, use package `order_service`:
 AGENTS.md
 src/order_service/
   __init__.py
-  foundation/
-    __init__.py
-    capability.py
-    command.py
-    dto.py
-    entity.py
-    enums.py
-    exceptions.py
-    factory.py
-    gateway.py
-    effect_service.py
-    pure_service.py
-    read_service.py
-    repository.py
-    query.py
-    settings.py
-    unit_of_work.py
-    unit_of_work_manager.py
-    use_case.py
-    delivery/
-      __init__.py
-      controller.py
-      service.py
-      fastapi/
-        __init__.py
-        schema.py
-    infrastructure/
-      __init__.py
-      sqlalchemy/
-        __init__.py
-        model.py
   core/
     __init__.py
     health/
@@ -78,8 +47,10 @@ tests/
   architecture/
 ```
 
-Create only directories that contain real files. Add only the foundation bases
-needed by current classes. Add `core/<scope>/capabilities/` only when the scope
+Create only directories that contain real files. Import default bases from
+`specx.foundation`; create `src/<package>/foundation/` only when a real class
+category is missing from the package and current code needs that local base.
+Add `core/<scope>/capabilities/` only when the scope
 has small injectable collaborators narrower than services. Add
 `core/<scope>/gateways/` only when the scope has real outbound capabilities such
 as OpenAI, payments, email, queues, or external HTTP APIs. Add
@@ -111,6 +82,9 @@ Recommended content:
 - Shared technical infrastructure lives in `src/order_service/infrastructure`.
 - Scope-owned adapters live under `core/<scope>/infrastructure`.
 - DI composition lives in `src/order_service/ioc/container.py`.
+- Foundation bases come from `specx.foundation`; add
+  `src/order_service/foundation/` only for project-local bases missing from the
+  package.
 
 ## Commands
 
@@ -127,6 +101,7 @@ Recommended content:
 ## Architecture Rules
 
 - Controllers call injected use cases and never import infrastructure.
+- Project classes inherit explicit bases, usually from `specx.foundation`.
 - Public FastAPI routes use full `/api/v1/...` paths in controllers.
 - Use cases expose exactly one `execute(*, command=...)` or
   `execute(*, query=...)`.
@@ -139,8 +114,9 @@ Recommended content:
 - Direct concrete `BaseCapability` subclasses end with `Capability`; narrower
   foundation families such as `BaseClock` or `BaseGenerator` use their narrower
   suffix.
-- Do not add `base_` prefixes to foundation module filenames. Class names stay
-  prefixed, for example `capability.py` defines `BaseCapability`.
+- Do not copy packaged foundation bases into the project. If a local foundation
+  base is needed, do not use a `base_` module prefix; for example `clock.py`
+  defines `BaseClock`.
 - Gateway ports live in `core/<scope>/gateways`, subclass `BaseGateway`, use
   business language, declare external effects, and do not return entities.
 - Concrete gateway implementations live under
@@ -160,10 +136,13 @@ Recommended content:
   providers.
 - Only `ioc`, top-level delivery `__main__.py`/factory code, and tests may use
   `diwire.Container`.
-- Non-foundation source classes need explicit foundation/category bases,
+- Non-foundation source classes need explicit packaged or local bases,
   matching suffixes, and scoped docstrings with concrete `Example:` blocks.
-- Prefer `@dataclass(kw_only=True, slots=True)` for non-Pydantic services, use
-  cases, controllers, factories, adapters, entities, and similar classes.
+- Prefer `@dataclass(frozen=True, kw_only=True, slots=True)` for commands,
+  queries, DTOs, entities, and other core data classes unless the user asks for
+  another model type.
+- Prefer `@dataclass(kw_only=True, slots=True)` for services, use cases,
+  controllers, factories, adapters, and similar non-Pydantic behavior classes.
 - Keep all `__init__.py` files empty.
 ```
 
@@ -199,9 +178,12 @@ the boundaries.
 Core DTO:
 
 ```python
-from order_service.foundation.dto import BaseDTO
+from dataclasses import dataclass
+
+from specx.foundation.dto import BaseDTO
 
 
+@dataclass(frozen=True, kw_only=True, slots=True)
 class HealthStatusDTO(BaseDTO):
     """DTO returned by health use cases.
 
@@ -218,7 +200,7 @@ Core service:
 from dataclasses import dataclass
 
 from order_service.core.health.dtos.health_status_dto import HealthStatusDTO
-from order_service.foundation.pure_service import BasePureService
+from specx.foundation.pure_service import BasePureService
 
 
 @dataclass(kw_only=True, slots=True)
@@ -244,10 +226,11 @@ from order_service.core.health.dtos.health_status_dto import HealthStatusDTO
 from order_service.core.health.services.health_reporter_service import (
     HealthReporterService,
 )
-from order_service.foundation.query import BaseQuery
-from order_service.foundation.use_case import BaseUseCase
+from specx.foundation.query import BaseQuery
+from specx.foundation.use_case import BaseUseCase
 
 
+@dataclass(frozen=True, kw_only=True, slots=True)
 class CheckHealthQuery(BaseQuery):
     """Query for reading application health status.
 
@@ -274,7 +257,7 @@ class CheckHealthUseCase(BaseUseCase):
 Delivery schema:
 
 ```python
-from order_service.foundation.delivery.fastapi.schema import BaseFastAPISchema
+from specx.foundation.delivery.fastapi.schema import BaseFastAPISchema
 
 
 class HealthResponseSchema(BaseFastAPISchema):
@@ -300,11 +283,11 @@ from order_service.core.health.use_cases.check_health import (
     CheckHealthUseCase,
 )
 from order_service.delivery.fastapi.schemas.health_schema import HealthResponseSchema
-from order_service.foundation.delivery.controller import BaseController
+from specx.foundation.delivery.controller import BaseController
 
 
 @dataclass(kw_only=True, slots=True)
-class HealthController(BaseController):
+class HealthController(BaseController[APIRouter]):
     """FastAPI controller that registers health routes.
 
     Example:
@@ -335,7 +318,7 @@ from diwire import Injected
 from fastapi import APIRouter, FastAPI
 
 from order_service.delivery.fastapi.controllers.health import HealthController
-from order_service.foundation.factory import BaseFactory
+from specx.foundation.factory import BaseFactory
 
 
 @dataclass(kw_only=True, slots=True)
@@ -389,7 +372,8 @@ def get_container() -> Container:
 ## Creation Checklist
 
 - Add package files before tests so imports resolve.
-- Add foundation bases with `$specx-foundation`.
+- Use packaged `specx.foundation` bases. Use `$specx-foundation` only when a
+  real missing class category needs a project-local base.
 - Give every major class a scoped docstring with a concrete `Example:`.
 - Define every use-case input as a same-file `Command` or `Query`, even when
   it has no fields.
@@ -397,7 +381,8 @@ def get_container() -> Container:
 - Add DI with `$specx-diwire-composition`.
 - Add Alembic with `$specx-sqlalchemy-migrations` when SQLAlchemy models exist.
 - Create root `AGENTS.md` with project commands and architecture boundaries.
-- Add tests with `$specx-tests`.
+- Add tests with `$specx-tests`, including the tiny `specx` architecture
+  wrapper when architecture guardrails are needed.
 - Run `uv run pytest`, `uv run ruff check .`,
   `uv run ruff format --check .`, and `uv run mypy .` when tooling exists.
 
@@ -418,12 +403,12 @@ def get_container() -> Container:
 - Do not return entities from gateways. Return DTOs, primitives, value objects,
   or explicit result objects instead.
 - Do not inherit raw common bases such as `BaseModel`, `BaseSettings`, `ABC`,
-  `Exception`, `ValueError`, or `DeclarativeBase` outside `foundation/` when a
-  project foundation base exists.
+  `Exception`, `ValueError`, or `DeclarativeBase` outside `specx.foundation` or
+  a justified project-local foundation module.
 - Do not add a generic `BaseService`; choose `BasePureService`,
   `BaseReadService`, or `BaseEffectService` for every core service.
-- Do not add `base_` prefixes to foundation module filenames. Class names stay
-  prefixed, for example `pure_service.py` defines `BasePureService`.
+- Do not add `base_` prefixes to project-local foundation module filenames.
+  Class names stay prefixed, for example `clock.py` defines `BaseClock`.
 - Do not open UoW scopes inside services. Use cases own transaction lifecycle
   and pass the active UoW into read/effect services when needed.
 - Name classes with the suffix implied by their foundation base ancestry, such

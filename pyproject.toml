@@ -1,0 +1,84 @@
+[project]
+name = "specx"
+version = "0.1.0"
+description = "Rule-based architecture guardrails for Specx Python services."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE.md"]
+dependencies = [
+    "pydantic>=2.13.0",
+    "pydantic-settings>=2.14.0",
+    "sqlalchemy>=2.0.0",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: Pytest",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Typing :: Typed",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=2.1.0",
+    "pytest>=9.1.0",
+    "pyright>=1.1.407",
+    "pyyaml>=6.0.3",
+    "ruff>=0.15.0",
+    "types-PyYAML>=6.0.12",
+]
+
+[build-system]
+requires = ["uv_build>=0.11.0,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "specx"
+
+[tool.pytest.ini_options]
+minversion = "9.0"
+addopts = "-vv --strict-config --strict-markers --import-mode=importlib"
+pythonpath = ["src"]
+testpaths = ["tests"]
+xfail_strict = true
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["src", "tests", "scripts"]
+
+[tool.ruff.lint]
+select = [
+    "A",
+    "B",
+    "C4",
+    "E",
+    "F",
+    "I",
+    "N",
+    "PIE",
+    "PT",
+    "PTH",
+    "RET",
+    "RUF",
+    "SIM",
+    "UP",
+]
+ignore = []
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unreachable = true
+extra_checks = true
+mypy_path = "src"
+
+[tool.pyright]
+typeCheckingMode = "strict"
+pythonVersion = "3.11"
+include = ["src", "tests"]

@@ -10,7 +10,7 @@ Place settings near the consumer when only one class needs them:
 from pydantic import AnyHttpUrl
 from pydantic_settings import SettingsConfigDict
 
-from order_service.foundation.settings import BaseRuntimeSettings
+from specx.foundation.settings import BaseRuntimeSettings
 
 
 class UserDirectorySettings(BaseRuntimeSettings):
@@ -61,8 +61,8 @@ class HttpUserDirectoryRepository(UserDirectoryRepository):
 Use a shared settings class only for app-wide values:
 
 ```python
-from order_service.foundation.enums import BaseStrEnum
-from order_service.foundation.settings import BaseRuntimeSettings
+from specx.foundation.enums import BaseStrEnum
+from specx.foundation.settings import BaseRuntimeSettings
 
 
 class EnvironmentEnum(BaseStrEnum):
@@ -129,4 +129,5 @@ def test_settings_reads_env(monkeypatch: pytest.MonkeyPatch) -> None:
 - No global settings singleton hidden in core.
 - No settings objects passed through delivery request schemas.
 - No broad `Settings` class for unrelated scope config.
-- No direct raw `BaseSettings` inheritance outside foundation.
+- No direct raw `BaseSettings` inheritance; use
+  `specx.foundation.settings.BaseRuntimeSettings`.

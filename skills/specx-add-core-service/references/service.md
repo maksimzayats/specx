@@ -16,7 +16,7 @@ from dataclasses import dataclass
 
 from diwire import Injected
 
-from order_service.foundation.pure_service import BasePureService
+from specx.foundation.pure_service import BasePureService
 
 
 @dataclass(kw_only=True, slots=True)
@@ -137,7 +137,7 @@ external APIs.
 Read/effect services may receive an active UoW as a method argument:
 
 ```python
-from order_service.foundation.read_service import BaseReadService
+from specx.foundation.read_service import BaseReadService
 
 
 @dataclass(kw_only=True, slots=True)
@@ -152,7 +152,7 @@ class TaskLookupService(BaseReadService):
         task = await unit_of_work.tasks.get(task_id=task_id)
         if task is None:
             raise TaskNotFoundError(task_id=task_id)
-        return TaskDTO.model_validate(task)
+        return TaskDTO(id=task.id, title=task.title, is_completed=task.is_completed)
 ```
 
 The service does not open `async with self._unit_of_work_manager`. The use case
@@ -176,7 +176,7 @@ async with self._unit_of_work_manager as unit_of_work:
 Effect services follow the same active-UoW rule:
 
 ```python
-from order_service.foundation.effect_service import BaseEffectService
+from specx.foundation.effect_service import BaseEffectService
 
 
 @dataclass(kw_only=True, slots=True)
@@ -191,7 +191,7 @@ class TaskCompletionService(BaseEffectService):
         task = await unit_of_work.tasks.complete(task_id=task_id)
         if task is None:
             raise TaskNotFoundError(task_id=task_id)
-        return TaskDTO.model_validate(task)
+        return TaskDTO(id=task.id, title=task.title, is_completed=task.is_completed)
 ```
 
 ## Unit Tests

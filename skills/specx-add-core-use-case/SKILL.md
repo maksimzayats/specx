@@ -12,12 +12,15 @@ Use this skill for one application action at a time. Read
 
 1. Name the action directly, for example `CreateInvoiceUseCase`.
 2. Put it under `core/<scope>/use_cases/<action>.py`.
-3. Inherit `BaseUseCase` from `foundation/use_case.py`.
+3. Inherit `BaseUseCase` from `specx.foundation.use_case`.
 4. Define exactly one same-file input class: a `Command` for state-changing
    use cases or a `Query` for read-only use cases. Even empty inputs are
    explicit.
-5. Make commands inherit `BaseCommand`, queries inherit `BaseQuery`, and result
-   DTOs inherit `BaseDTO`.
+5. Make commands inherit `specx.foundation.command.BaseCommand`, queries inherit
+   `specx.foundation.query.BaseQuery`, and result DTOs inherit
+   `specx.foundation.dto.BaseDTO`. Prefer
+   `@dataclass(frozen=True, kw_only=True, slots=True)` for all of these core
+   data classes unless the user asks for another model type.
 6. `execute(...)` accepts exactly one keyword-only argument named `command` or
    `query` and returns DTOs, not entities.
 7. Inject services, capabilities, repositories, gateways, and settings with

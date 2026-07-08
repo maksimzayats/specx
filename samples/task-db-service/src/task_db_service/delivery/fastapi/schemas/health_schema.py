@@ -1,4 +1,4 @@
-from task_db_service.foundation.delivery.fastapi.schema import BaseFastAPISchema
+from specx.foundation.delivery.fastapi.schema import BaseFastAPISchema
 
 
 class HealthResponseSchema(BaseFastAPISchema):

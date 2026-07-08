@@ -2,10 +2,10 @@ from dataclasses import dataclass
 
 from diwire import Injected
 from fastapi import APIRouter, FastAPI
+from specx.foundation.factory import BaseFactory
 
 from task_db_service.delivery.fastapi.controllers.health import HealthController
 from task_db_service.delivery.fastapi.controllers.tasks import TasksController
-from task_db_service.foundation.factory import BaseFactory
 
 
 @dataclass(kw_only=True, slots=True)

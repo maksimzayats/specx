@@ -10,6 +10,8 @@
 - Scope-owned adapters live under `core/<scope>/infrastructure`.
 - DI composition lives in `src/task_db_service/ioc/container.py`.
 - Alembic migrations live in `migrations`.
+- Foundation bases come from `specx.foundation`; this sample has no local
+  `foundation/` package.
 
 ## Commands
 
@@ -29,6 +31,7 @@
 ## Architecture Rules
 
 - Controllers call injected use cases and never import infrastructure.
+- Project classes inherit explicit bases from `specx.foundation`.
 - Public FastAPI routes use full `/api/v1/...` paths in controllers.
 - Use cases subclass `BaseUseCase` and expose exactly one
   `execute(*, command=...)` or `execute(*, query=...)`.
@@ -48,8 +51,9 @@
   `core/<scope>/infrastructure/<tech>`.
 - Core services inherit `BasePureService`, `BaseReadService`, or
   `BaseEffectService` and end with `Service`.
-- Do not add `base_` prefixes to foundation module filenames; class names stay
-  prefixed, for example `capability.py` defines `BaseCapability`.
+- Do not add local foundation modules unless a real class category is missing
+  from `specx.foundation`. Do not use `base_` module prefixes for those local
+  extensions.
 - Pure services are deterministic and do not depend on UoWs, repositories,
   gateways, clients, settings, clocks, UUID/random/time, SQLAlchemy, Redis, or
   SDKs.
@@ -64,10 +68,13 @@
 - Only `ioc/container.py`, top-level delivery `__main__.py`/factory code, and
   tests may use `diwire.Container`.
 - Use `Injected[...]` for collaborators.
-- Non-foundation source classes need explicit foundation/category bases,
+- Source classes need explicit packaged or local bases,
   matching suffixes, and scoped docstrings with concrete `Example:` blocks.
-- Prefer `@dataclass(kw_only=True, slots=True)` for non-Pydantic services, use
-  cases, controllers, factories, adapters, entities, and similar classes.
+- Prefer `@dataclass(frozen=True, kw_only=True, slots=True)` for commands,
+  queries, DTOs, entities, and other core data classes unless the user asks for
+  another model type.
+- Prefer `@dataclass(kw_only=True, slots=True)` for services, use cases,
+  controllers, factories, adapters, and similar non-Pydantic behavior classes.
 - Keep all `__init__.py` files empty.
 
 ## Tests
@@ -92,7 +99,7 @@
 ## Do Not Touch Without Explicit Request
 
 - Do not hand-edit `uv.lock`; use `uv`.
-- Do not rewrite `foundation/` base classes for feature work.
+- Do not add local copies of packaged `specx.foundation` bases for feature work.
 - Do not move route paths into router prefixes.
 - Do not bypass the DI container by constructing production graphs in delivery.
 - Do not edit existing migration revisions casually; add a new revision for

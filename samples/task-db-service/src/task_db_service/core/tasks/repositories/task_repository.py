@@ -1,7 +1,8 @@
 from abc import abstractmethod
 
+from specx.foundation.repository import BaseRepository
+
 from task_db_service.core.tasks.entities.task_entity import TaskEntity
-from task_db_service.foundation.repository import BaseRepository
 
 
 class TaskRepository(BaseRepository):
@@ -10,9 +11,6 @@ class TaskRepository(BaseRepository):
     Example:
         task = await repository.get(task_id=1)
     """
-
-    def _repository_marker(self) -> None:
-        return None
 
     @abstractmethod
     async def add(self, *, title: str) -> TaskEntity:

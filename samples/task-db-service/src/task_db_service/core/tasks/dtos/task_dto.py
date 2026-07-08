@@ -1,6 +1,9 @@
-from task_db_service.foundation.dto import BaseDTO
+from dataclasses import dataclass
+
+from specx.foundation.dto import BaseDTO
 
 
+@dataclass(frozen=True, kw_only=True, slots=True)
 class TaskDTO(BaseDTO):
     """DTO returned to callers for task state.
 

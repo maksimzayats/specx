@@ -1,356 +1,114 @@
 # Specx Foundation Reference
 
-`foundation/` holds stable base classes and primitives used across layers. It
-exists so project classes are never bare `class Foo:` declarations and do not
-inherit raw external bases directly when a project-owned base exists.
+Specx ships reusable foundation bases in the `specx.foundation` package. New
+services should import those bases directly instead of generating a large
+project-local foundation tree.
 
-## Suggested Package
+Prefer standard-library dataclasses for core data classes unless the user asks
+for another model type. Commands, queries, DTOs, and entities should normally
+use `@dataclass(frozen=True, kw_only=True, slots=True)`. Keep Pydantic at the
+delivery/schema and settings edges.
 
-```text
-foundation/
-  capability.py
-  command.py
-  configurator.py
-  dto.py
-  entity.py
-  enums.py
-  exceptions.py
-  factory.py
-  gateway.py
-  effect_service.py
-  pure_service.py
-  read_service.py
-  repository.py
-  query.py
-  settings.py
-  unit_of_work.py
-  unit_of_work_manager.py
-  use_case.py
-  delivery/
-    controller.py
-    service.py
-    fastapi/
-      schema.py
-  infrastructure/
-    sqlalchemy/
-      model.py
-```
+Create `src/<package>/foundation/` only when current code has a real class
+category that `specx.foundation` does not cover. Keep local foundation modules
+small and stable.
 
-Create only the files needed by real classes. Foundation modules should use
-unprefixed filenames such as `capability.py`, `gateway.py`, and
-`pure_service.py`. Foundation class names stay prefixed, for example
-`BaseCapability`, `BaseGateway`, `BasePureService`, `BaseReadService`, and
-`BaseEffectService`. New narrower capability-family bases stay prefixed too,
-for example `BaseClock` or `BaseGenerator`.
+## Packaged Bases
 
-Concrete class names use the suffix implied by their foundation base ancestry:
-`BaseCommand` -> `Command`, `BaseQuery` -> `Query`, `BaseDTO` -> `DTO`,
-`BaseEntity` -> `Entity`, `BaseFastAPISchema` -> `Schema`,
-`BaseUseCase` -> `UseCase`, `BaseCapability` -> `Capability`,
-`BaseGateway` -> `Gateway`, `BasePureService` / `BaseReadService` /
-`BaseEffectService` -> `Service`, `BaseRepository` -> `Repository`,
-`BaseUnitOfWork` -> `UnitOfWork`, `BaseUnitOfWorkManager` ->
-`UnitOfWorkManager`, `BaseController` -> `Controller`, `BaseFactory` ->
-`Factory`, `BaseConfigurator` -> `Configurator`, `BaseRuntimeSettings` ->
-`Settings`, `BaseStrEnum` -> `Enum`, `BaseDeliveryService` -> `Service`,
-`BaseApplicationError` -> `Error`, `BaseApplicationValueError` ->
-`ValueError`, and `BaseSQLAlchemyModel` -> `Model`.
+Use these imports first:
+
+| Base | Import path | Use for |
+| --- | --- | --- |
+| `BaseDTO` | `specx.foundation.dto` | Core result DTOs and application payloads. |
+| `BaseCommand` | `specx.foundation.command` | State-changing use-case inputs. |
+| `BaseQuery` | `specx.foundation.query` | Read-only use-case inputs. |
+| `BaseEntity` | `specx.foundation.entity` | Framework-free entities and value objects. |
+| `BaseUseCase` | `specx.foundation.use_case` | Externally meaningful application actions. |
+| `BasePureService` | `specx.foundation.pure_service` | Deterministic helpers with no IO or runtime state. |
+| `BaseReadService` | `specx.foundation.read_service` | Read-only orchestration helpers. |
+| `BaseEffectService` | `specx.foundation.effect_service` | Helpers that coordinate side effects without opening UoW scopes. |
+| `BaseCapability` | `specx.foundation.capability` | Small injectable collaborators narrower than services. |
+| `BaseGateway` | `specx.foundation.gateway` | Core-facing outbound business capability ports. |
+| `BaseRepository` | `specx.foundation.repository` | Owned-persistence repository ports and adapters. |
+| `BaseUnitOfWork` | `specx.foundation.unit_of_work` | Active unit-of-work contracts. |
+| `BaseUnitOfWorkManager` | `specx.foundation.unit_of_work_manager` | Objects that open, finish, and close active UoWs. |
+| `BaseFactory` | `specx.foundation.factory` | Dependency-injected factories and app factories. |
+| `BaseConfigurator` | `specx.foundation.configurator` | Bootstrap/configuration objects. |
+| `BaseRuntimeSettings` | `specx.foundation.settings` | `pydantic-settings` runtime settings. |
+| `BaseStrEnum` | `specx.foundation.enums` | String enums used by settings and application values. |
+| `BaseApplicationError` | `specx.foundation.exceptions` | Application errors translated by delivery layers. |
+| `BaseApplicationValueError` | `specx.foundation.exceptions` | Invalid application values rejected before persistence. |
+| `BaseController` | `specx.foundation.delivery.controller` | Delivery controllers that register public routes. |
+| `BaseDeliveryService` | `specx.foundation.delivery.service` | Delivery-only helpers such as auth or rate limiting. |
+| `BaseFastAPISchema` | `specx.foundation.delivery.fastapi.schema` | FastAPI request and response schemas. |
+| `BaseSQLAlchemyModel` | `specx.foundation.infrastructure.sqlalchemy.model` | SQLAlchemy declarative models and metadata naming conventions. |
+
+## Naming Rules
+
+Concrete class names use the suffix implied by their most-specific base:
+
+- `BaseCommand` -> `Command`
+- `BaseQuery` -> `Query`
+- `BaseDTO` -> `DTO`
+- `BaseEntity` -> `Entity`
+- `BaseFastAPISchema` -> `Schema`
+- `BaseUseCase` -> `UseCase`
+- `BaseCapability` -> `Capability`
+- `BaseGateway` -> `Gateway`
+- `BasePureService`, `BaseReadService`, `BaseEffectService` -> `Service`
+- `BaseRepository` -> `Repository`
+- `BaseUnitOfWork` -> `UnitOfWork`
+- `BaseUnitOfWorkManager` -> `UnitOfWorkManager`
+- `BaseController` -> `Controller`
+- `BaseFactory` -> `Factory`
+- `BaseRuntimeSettings` -> `Settings`
+- `BaseApplicationError` -> `Error`
+- `BaseApplicationValueError` -> `ValueError`
+- `BaseSQLAlchemyModel` -> `Model`
 
 Direct concrete subclasses of `BaseCapability` use the `Capability` suffix.
-When a capability family becomes common or needs stronger review rules, add a
-narrower foundation base inheriting `BaseCapability`; concrete classes then use
-the narrower suffix, for example `BaseClock` -> `SystemClock` and
-`BaseGenerator` -> `UUID7Generator`.
-
-## Base Catalog
-
-Use these names unless the repo already has stronger local names:
-
-- `BaseCommand` for state-changing use-case inputs.
-- `BaseQuery` for read-only use-case inputs.
-- `BaseDTO` for result DTOs and other core payloads.
-- `BaseEntity` for framework-free entities and value objects.
-- `BaseCapability` for small injectable collaborators that do one narrow thing,
-  may be faked or swapped, and do not own application workflows, UoW scopes,
-  repositories, or gateways.
-- `BaseGateway` for core-facing outbound business capability ports to external
-  systems. Gateway ports live under `core/<scope>/gateways/`, use business
-  language, declare external effects, and do not return entities.
-- `BasePureService` for deterministic core helpers with no IO, UoW,
-  repository, gateway, client, settings, clock, UUID, random, time, SQLAlchemy,
-  Redis, OpenAI SDK, or framework dependency.
-- `BaseReadService` for read-only orchestration helpers that may read through
-  repositories/read gateways, preferably via an active UoW passed by the caller.
-- `BaseEffectService` for helpers that perform or coordinate side effects
-  through an active UoW or effect gateways. They must not open UoW scopes.
-- `BaseUseCase` for externally meaningful application actions.
-- `BaseRepository` for owned-persistence repository ports and adapters.
-- `BaseUnitOfWork` for active unit-of-work contracts exposed inside manager
-  scopes.
-- `BaseUnitOfWorkManager` for objects that open, finish, and close active units
-  of work.
-- `BaseFactory` for dependency-injected factories and app factories.
-- `BaseConfigurator` for bootstrap/configuration objects.
-- `BaseRuntimeSettings` for `pydantic-settings` classes.
-- `BaseStrEnum` for project enums.
-- `BaseApplicationError` and `BaseApplicationValueError` for application
-  exceptions.
-- `BaseController` for delivery controllers.
-- `BaseDeliveryService` for framework-facing helper services such as auth,
-  request context, and rate limiting. Concrete delivery services still use the
-  `Service` suffix.
-- `BaseFastAPISchema` for FastAPI request and response schemas.
-- `BaseSQLAlchemyModel` for SQLAlchemy declarative models when a real SQL
-  adapter exists. It owns metadata naming conventions only, not engines,
-  sessions, migrations, or schema creation.
-
-## Minimal Examples
-
-```python
-from pydantic import BaseModel, ConfigDict
-
-
-class BaseDTO(BaseModel):
-    """Base for core payloads represented as Pydantic models.
-
-    Example:
-        class TaskDTO(BaseDTO):
-            id: int
-            title: str
-    """
-
-    model_config = ConfigDict(extra="forbid", from_attributes=True)
-```
-
-```python
-from order_service.foundation.dto import BaseDTO
-
-
-class BaseCommand(BaseDTO):
-    """Base for use-case inputs that request state-changing actions.
-
-    Example:
-        class CreateTaskCommand(BaseCommand):
-            title: str
-    """
-```
-
-```python
-from order_service.foundation.dto import BaseDTO
-
-
-class BaseQuery(BaseDTO):
-    """Base for use-case inputs that request read-only results.
-
-    Example:
-        class GetTaskQuery(BaseQuery):
-            task_id: int
-    """
-```
-
-```python
-class BaseCapability:
-    """Base class for small injectable collaborators.
-
-    Capabilities do one narrow thing, may be injected or faked, and do not own
-    application workflows, unit-of-work scopes, repositories, or gateways.
-
-    Example:
-        SlugGeneratingCapability creates slugs for display labels.
-        BaseClock can be introduced later for concrete clocks such as SystemClock.
-        BaseGenerator can be introduced later for classes such as UUID7Generator.
-    """
-```
-
-```python
-class BaseGateway:
-    """Base class for outbound business capabilities.
-
-    Gateways are core-facing interfaces to external systems. A gateway should
-    expose business language, not SDK or HTTP details.
-
-    Example:
-        TaskSummaryGateway generates summaries for task descriptions.
-        PaymentGateway charges customers.
-        EmailGateway sends transactional emails.
-    """
-```
-
-```python
-class BasePureService:
-    """Base class for deterministic business helpers.
-
-    Pure services do not perform I/O, do not use repositories, do not use
-    gateways, and do not depend on unit-of-work objects, settings, clocks,
-    UUID generators, random numbers, HTTP clients, SQLAlchemy, Redis, or SDKs.
-
-    Example:
-        class TaskTitleNormalizerService(BasePureService):
-            def normalize(self, *, title: str) -> str:
-                return " ".join(title.split())
-    """
-```
-
-```python
-class BaseReadService:
-    """Base class for read-only orchestration helpers.
-
-    Read services may read from repositories or read gateways, usually through
-    an active unit of work passed by the caller. They may map entities to DTOs,
-    but they must not commit, roll back, call repository mutators, publish
-    messages, send email, charge money, or call external write APIs.
-
-    Example:
-        class TaskLookupService(BaseReadService):
-            async def get(self, *, unit_of_work: TaskUnitOfWork, task_id: int) -> TaskDTO:
-                task = await unit_of_work.tasks.get(task_id=task_id)
-                return TaskDTO.model_validate(task)
-    """
-```
-
-```python
-class BaseEffectService:
-    """Base class for helpers that perform or coordinate side effects.
-
-    Effect services may mutate owned state through an active unit of work
-    passed by a use case, or call outbound gateways with real side effects.
-    They must not open unit-of-work scopes, own transaction lifecycle, return
-    entities outward, or import delivery/framework code.
-
-    Example:
-        class TaskCompletionService(BaseEffectService):
-            async def complete(self, *, unit_of_work: TaskUnitOfWork, task_id: int) -> TaskDTO:
-                task = await unit_of_work.tasks.complete(task_id=task_id)
-                return TaskDTO.model_validate(task)
-    """
-```
-
-```python
-from enum import StrEnum
-
-
-class BaseStrEnum(StrEnum):
-    """Base for string enums used by settings and application values.
-
-    Example:
-        class EnvironmentEnum(BaseStrEnum):
-            LOCAL = "local"
-    """
-```
-
-```python
-from abc import ABC, abstractmethod
-
-
-class BaseUnitOfWork(ABC):
-    """Base for active unit-of-work contracts exposed inside manager scopes.
-
-    Example:
-        class TaskUnitOfWork(BaseUnitOfWork):
-            def _unit_of_work_marker(self) -> None:
-                return None
-
-            @property
-            def tasks(self) -> TaskRepository:
-                return self._tasks
-    """
-
-    @abstractmethod
-    def _unit_of_work_marker(self) -> None:
-        raise NotImplementedError
-```
-
-```python
-from abc import ABC, abstractmethod
-from types import TracebackType
-from typing import Literal
-
-from order_service.foundation.unit_of_work import BaseUnitOfWork
-
-
-class BaseUnitOfWorkManager[UnitOfWorkT: BaseUnitOfWork](ABC):
-    """Base for objects that open, finish, and close active units of work.
-
-    Example:
-        class TaskUnitOfWorkManager(BaseUnitOfWorkManager[TaskUnitOfWork]):
-            async def __aenter__(self) -> TaskUnitOfWork:
-                return self._unit_of_work
-    """
-
-    @abstractmethod
-    async def __aenter__(self) -> UnitOfWorkT:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def __aexit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc: BaseException | None,
-        traceback: TracebackType | None,
-    ) -> Literal[False]:
-        raise NotImplementedError
-```
-
-```python
-class BaseDeliveryService:
-    """Base for delivery-layer helper services.
-
-    Example:
-        class BearerTokenParsingService(BaseDeliveryService):
-            def parse(self, *, authorization_header: str) -> str:
-                return authorization_header.removeprefix("Bearer ")
-    """
-```
-
-```python
-from abc import ABC, abstractmethod
-from typing import Any
-
-
-class BaseController(ABC):
-    """Base for delivery controllers that register routes.
-
-    Example:
-        class TasksController(BaseController):
-            def register(self, registry: APIRouter) -> None:
-                registry.add_api_route("/api/v1/tasks", self.list_tasks)
-    """
-
-    @abstractmethod
-    def register(self, registry: Any) -> None:
-        raise NotImplementedError
-```
-
-```python
-from sqlalchemy import MetaData
-from sqlalchemy.orm import DeclarativeBase
-
-
-class BaseSQLAlchemyModel(DeclarativeBase):
-    """Base for SQLAlchemy declarative models.
-
-    Example:
-        class TaskModel(BaseSQLAlchemyModel):
-            __tablename__ = "tasks"
-    """
-
-    metadata = MetaData(
-        naming_convention={
-            "ix": "ix_%(column_0_label)s",
-            "uq": "uq_%(table_name)s_%(column_0_name)s",
-            "ck": "ck_%(table_name)s_%(constraint_name)s",
-            "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
-            "pk": "pk_%(table_name)s",
-        },
-    )
-```
+When a capability family needs stronger review rules, add a project-local
+narrower base that inherits `BaseCapability`, such as `BaseClock` or
+`BaseGenerator`; concrete classes then use the narrower suffix, for example
+`SystemClock` or `UUID7Generator`.
 
 ## Usage Examples
 
 ```python
 from dataclasses import dataclass
 
-from order_service.foundation.pure_service import BasePureService
+from specx.foundation.dto import BaseDTO
+from specx.foundation.entity import BaseEntity
+
+
+@dataclass(frozen=True, kw_only=True, slots=True)
+class OrderDTO(BaseDTO):
+    """DTO returned from order use cases.
+
+    Example:
+        OrderDTO(id=1, total=100)
+    """
+
+    id: int
+    total: int
+
+
+@dataclass(frozen=True, kw_only=True, slots=True)
+class OrderEntity(BaseEntity):
+    """Framework-free order state used inside core.
+
+    Example:
+        OrderEntity(id=1, total=100)
+    """
+
+    id: int
+    total: int
+```
+
+```python
+from dataclasses import dataclass
+
+from specx.foundation.pure_service import BasePureService
 
 
 @dataclass(kw_only=True, slots=True)
@@ -366,21 +124,33 @@ class OrderPricingService(BasePureService):
 ```
 
 ```python
-from order_service.foundation.dto import BaseDTO
+from dataclasses import dataclass
+
+from specx.foundation.command import BaseCommand
+from specx.foundation.use_case import BaseUseCase
 
 
-class CreateOrderResultDTO(BaseDTO):
-    """Result DTO returned after order creation.
+@dataclass(frozen=True, kw_only=True, slots=True)
+class CreateOrderCommand(BaseCommand):
+    """Command for creating an order.
 
     Example:
-        CreateOrderResultDTO(order_id=1)
+        CreateOrderCommand(customer_id=1)
     """
 
-    order_id: int
+    customer_id: int
+
+
+class CreateOrderUseCase(BaseUseCase):
+    """Use case that creates orders.
+
+    Example:
+        result = use_case.execute(command=command)
+    """
 ```
 
 ```python
-from order_service.foundation.delivery.fastapi.schema import BaseFastAPISchema
+from specx.foundation.delivery.fastapi.schema import BaseFastAPISchema
 
 
 class OrderResponseSchema(BaseFastAPISchema):
@@ -394,49 +164,54 @@ class OrderResponseSchema(BaseFastAPISchema):
     title: str
 ```
 
-Major concrete classes should also have a scoped docstring with a concrete
-`Example:`. This includes use cases, services, repositories, adapters,
-controllers, factories, settings, DTOs, entities, schemas, unit-of-work ports,
-and unit-of-work managers.
+## Local Extension Rule
 
-## Extension Rule
+Add a project-local foundation base only when all are true:
 
-It is fine to extend foundation with a new base class when a real class category
-appears and no existing base fits. Add the smallest useful base, name it after
-the category, and update architecture tests if the new base replaces a raw
-external base.
+- current code has a real class category;
+- no packaged `specx.foundation` base describes that category;
+- the category improves architecture checks, naming, or dependency boundaries.
 
-Do not add foundation bases speculatively. A base class must serve code that
-exists now.
+Place it under `src/<package>/foundation/<category>.py`. Do not use `base_`
+module prefixes. Class names stay prefixed, for example `clock.py` defines
+`BaseClock`.
 
-## Architecture Guardrails
+Good local extension:
+
+```python
+from specx.foundation.capability import BaseCapability
+
+
+class BaseClock(BaseCapability):
+    """Base for injectable time sources.
+
+    Example:
+        class SystemClock(BaseClock):
+            def now(self) -> datetime:
+                return datetime.now(UTC)
+    """
+```
+
+Avoid local copies of packaged bases such as `BaseDTO`, `BaseUseCase`, or
+`BasePureService`.
+
+## Guardrails
 
 Useful checks:
 
-- non-foundation source classes have at least one explicit base;
-- foundation classes have scoped docstrings with concrete examples;
-- major non-foundation classes have scoped docstrings with concrete examples;
-- class names use the suffix implied by their foundation base ancestry;
-- direct concrete `BaseCapability` subclasses use the `Capability` suffix;
-- narrower foundation bases inheriting `BaseCapability` use their narrower
-  suffix, for example `BaseClock` -> `SystemClock`;
-- capabilities do not open UoW scopes, inherit repository/gateway bases, or use
-  generic `Helper`, `Utils`, `Manager`, or `Dependency` names;
-- gateway ports live under `core/<scope>/gateways/`, concrete gateway
-  implementations live under `core/<scope>/infrastructure/<technology>/`,
-  gateway docstrings declare external effects, and gateway methods do not
-  return entities;
+- non-foundation source classes inherit explicit packaged or local bases;
+- major classes have scoped docstrings with concrete `Example:` blocks;
+- class names use the suffix implied by the most-specific base;
+- capabilities do not act as services, repositories, gateways, helpers,
+  managers, or generic dependencies;
+- gateway ports live under `core/<scope>/gateways/`, declare external effects,
+  and do not return entities;
 - core services inherit `BasePureService`, `BaseReadService`, or
   `BaseEffectService`, not a generic `BaseService`;
-- pure services do not import IO/runtime-state dependencies;
-- read services do not call repository mutators or transaction lifecycle
-  methods;
-- effect services do not inject UoW managers, open UoW scopes, commit, roll
-  back, return entities outward, or import delivery/framework code;
-- non-foundation classes do not directly inherit `BaseModel`, `BaseSettings`,
-  `ABC`, `Exception`, `ValueError`, `DeclarativeBase`, `StrEnum`, or `object`;
-- foundation does not import `core`, `delivery`, `ioc`, or scope
-  infrastructure;
-- foundation SQLAlchemy bases do not create engines, sessions, migrations, or
-  database schema;
-- `__init__.py` files stay empty.
+- non-foundation classes do not directly inherit raw common bases such as
+  `BaseModel`, `BaseSettings`, `ABC`, `Exception`, `ValueError`,
+  `DeclarativeBase`, `StrEnum`, or `object`;
+- local foundation modules, if present, do not import `core`, `delivery`,
+  `ioc`, scope infrastructure, or application logic;
+- local SQLAlchemy bases, if added, do not create engines, sessions,
+  migrations, or database schema.

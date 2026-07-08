@@ -1,4 +1,4 @@
-from task_db_service.foundation.settings import BaseRuntimeSettings
+from specx.foundation.settings import BaseRuntimeSettings
 
 
 class DatabaseSettings(BaseRuntimeSettings):

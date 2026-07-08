@@ -1,13 +1,14 @@
 from dataclasses import dataclass
 
 from diwire import Injected
+from specx.foundation.query import BaseQuery
+from specx.foundation.use_case import BaseUseCase
 
 from task_db_service.core.health.dtos.health_status_dto import HealthStatusDTO
 from task_db_service.core.health.services.health_reporter_service import HealthReporterService
-from task_db_service.foundation.query import BaseQuery
-from task_db_service.foundation.use_case import BaseUseCase
 
 
+@dataclass(frozen=True, kw_only=True, slots=True)
 class CheckHealthQuery(BaseQuery):
     """Query for reading application health status.
 

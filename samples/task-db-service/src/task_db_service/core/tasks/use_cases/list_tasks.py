@@ -1,14 +1,15 @@
 from dataclasses import dataclass
 
 from diwire import Injected
+from specx.foundation.query import BaseQuery
+from specx.foundation.use_case import BaseUseCase
 
 from task_db_service.core.tasks.dtos.task_list_dto import TaskListDTO
 from task_db_service.core.tasks.repositories.task_unit_of_work import TaskUnitOfWorkManager
 from task_db_service.core.tasks.services.task_lookup_service import TaskLookupService
-from task_db_service.foundation.query import BaseQuery
-from task_db_service.foundation.use_case import BaseUseCase
 
 
+@dataclass(frozen=True, kw_only=True, slots=True)
 class ListTasksQuery(BaseQuery):
     """Query for reading all tasks.
 

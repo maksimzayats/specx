@@ -1,7 +1,6 @@
+from specx.foundation.infrastructure.sqlalchemy.model import BaseSQLAlchemyModel
 from sqlalchemy import Boolean, String, false
 from sqlalchemy.orm import Mapped, mapped_column
-
-from task_db_service.foundation.infrastructure.sqlalchemy.model import BaseSQLAlchemyModel
 
 
 class TaskModel(BaseSQLAlchemyModel):

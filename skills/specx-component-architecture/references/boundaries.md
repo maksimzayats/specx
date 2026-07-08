@@ -1,33 +1,14 @@
 # Specx Scope Boundary Reference
 
-Specx uses scoped core packages, a top-level delivery layer, and a foundation
-base-class layer.
+Specx uses scoped core packages, a top-level delivery layer, and packaged
+foundation bases from `specx.foundation`.
 
 ## Component Layout
 
 ```text
-foundation/
-  capability.py
-  command.py
-  dto.py
-  entity.py
-  exceptions.py
-  factory.py
-  gateway.py
-  effect_service.py
-  pure_service.py
-  read_service.py
-  repository.py
-  query.py
-  settings.py
-  unit_of_work.py
-  unit_of_work_manager.py
-  use_case.py
-  delivery/
-    controller.py
-    service.py
-    fastapi/
-      schema.py
+specx.foundation  # external package dependency
+src/<package>/
+  foundation/     # optional local bases missing from specx.foundation
 core/<scope>/
   capabilities/
   dtos/
@@ -56,19 +37,21 @@ infrastructure/
 shared/
 ```
 
-Use only the folders needed by real code. Add foundation bases only for class
-categories that exist now. Add `delivery/<framework>/services/` only for
-delivery-only helpers such as auth, rate limiting, request context, or
-controller-specific policies.
+Use only the folders needed by real code. Import bases from `specx.foundation`
+by default. Add `src/<package>/foundation/` only when a real class category is
+missing from the package and current code needs that local base. Add
+`delivery/<framework>/services/` only for delivery-only helpers such as auth,
+rate limiting, request context, or controller-specific policies.
 
 ## Import Direction
 
-- Foundation may import standard library, pure base dependencies such as
-  Pydantic, pydantic-settings, SQLAlchemy declarative base, and framework base
-  types when defining explicit project bases. It must not import `core`,
-  `delivery`, `ioc`, or scope infrastructure.
+- Project-local foundation modules, if present, may import the standard
+  library, `specx.foundation`, and pure base dependencies required by the local
+  base. They must not import `core`, `delivery`, `ioc`, or scope
+  infrastructure.
 - Core inner packages may import only same-scope inner packages, `shared`,
-  `foundation`, standard library, and pure domain libraries.
+  `specx.foundation`, optional project-local foundation modules, standard
+  library, and pure domain libraries.
 - Scope infrastructure may import same-scope inner packages and technical
   libraries. It must not import delivery.
 - Top-level infrastructure contains app-wide technical resources such as
@@ -85,8 +68,8 @@ controller-specific policies.
 
 ## Foundation Bases
 
-Every project class should inherit an explicit base class. Prefer foundation
-bases:
+Every project class should inherit an explicit base class. Prefer packaged
+`specx.foundation` bases:
 
 - `BaseDTO`
 - `BaseCommand`
@@ -112,8 +95,9 @@ bases:
 - `BaseApplicationValueError`
 - `BaseSQLAlchemyModel`
 
-It is fine to extend foundation with a new base class when a real class category
-appears and no existing base fits. Do not add speculative bases.
+It is fine to add a project-local foundation base when a real class category
+appears and no packaged base fits. Do not copy packaged bases locally, and do
+not add speculative bases.
 
 ## Use Cases, Services, And Capabilities
 
@@ -149,13 +133,13 @@ A capability:
 Direct concrete subclasses of `BaseCapability` must end with `Capability`.
 
 When a capability family becomes common or needs stronger review rules, add a
-narrower foundation base that inherits from `BaseCapability`, such as
-`BaseClock` or `BaseGenerator`. Concrete classes should then use the narrower
-suffix: `SystemClock`, `UUID7Generator`, and so on.
+project-local narrower foundation base that inherits from `BaseCapability`,
+such as `BaseClock` or `BaseGenerator`. Concrete classes should then use the
+narrower suffix: `SystemClock`, `UUID7Generator`, and so on.
 
-Do not add `base_` prefixes to foundation module filenames. Class names stay
-prefixed: `capability.py` defines `BaseCapability`, `gateway.py` defines
-`BaseGateway`, and `pure_service.py` defines `BasePureService`.
+Do not add `base_` prefixes to project-local foundation module filenames. Class
+names stay prefixed: `clock.py` defines `BaseClock` and `generator.py` defines
+`BaseGenerator`.
 
 Do not call small collaborators services by default. Use `Service` for reusable
 business/application behavior. Use `BaseCapability` for small replaceable
@@ -227,7 +211,7 @@ Example gateway port:
 
 ```python
 from order_service.core.tasks.dtos.task_summary_dto import TaskSummaryDTO
-from order_service.foundation.gateway import BaseGateway
+from specx.foundation.gateway import BaseGateway
 
 
 class TaskSummaryGateway(BaseGateway):
@@ -249,6 +233,9 @@ OpenAI, Redis, a queue, or another SDK.
 
 ## Commands, Queries, DTOs, Schemas, Entities
 
+- Prefer `@dataclass(frozen=True, kw_only=True, slots=True)` for commands,
+  queries, DTOs, entities, and other core data classes unless the user asks for
+  another model type.
 - Use-case inputs are same-file `Command` or `Query` classes beside the use
   case. Do not put them under `dtos/`.
 - Commands inherit `BaseCommand`, use the `Command` suffix, and represent
@@ -336,35 +323,37 @@ Use `shared/` for stable cross-scope application primitives:
 Do not put scope-specific decisions in `shared/` or app-wide technical
 resources inside one core scope.
 
-## Architecture Tests Worth Adding
+## Packaged Architecture Guardrails
 
-- Core inner packages do not import delivery, infrastructure, or ioc.
-- Foundation does not import core, delivery, ioc, or scope infrastructure.
-- All source classes have explicit base classes.
-- Major source classes have scoped docstrings with concrete examples.
-- Non-foundation classes do not directly inherit raw common bases such as
-  `BaseModel`, `BaseSettings`, `ABC`, `Exception`, `ValueError`,
-  `DeclarativeBase`, `StrEnum`, or `object`.
-- Capabilities live under `core/<scope>/capabilities/`, direct concrete
-  `BaseCapability` subclasses use the `Capability` suffix, and capability
-  classes do not use `Helper`, `Utils`, `Manager`, or `Dependency` names.
-- `core/<scope>/delivery/` does not exist.
-- Delivery controllers do not import infrastructure.
-- Infrastructure does not import delivery.
-- App code does not call `metadata.create_all` or `drop_all`.
-- Core inner packages do not import FastAPI, SQLAlchemy, Redis, or HTTP
-  clients.
-- Only `ioc`, top-level delivery `__main__.py`/factory modules, and tests access
-  `diwire.Container`.
-- Public HTTP routes use full `/api/v1/...` paths.
-- Gateway ports live under `core/<scope>/gateways/`, concrete gateway
-  implementations live under `core/<scope>/infrastructure/<technology>/`,
-  gateway docstrings declare external effects, and gateway methods do not
-  return entities.
-- Core services inherit `BasePureService`, `BaseReadService`, or
-  `BaseEffectService`, not a generic `BaseService`.
-- Pure services do not import IO/runtime-state dependencies.
-- Read services do not call repository mutators or transaction lifecycle
-  methods.
-- Effect services do not inject UoW managers, open UoW scopes, commit, roll
-  back, return entities outward, or import delivery/framework code.
+Use `specx.testing.architecture` as the default guardrail mechanism instead of
+hand-writing local architecture tests for Specx boundaries. The packaged rule
+set is exposed through stable `SpecxRuleId` values and covers:
+
+- core import direction, including no delivery, ioc, top-level infrastructure,
+  FastAPI, SQLAlchemy, Redis, or HTTP clients from core inner packages;
+- project-local foundation import direction, when local foundation modules
+  exist;
+- explicit source-class bases, scoped example docstrings, foundation-category
+  suffixes, and avoidance of raw common bases such as `BaseModel`,
+  `BaseSettings`, `ABC`, `Exception`, `ValueError`, `DeclarativeBase`,
+  `StrEnum`, or `object`;
+- capability placement, suffixes, and avoidance of helper/manager/repository/
+  gateway/service roles;
+- no `core/<scope>/delivery/` packages;
+- delivery controllers avoiding infrastructure imports and infrastructure
+  avoiding delivery imports;
+- no `metadata.create_all` or `drop_all` calls in source or tests;
+- `diwire.Container` access limited to `ioc`, top-level delivery app entry
+  points/factories, and tests;
+- full `/api/v1/...` public HTTP route paths;
+- gateway port and implementation placement, external-effect documentation, and
+  no entity returns from gateway methods;
+- use-case input placement, command/query semantics, DTO returns, and query
+  use cases avoiding repository mutators;
+- core service suffixes and use of `BasePureService`, `BaseReadService`, or
+  `BaseEffectService`;
+- pure/read/effect service effect boundaries and UoW lifecycle constraints;
+- root `AGENTS.md` project-command and Specx-boundary guidance.
+
+Add custom `extra_rules` only for project-specific policies that the packaged
+`SpecxRuleId` set does not cover.

@@ -4,10 +4,27 @@ import argparse
 import re
 from pathlib import Path
 
-
 PACKAGE_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
-PACKAGE_PLACEHOLDER = "__SPECX_PACKAGE_NAME__"
-TEMPLATE_PATH = Path(__file__).with_name("architecture_guardrails.py")
+WRAPPER_TEMPLATE = """from pathlib import Path
+
+from specx.testing.architecture import (
+    SpecxArchitectureConfig,
+    SpecxRuleId,
+    assert_specx_architecture,
+)
+
+
+def test_specx_architecture() -> None:
+    disabled_rules: frozenset[SpecxRuleId] = frozenset()
+
+    assert_specx_architecture(
+        SpecxArchitectureConfig(
+            project_root=Path(__file__).resolve().parents[2],
+            package_name="{package_name}",
+            disabled_rules=disabled_rules,
+        )
+    )
+"""
 
 
 def main() -> int:
@@ -28,15 +45,13 @@ def main() -> int:
     args = parser.parse_args()
 
     if PACKAGE_PATTERN.fullmatch(args.package) is None:
-        parser.error(
-            "--package must be one Python package identifier, such as task_db_service"
-        )
-
-    text = TEMPLATE_PATH.read_text(encoding="utf-8")
-    rendered = text.replace(PACKAGE_PLACEHOLDER, args.package)
+        parser.error("--package must be one Python package identifier, such as task_db_service")
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(rendered, encoding="utf-8")
+    args.output.write_text(
+        WRAPPER_TEMPLATE.format(package_name=args.package),
+        encoding="utf-8",
+    )
     return 0
 
 

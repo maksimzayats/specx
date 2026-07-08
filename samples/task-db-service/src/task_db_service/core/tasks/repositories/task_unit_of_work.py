@@ -1,8 +1,9 @@
 from abc import abstractmethod
 
+from specx.foundation.unit_of_work import BaseUnitOfWork
+from specx.foundation.unit_of_work_manager import BaseUnitOfWorkManager
+
 from task_db_service.core.tasks.repositories.task_repository import TaskRepository
-from task_db_service.foundation.unit_of_work import BaseUnitOfWork
-from task_db_service.foundation.unit_of_work_manager import BaseUnitOfWorkManager
 
 
 class TaskUnitOfWork(BaseUnitOfWork):
@@ -11,9 +12,6 @@ class TaskUnitOfWork(BaseUnitOfWork):
     Example:
         task = await unit_of_work.tasks.get(task_id=1)
     """
-
-    def _unit_of_work_marker(self) -> None:
-        return None
 
     @property
     @abstractmethod

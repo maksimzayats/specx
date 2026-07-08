@@ -21,9 +21,10 @@ adapters. Read `references/alembic.md` before editing migration files.
 6. Discover and import all ORM model modules in `migrations/env.py` before
    assigning `target_metadata`; do not maintain a hard-coded tuple of model
    module names.
-7. Set `target_metadata` to the project `BaseSQLAlchemyModel.metadata`.
-8. Add a naming convention to `BaseSQLAlchemyModel.metadata` before the first
-   migration.
+7. Set `target_metadata` to the packaged
+   `specx.foundation.infrastructure.sqlalchemy.model.BaseSQLAlchemyModel.metadata`.
+8. Use the packaged `BaseSQLAlchemyModel` metadata conventions as-is; do not
+   copy the base or create a project-local `BaseSQLAlchemyModel`.
 9. Generate or hand-review an initial migration for current models.
 10. Add `make migrate` and `make makemigrations`.
 11. Add tests that run `alembic upgrade head` against a temp database, check for

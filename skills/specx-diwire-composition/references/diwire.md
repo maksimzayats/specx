@@ -14,10 +14,11 @@ from order_service.core.orders.dtos.create_order_result_dto import CreateOrderRe
 from order_service.core.orders.repositories.order_unit_of_work import (
     OrderUnitOfWorkManager,
 )
-from order_service.foundation.command import BaseCommand
-from order_service.foundation.use_case import BaseUseCase
+from specx.foundation.command import BaseCommand
+from specx.foundation.use_case import BaseUseCase
 
 
+@dataclass(frozen=True, kw_only=True, slots=True)
 class CreateOrderCommand(BaseCommand):
     """Command for creating an order.
 
@@ -46,7 +47,8 @@ class CreateOrderUseCase(BaseUseCase):
         return CreateOrderResultDTO(order_id=order.id)
 ```
 
-Use private fields for dependencies and inherit the matching foundation base.
+Use private fields for dependencies and inherit the matching `specx.foundation`
+base.
 Prefer concrete project classes unless there is a real boundary.
 
 ## Container

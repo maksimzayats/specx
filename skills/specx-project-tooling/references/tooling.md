@@ -17,6 +17,7 @@ dependencies = [
     "fastapi>=0.138.0",
     "pydantic-settings>=2.14.0",
     "pydantic>=2.13.0",
+    "specx>=0.1.0",
     "uvicorn[standard]>=0.49.0",
 ]
 
@@ -142,6 +143,9 @@ migration-check:
 - Add `httpx` as runtime only when production code performs outbound HTTP.
 - Use `httpx2` in dev when FastAPI `TestClient` is used only by tests. Recent
   FastAPI/Starlette versions warn when tests rely on legacy `httpx`.
+- Add `specx` as a runtime dependency when generated projects import packaged
+  foundation bases. The standard architecture wrapper in `tests/architecture`
+  uses the same package.
 
 ## Validation
 

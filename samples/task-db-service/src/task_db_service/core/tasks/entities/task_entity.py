@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 
-from task_db_service.foundation.entity import BaseEntity
+from specx.foundation.entity import BaseEntity
 
 
-@dataclass(kw_only=True, slots=True, frozen=True)
+@dataclass(frozen=True, kw_only=True, slots=True)
 class TaskEntity(BaseEntity):
     """Framework-free task state used inside the core boundary.
 

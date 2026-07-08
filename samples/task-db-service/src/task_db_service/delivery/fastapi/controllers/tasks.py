@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 from diwire import Injected
 from fastapi import APIRouter, HTTPException, status
+from specx.foundation.delivery.controller import BaseController
 
 from task_db_service.core.tasks.exceptions.invalid_task_title_value_error import (
     InvalidTaskTitleValueError,
@@ -19,11 +20,10 @@ from task_db_service.delivery.fastapi.schemas.task_schema import (
     TaskListResponseSchema,
     TaskResponseSchema,
 )
-from task_db_service.foundation.delivery.controller import BaseController
 
 
 @dataclass(kw_only=True, slots=True)
-class TasksController(BaseController):
+class TasksController(BaseController[APIRouter]):
     """FastAPI controller that registers task routes.
 
     Example:

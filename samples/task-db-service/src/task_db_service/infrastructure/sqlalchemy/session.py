@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 
 from diwire import Injected
+from specx.foundation.factory import BaseFactory
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -8,7 +9,6 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from task_db_service.foundation.factory import BaseFactory
 from task_db_service.infrastructure.sqlalchemy.settings import DatabaseSettings
 
 

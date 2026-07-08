@@ -13,7 +13,6 @@ migrations/
   script.py.mako
   versions/
 src/<package>/
-  foundation/infrastructure/sqlalchemy/model.py
   infrastructure/sqlalchemy/settings.py
   infrastructure/sqlalchemy/session.py
   core/<scope>/infrastructure/sqlalchemy/models/
@@ -26,29 +25,12 @@ repositories stay under `core/<scope>/infrastructure/`.
 
 ## Foundation Model Base
 
-```python
-from sqlalchemy import MetaData
-from sqlalchemy.orm import DeclarativeBase
-
-
-class BaseSQLAlchemyModel(DeclarativeBase):
-    """Base for SQLAlchemy declarative models.
-
-    Example:
-        class TaskModel(BaseSQLAlchemyModel):
-            __tablename__ = "tasks"
-    """
-
-    metadata = MetaData(
-        naming_convention={
-            "ix": "ix_%(column_0_label)s",
-            "uq": "uq_%(table_name)s_%(column_0_name)s",
-            "ck": "ck_%(table_name)s_%(constraint_name)s",
-            "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
-            "pk": "pk_%(table_name)s",
-        },
-    )
-```
+Use `specx.foundation.infrastructure.sqlalchemy.model.BaseSQLAlchemyModel` as
+the only SQLAlchemy declarative base for generated projects. Import it directly
+in ORM model modules and in Alembic `env.py`, set `target_metadata` to
+`BaseSQLAlchemyModel.metadata`, and keep the packaged naming conventions as-is.
+Do not copy it, wrap it in a project-local `BaseSQLAlchemyModel`, or create a
+local convention-gap base in generated services.
 
 ## Async env.py Shape
 
@@ -67,7 +49,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 import order_service.core as core_package
-from order_service.foundation.infrastructure.sqlalchemy.model import BaseSQLAlchemyModel
+from specx.foundation.infrastructure.sqlalchemy.model import BaseSQLAlchemyModel
 from order_service.infrastructure.sqlalchemy.settings import DatabaseSettings
 
 config = context.config

@@ -2,17 +2,17 @@ from dataclasses import dataclass
 
 from diwire import Injected
 from fastapi import APIRouter
+from specx.foundation.delivery.controller import BaseController
 
 from task_db_service.core.health.use_cases.check_health import (
     CheckHealthQuery,
     CheckHealthUseCase,
 )
 from task_db_service.delivery.fastapi.schemas.health_schema import HealthResponseSchema
-from task_db_service.foundation.delivery.controller import BaseController
 
 
 @dataclass(kw_only=True, slots=True)
-class HealthController(BaseController):
+class HealthController(BaseController[APIRouter]):
     """FastAPI controller that registers health routes.
 
     Example:

@@ -14,8 +14,9 @@ Read `references/testing.md` before creating test files.
 - `tests/integration/`: delivery controllers, app factory, container wiring,
   database repositories, Redis adapters, network clients with stubs.
 - `tests/e2e/`: optional whole-app smoke flows.
-- `tests/architecture/`: import direction, route path, container, UoW, and
-  framework-boundary guardrails.
+- `tests/architecture/`: the packaged
+  `specx.testing.architecture.assert_specx_architecture` wrapper plus any
+  genuinely project-specific extra rules.
 
 ## Rules
 
@@ -24,26 +25,19 @@ Read `references/testing.md` before creating test files.
   resources with fakes or fixtures.
 - Override DI dependencies before resolving the target graph.
 - Keep unit tests free from FastAPI request objects and real external IO.
-- Add architecture tests for major class docstrings with concrete `Example:`
-  blocks.
-- Add architecture tests that every use case accepts one same-file `Command` or
-  `Query` input and that queries avoid obvious repository mutators.
-- Add architecture tests that persistence use cases inject
-  `Injected[*UnitOfWorkManager]`, not `Provider[UnitOfWork]` or an active
-  `*UnitOfWork`.
-- Add architecture tests that root `AGENTS.md` exists, documents project
-  commands plus the core Specx boundaries, and only documents `make <target>`
-  commands that exist in the Makefile.
-- For full Specx service guardrails, render the bundled
-  `references/architecture_guardrails.py` template with
-  `references/render_architecture_guardrails.py`.
-- Add architecture tests only for rules that are likely to regress.
+- Use the packaged architecture wrapper as the default guardrail mechanism for
+  Specx boundaries such as docstrings, use-case inputs, UoW injection, route
+  paths, container imports, and `AGENTS.md` command coverage.
+- Disable built-in guardrails only with explicit `SpecxRuleId` values and a
+  project reason.
+- Add `extra_rules` only for project-specific checks that are not covered by a
+  built-in `SpecxRuleId`.
+- Existing workflows may use `references/render_architecture_guardrails.py` to
+  render the tiny wrapper.
 
 ## References
 
 - `references/testing.md` - folder layout, fixtures, unit/integration examples,
   and architecture guardrail snippets.
-- `references/architecture_guardrails.py` - canonical full architecture
-  guardrail pytest module template.
-- `references/render_architecture_guardrails.py` - renderer for the canonical
-  architecture guardrail module.
+- `references/render_architecture_guardrails.py` - compatibility renderer for
+  the tiny `specx` architecture wrapper.

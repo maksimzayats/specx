@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from task_db_service.foundation.exceptions import BaseApplicationError
+from specx.foundation.exceptions import BaseApplicationError
 
 
 @dataclass(kw_only=True)

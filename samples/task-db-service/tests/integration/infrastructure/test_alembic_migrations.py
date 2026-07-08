@@ -5,10 +5,10 @@ from types import ModuleType
 import pytest
 from alembic import command
 from alembic.config import Config
+from specx.foundation.infrastructure.sqlalchemy.model import BaseSQLAlchemyModel
 from sqlalchemy import create_engine, inspect
 
 import task_db_service.core as core_package
-from task_db_service.foundation.infrastructure.sqlalchemy.model import BaseSQLAlchemyModel
 from task_db_service.infrastructure.sqlalchemy import model_discovery
 from task_db_service.infrastructure.sqlalchemy.model_discovery import (
     iter_sqlalchemy_model_module_names,

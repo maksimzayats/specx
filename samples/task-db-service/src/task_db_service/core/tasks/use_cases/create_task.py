@@ -1,14 +1,15 @@
 from dataclasses import dataclass
 
 from diwire import Injected
+from specx.foundation.command import BaseCommand
+from specx.foundation.use_case import BaseUseCase
 
 from task_db_service.core.tasks.dtos.task_dto import TaskDTO
 from task_db_service.core.tasks.repositories.task_unit_of_work import TaskUnitOfWorkManager
 from task_db_service.core.tasks.services.task_creation_service import TaskCreationService
-from task_db_service.foundation.command import BaseCommand
-from task_db_service.foundation.use_case import BaseUseCase
 
 
+@dataclass(frozen=True, kw_only=True, slots=True)
 class CreateTaskCommand(BaseCommand):
     """Command for creating a task.
 

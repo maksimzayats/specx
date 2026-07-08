@@ -1,7 +1,11 @@
+from dataclasses import dataclass
+
+from specx.foundation.dto import BaseDTO
+
 from task_db_service.core.tasks.dtos.task_dto import TaskDTO
-from task_db_service.foundation.dto import BaseDTO
 
 
+@dataclass(frozen=True, kw_only=True, slots=True)
 class TaskListDTO(BaseDTO):
     """DTO returned by task list use cases.
 

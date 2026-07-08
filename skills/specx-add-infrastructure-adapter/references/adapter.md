@@ -8,7 +8,7 @@ contracts.
 ```python
 from abc import abstractmethod
 
-from order_service.foundation.repository import BaseRepository
+from specx.foundation.repository import BaseRepository
 
 
 class UserDirectoryRepository(BaseRepository):
@@ -17,9 +17,6 @@ class UserDirectoryRepository(BaseRepository):
     Example:
         email = await repository.find_email(user_id="user-1")
     """
-
-    def _repository_marker(self) -> None:
-        return None
 
     @abstractmethod
     async def find_email(self, *, user_id: str) -> str | None:
@@ -34,7 +31,7 @@ provided by external systems.
 
 ```python
 from order_service.core.tasks.dtos.task_summary_dto import TaskSummaryDTO
-from order_service.foundation.gateway import BaseGateway
+from specx.foundation.gateway import BaseGateway
 
 
 class TaskSummaryGateway(BaseGateway):
@@ -69,7 +66,7 @@ from dataclasses import dataclass
 
 import httpx
 
-from order_service.foundation.factory import BaseFactory
+from specx.foundation.factory import BaseFactory
 
 
 @dataclass(kw_only=True, slots=True)
@@ -223,8 +220,8 @@ from application code. Schema changes must be represented as Alembic revisions.
 ```python
 from abc import abstractmethod
 
-from order_service.foundation.unit_of_work import BaseUnitOfWork
-from order_service.foundation.unit_of_work_manager import BaseUnitOfWorkManager
+from specx.foundation.unit_of_work import BaseUnitOfWork
+from specx.foundation.unit_of_work_manager import BaseUnitOfWorkManager
 
 
 class UnitOfWork(BaseUnitOfWork):
@@ -233,9 +230,6 @@ class UnitOfWork(BaseUnitOfWork):
     Example:
         order = await unit_of_work.orders.get(order_id=1)
     """
-
-    def _unit_of_work_marker(self) -> None:
-        return None
 
     @property
     @abstractmethod

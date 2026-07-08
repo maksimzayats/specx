@@ -1,9 +1,10 @@
 from dataclasses import dataclass
 
+from specx.foundation.effect_service import BaseEffectService
+
 from task_db_service.core.tasks.dtos.task_dto import TaskDTO
 from task_db_service.core.tasks.exceptions.task_not_found_error import TaskNotFoundError
 from task_db_service.core.tasks.repositories.task_unit_of_work import TaskUnitOfWork
-from task_db_service.foundation.effect_service import BaseEffectService
 
 
 @dataclass(kw_only=True, slots=True)
@@ -18,4 +19,4 @@ class TaskCompletionService(BaseEffectService):
         task = await unit_of_work.tasks.complete(task_id=task_id)
         if task is None:
             raise TaskNotFoundError(task_id=task_id)
-        return TaskDTO.model_validate(task)
+        return TaskDTO(id=task.id, title=task.title, is_completed=task.is_completed)

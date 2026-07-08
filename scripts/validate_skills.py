@@ -7,7 +7,6 @@ from typing import Any
 
 import yaml
 
-
 SKILL_NAME_PATTERN = re.compile(r"^[a-z0-9-]+$")
 
 

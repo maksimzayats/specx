@@ -23,11 +23,11 @@ from order_service.delivery.fastapi.schemas.users_schema import (
     RegisterUserRequestSchema,
     RegisterUserResponseSchema,
 )
-from order_service.foundation.delivery.controller import BaseController
+from specx.foundation.delivery.controller import BaseController
 
 
 @dataclass(kw_only=True, slots=True)
-class UsersController(BaseController):
+class UsersController(BaseController[APIRouter]):
     """FastAPI controller that registers user routes.
 
     Example:
@@ -77,7 +77,7 @@ from dataclasses import dataclass
 
 from fastapi import Request
 
-from order_service.foundation.delivery.service import BaseDeliveryService
+from specx.foundation.delivery.service import BaseDeliveryService
 
 
 @dataclass(kw_only=True, slots=True)
@@ -102,7 +102,7 @@ Delivery service class names must end with `Service`.
 ```python
 from pydantic import EmailStr
 
-from order_service.foundation.delivery.fastapi.schema import BaseFastAPISchema
+from specx.foundation.delivery.fastapi.schema import BaseFastAPISchema
 
 
 class RegisterUserRequestSchema(BaseFastAPISchema):
@@ -132,7 +132,7 @@ Commands and queries live in the same file as their use case.
 ## App Factory Registration
 
 ```python
-from order_service.foundation.factory import BaseFactory
+from specx.foundation.factory import BaseFactory
 
 
 @dataclass(kw_only=True, slots=True)

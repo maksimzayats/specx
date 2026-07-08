@@ -21,7 +21,8 @@ Use this skill whenever runtime configuration is needed. Read
 - Keep secrets out of examples.
 - Update `.env.example` when adding user-provided environment variables.
 - Override environment values in tests with fixtures or `monkeypatch`.
-- Do not inherit raw `BaseSettings` outside `foundation/settings.py`.
+- Do not inherit raw `BaseSettings`; inherit
+  `specx.foundation.settings.BaseRuntimeSettings`.
 
 ## References
 

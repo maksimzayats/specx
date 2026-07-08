@@ -13,10 +13,11 @@ from order_service.core.users.dtos.register_user_result_dto import RegisterUserR
 from order_service.core.users.repositories.user_unit_of_work import (
     UserUnitOfWorkManager,
 )
-from order_service.foundation.command import BaseCommand
-from order_service.foundation.use_case import BaseUseCase
+from specx.foundation.command import BaseCommand
+from specx.foundation.use_case import BaseUseCase
 
 
+@dataclass(frozen=True, kw_only=True, slots=True)
 class RegisterUserCommand(BaseCommand):
     """Command for registering a user.
 
@@ -69,13 +70,16 @@ class RegisterUserUseCase(BaseUseCase):
 ## Inputs And Results
 
 Use `BaseCommand` for state-changing inputs, `BaseQuery` for read-only inputs,
-and `BaseDTO` for results:
+and `BaseDTO` for results. Treat these as core data classes by default:
 
 ```python
-from order_service.foundation.command import BaseCommand
-from order_service.foundation.query import BaseQuery
+from dataclasses import dataclass
+
+from specx.foundation.command import BaseCommand
+from specx.foundation.query import BaseQuery
 
 
+@dataclass(frozen=True, kw_only=True, slots=True)
 class RegisterUserCommand(BaseCommand):
     """Command for registering a user.
 
@@ -87,6 +91,7 @@ class RegisterUserCommand(BaseCommand):
     password: str
 
 
+@dataclass(frozen=True, kw_only=True, slots=True)
 class ListUsersQuery(BaseQuery):
     """Query for listing users.
 
@@ -102,9 +107,12 @@ Define result DTOs under `core/<scope>/dtos/`, not inline with the use case.
 Result DTO file:
 
 ```python
-from order_service.foundation.dto import BaseDTO
+from dataclasses import dataclass
+
+from specx.foundation.dto import BaseDTO
 
 
+@dataclass(frozen=True, kw_only=True, slots=True)
 class RegisterUserResultDTO(BaseDTO):
     """Result DTO returned after user registration.
 
@@ -132,8 +140,8 @@ class RegisterUserResultDTO(BaseDTO):
 - Do not commit, rollback, or close sessions outside the UoW implementation.
 - Return DTOs from use cases. Do not return entities from `execute(...)`.
 - If repositories return entities, map them to result DTOs before returning
-  from `execute(...)`; a read/effect service may own that DTO mapping when the
-  use case delegates to it.
+  from `execute(...)`; a read/effect service may own that explicit DTO
+  construction when the use case delegates to it.
 
 Good service delegation:
 
@@ -158,7 +166,7 @@ Put application exceptions under `exceptions/` or near the use case when
 the error is local:
 
 ```python
-from order_service.foundation.exceptions import BaseApplicationError
+from specx.foundation.exceptions import BaseApplicationError
 
 
 class UserAlreadyExistsError(BaseApplicationError):
@@ -177,9 +185,9 @@ Delivery translates these errors to HTTP responses.
 from dataclasses import dataclass, field
 from typing import Literal
 
-from order_service.foundation.repository import BaseRepository
-from order_service.foundation.unit_of_work import BaseUnitOfWork
-from order_service.foundation.unit_of_work_manager import BaseUnitOfWorkManager
+from specx.foundation.repository import BaseRepository
+from specx.foundation.unit_of_work import BaseUnitOfWork
+from specx.foundation.unit_of_work_manager import BaseUnitOfWorkManager
 
 
 @dataclass(kw_only=True, slots=True)
@@ -191,9 +199,6 @@ class FakeUsersRepository(BaseRepository):
     """
 
     emails: set[str] = field(default_factory=set)
-
-    def _repository_marker(self) -> None:
-        return None
 
     async def find_by_email(self, *, email: str) -> object | None:
         return object() if email in self.emails else None
@@ -208,9 +213,6 @@ class FakeUnitOfWork(BaseUnitOfWork):
 
     def __init__(self, *, users: FakeUsersRepository) -> None:
         self.users = users
-
-    def _unit_of_work_marker(self) -> None:
-        return None
 
 
 class FakeUnitOfWorkManager(BaseUnitOfWorkManager[FakeUnitOfWork]):
@@ -267,5 +269,6 @@ async def test_register_user_rejects_duplicate_email() -> None:
 - No SQLAlchemy/Redis/HTTP clients in core.
 - No `container.resolve(...)`.
 - No vague names such as `UserManager` or `OrderHandler`.
-- No bare classes; inherit existing foundation bases or add a new foundation
-  base only when a real class category needs it.
+- No bare classes; inherit packaged `specx.foundation` bases or add a
+  project-local foundation base only when a real class category is missing from
+  the package.

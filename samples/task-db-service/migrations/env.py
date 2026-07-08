@@ -5,12 +5,12 @@ from logging.config import fileConfig
 from typing import Any, cast
 
 from alembic import context
+from specx.foundation.infrastructure.sqlalchemy.model import BaseSQLAlchemyModel
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 import task_db_service.core as core_package
-from task_db_service.foundation.infrastructure.sqlalchemy.model import BaseSQLAlchemyModel
 from task_db_service.infrastructure.sqlalchemy.model_discovery import (
     load_sqlalchemy_model_modules,
 )
