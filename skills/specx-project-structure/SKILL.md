@@ -12,7 +12,7 @@ details, read `references/blueprint.md`.
 
 1. Derive the import package from the project name: lowercase, hyphen to
    underscore, valid Python identifier.
-2. Create `src/<package>/` with empty `__init__.py` files only.
+2. Create `src/<package>/` and `tests/` packages with empty `__init__.py` files only.
 3. Add `specx` as a runtime dependency and import base classes from
    `specx.foundation`.
 4. Use `core/<scope>/` as the main boundary. Put application packages at the
@@ -41,7 +41,26 @@ details, read `references/blueprint.md`.
 
 ## Hard Rules
 
-- Keep `__init__.py` files empty.
+- Keep all source and test `__init__.py` files empty.
+- Under `tests/`, only suite folders such as `unit`, `integration`, and
+  `guardrails` are public. Put private helper code under `tests/_support`.
+- Required generated tests are currently scoped to core services, use cases,
+  and capabilities.
+- Before adding a test, sanity-check that it would fail for a plausible bug and
+  that its assertion protects behavior, a boundary, or a contract.
+- Do not add tests only to have mirrored files, and do not prove upstream
+  libraries work.
+- Integration tests must use the real internal app graph; do not mock internal
+  use cases or services.
+- Core use-case integration tests live under `tests/integration/core/...`;
+  delivery integration tests live under `tests/integration/delivery/...`.
+- FastAPI route tests compare response status codes with `fastapi.status`
+  constants, not raw integer literals.
+- Use native pytest fixtures for test DI. Do not enable
+  `diwire.integrations.pytest_plugin`, and do not use `Injected[...]` test
+  parameters.
+- Mock fixtures should register one external collaborator for the behavior
+  under test. Do not bundle unrelated mocks in a dict or class-keyed fixture.
 - Every project class must inherit an explicit base class.
 - Prefer packaged bases such as `specx.foundation.dto.BaseDTO`,
   `specx.foundation.command.BaseCommand`,
@@ -54,6 +73,9 @@ details, read `references/blueprint.md`.
   `specx.foundation.delivery.fastapi.schema.BaseFastAPISchema`.
 - Every major class should have a docstring that explains the class scope and
   includes a concrete `Example:`.
+- Use blank lines as logical separators in all code. Keep related statements
+  together, but separate independent setup, action, assertion, response, branch,
+  and transformation groups so long blocks stay readable.
 - Add a project-local foundation base only when a real class category exists
   and no packaged base fits. Do not copy packaged bases locally.
 - Do not add `base_` prefixes to local foundation module filenames. Class names

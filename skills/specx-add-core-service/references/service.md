@@ -196,15 +196,17 @@ class TaskCompletionService(BaseEffectService):
 
 ## Unit Tests
 
-Construct services directly unless DI behavior is the subject:
+Resolve services from a fresh test container. Keep fake replacements in
+fixtures, not in the test body:
 
 ```python
-def test_order_pricer_adds_tax() -> None:
-    service = OrderPricingService(
-        _tax_policy_service=FixedTaxPolicyService(rate=Decimal("0.20")),
-    )
+@pytest.fixture
+def order_pricing_service(container: Container) -> OrderPricingService:
+    return container.resolve(OrderPricingService)
 
-    result = service.price(items=(OrderItem(price=Money("10.00")),))
+
+def test_order_pricer_adds_tax(order_pricing_service: OrderPricingService) -> None:
+    result = order_pricing_service.price(items=(OrderItem(price=Money("10.00")),))
 
     assert result == Money("12.00")
 ```

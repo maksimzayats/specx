@@ -30,6 +30,12 @@ before adding controller code.
    prefixes across routers and route fragments.
 13. Add integration tests at the HTTP boundary.
 
+## Code Style
+
+Use blank lines as logical separators in all code. Keep related statements
+together, but separate independent setup, action, assertion, response, branch,
+and transformation groups so long blocks stay readable.
+
 ## References
 
 - `references/controller.md` - FastAPI controller class pattern, app factory

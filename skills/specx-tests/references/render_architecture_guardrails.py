@@ -19,7 +19,7 @@ def test_specx_architecture() -> None:
 
     assert_specx_architecture(
         SpecxArchitectureConfig(
-            project_root=Path(__file__).resolve().parents[2],
+            project_root=Path(__file__).resolve().parents[3],
             package_name="{package_name}",
             disabled_rules=disabled_rules,
         )
@@ -40,7 +40,7 @@ def main() -> int:
         "--output",
         required=True,
         type=Path,
-        help="Output path, for example tests/architecture/test_boundaries.py.",
+        help="Output path, for example tests/guardrails/architecture/test_boundaries.py.",
     )
     args = parser.parse_args()
 

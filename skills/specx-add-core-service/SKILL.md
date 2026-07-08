@@ -30,6 +30,12 @@ action. Read `references/service.md` before writing the service.
    pass active UoWs into read/effect services when needed.
 11. Add direct unit tests with deterministic fakes where needed.
 
+## Code Style
+
+Use blank lines as logical separators in all code. Keep related statements
+together, but separate independent setup, action, assertion, response, branch,
+and transformation groups so long blocks stay readable.
+
 ## References
 
 - `references/service.md` - class shape, dependency choices, UoW parameter

@@ -205,7 +205,7 @@ The compatibility renderer writes that wrapper for existing workflows:
 ```sh
 python3 skills/specx-tests/references/render_architecture_guardrails.py \
   --package task_db_service \
-  --output samples/task-db-service/tests/architecture/test_boundaries.py
+  --output samples/task-db-service/tests/guardrails/architecture/test_boundaries.py
 ```
 
 When changing guardrail behavior, update the package rule, its focused tests,

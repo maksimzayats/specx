@@ -24,6 +24,12 @@ Use this skill whenever runtime configuration is needed. Read
 - Do not inherit raw `BaseSettings`; inherit
   `specx.foundation.settings.BaseRuntimeSettings`.
 
+## Code Style
+
+Use blank lines as logical separators in all code. Keep related statements
+together, but separate independent setup, action, assertion, response, branch,
+and transformation groups so long blocks stay readable.
+
 ## References
 
 - `references/settings.md` - settings placement, examples, env naming, and test

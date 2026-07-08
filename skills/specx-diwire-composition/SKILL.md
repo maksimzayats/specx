@@ -27,7 +27,19 @@ overrides need `diwire`. Read `references/diwire.md` before writing DI code.
 - Register unit-of-work managers for UoW abstractions. Persistence use cases
   inject the manager and open the active UoW inside `execute(...)`; do not
   inject `Provider[UnitOfWork]`.
-- Override dependencies in tests before resolving the graph.
+- Override dependencies in unit tests and external-boundary integration tests
+  before resolving the graph.
+- Integration tests must use the real internal app graph; do not mock internal
+  use cases or services.
+- Keep tests on native pytest fixtures. Do not enable
+  `diwire.integrations.pytest_plugin`, and do not use `Injected[...]`
+  parameters in test functions.
+
+## Code Style
+
+Use blank lines as logical separators in all code. Keep related statements
+together, but separate independent setup, action, assertion, response, branch,
+and transformation groups so long blocks stay readable.
 
 ## References
 

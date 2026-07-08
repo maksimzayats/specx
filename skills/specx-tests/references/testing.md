@@ -1,80 +1,210 @@
 # Specx Testing Reference
 
-Tests should prove behavior and protect boundaries without recreating the
-application inside test helpers.
+Tests should prove behavior and protect boundaries while letting `diwire`
+assemble application graphs explicitly through native pytest fixtures. Test
+bodies should receive resolved components, scenario fakes, or container-backed
+test clients from fixtures.
 
 ## Layout
 
+Mirror source paths under the test layer that owns the behavior:
+
 ```text
 tests/
+  _support/
+    bases/
+    clients/
+    db/
+    fakes/
+      core/
+  guardrails/
+    architecture/
+      test_boundaries.py
   unit/
+    core/
+      <scope>/
+        services/test_<service_module>.py
+        use_cases/test_<use_case_module>.py
+        capabilities/test_<capability_module>.py
   integration/
-  e2e/
-  architecture/
+    core/
+      <scope>/
+        use_cases/test_<use_case_module>.py
+    delivery/<framework>/
+    migrations/test_alembic.py
 ```
 
-Create only folders that contain real tests. Use `unit/` for isolated core
-behavior, `integration/` for delivery/container/persistence paths, `e2e/` for
-optional whole-app smoke flows, and `architecture/` for the `specx` guardrail
-wrapper.
+Create only folders that contain real tests. If a test targets a source module,
+its path should mirror that module below `tests/unit` or `tests/integration`.
+Private support code lives under `tests/_support` and must not be treated as a
+test suite. Architecture policy checks live under `tests/guardrails`, because
+they enforce project rules rather than test one application layer. Migration
+tests remain the non-mirrored integration exception.
+
+Every directory under `tests/` must include an empty `__init__.py` file. Do not
+add re-exports, imports, or setup behavior there.
+
+The required mirrored scope is currently only core services, use cases, and
+capabilities. Do not create repository, UoW, model, session, or adapter tests
+only to mirror source files.
 
 ## Unit Tests
 
-Construct simple use cases and services directly. Use real deterministic
-collaborators and fake only external IO, time, randomness, network clients,
-database sessions, and framework resources.
+Unit tests use a fresh test container, override IO ports with typed fakes, then
+resolve the component under test. Do not manually instantiate use cases,
+services, repositories, UoW managers, or controllers in test bodies. Do not use
+`diwire.integrations.pytest_plugin` or `Injected[...]` test parameters.
 
 ```python
-def test_check_health_returns_ok() -> None:
-    use_case = CheckHealthUseCase(
-        _health_reporter_service=HealthReporterService(),
+@pytest.fixture
+def container() -> Container:
+    container = get_container()
+    repository = InMemoryTaskRepository()
+    unit_of_work_manager = InMemoryTaskUnitOfWorkManager(repository=repository)
+    container.add_instance(repository, provides=InMemoryTaskRepository)
+    container.add_instance(unit_of_work_manager, provides=TaskUnitOfWorkManager)
+    return container
+
+
+@pytest.fixture
+def create_task_use_case(container: Container) -> CreateTaskUseCase:
+    return container.resolve(CreateTaskUseCase)
+
+
+@pytest.mark.anyio
+async def test_create_task_normalizes_title(
+    create_task_use_case: CreateTaskUseCase,
+) -> None:
+    result = await create_task_use_case.execute(
+        command=CreateTaskCommand(title="  Ship skill  "),
     )
 
-    result = use_case.execute(query=CheckHealthQuery())
-
-    assert result.status == "ok"
+    assert result.title == "Ship skill"
 ```
 
-For async code, use the repo's chosen async pytest plugin consistently.
+Use typed fakes for boundaries such as repositories, UoW managers, clocks,
+generators, network clients, queues, and SDKs. Keep fakes under
+`tests/_support/fakes/...`.
+
+Parameterize aggressively. When a case has more than one meaningful field, use
+a small dataclass and inline the case list directly in `pytest.mark.parametrize`
+unless the same case set is reused by multiple tests.
+
+```python
+@dataclass(frozen=True, kw_only=True, slots=True)
+class NormalizeTitleCase:
+    id: str
+    raw_title: str
+    expected_title: str
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        NormalizeTitleCase(
+            id="trims_edges",
+            raw_title="  Ship skill  ",
+            expected_title="Ship skill",
+        ),
+        NormalizeTitleCase(
+            id="collapses_inner_space",
+            raw_title="Ship   skill",
+            expected_title="Ship skill",
+        ),
+    ],
+    ids=lambda case: case.id,
+)
+def test_normalize_accepts_valid_titles(
+    case: NormalizeTitleCase,
+    task_title_normalizer_service: TaskTitleNormalizerService,
+) -> None:
+    assert task_title_normalizer_service.normalize(title=case.raw_title) == case.expected_title
+```
 
 ## Integration Tests
 
-Resolve production graphs from the container only after applying any test
-overrides. Keep each integration test focused on one boundary: route to use
-case, container to graph, repository to database, or migration to metadata.
+Integration tests use the real internal application graph: delivery, DI, use
+cases, services, UoWs, repositories, and the database. Stub only external
+systems. Apply overrides before resolving the target graph. Resolve the factory
+first, then call it.
 
 ```python
-from fastapi.testclient import TestClient
+class TestAsyncClientFactory(ContainerBasedFactory):
+    async def __call__(self) -> AsyncIterator[AsyncClient]:
+        app_factory = self._container.resolve(FastAPIFactory)
+        app = app_factory()
+        transport = ASGITransport(app=app)
 
-
-def test_health_route(container: Container) -> None:
-    app = container.resolve(FastAPIFactory)()
-
-    with TestClient(app) as client:
-        response = client.get("/api/v1/health")
-
-    assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+        async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+            yield client
 ```
 
-Container fixture:
+Core use-case integration tests call resolved use cases directly against the
+transactional DB. They own persistence-facing application contracts:
 
 ```python
-import pytest
-from diwire import Container
+@pytest.mark.anyio
+async def test_execute_normalizes_and_persists_task(
+    create_task_use_case: CreateTaskUseCase,
+    list_tasks_use_case: ListTasksUseCase,
+) -> None:
+    created_task = await create_task_use_case.execute(
+        command=CreateTaskCommand(title="  Ship skill  "),
+    )
+    listed_tasks = await list_tasks_use_case.execute(query=ListTasksQuery())
 
-from order_service.ioc.container import get_container
-
-
-@pytest.fixture()
-def container() -> Container:
-    return get_container()
+    assert created_task.title == "Ship skill"
+    assert listed_tasks.tasks == [created_task]
 ```
+
+FastAPI route tests use the transactional client backed by the real database:
+
+```python
+from fastapi import status
+
+
+@pytest.mark.anyio
+async def test_create_task_route_persists_normalized_title(
+    transactional_test_async_client_factory: TestAsyncClientFactory,
+) -> None:
+    async with transactional_test_async_client_factory() as client:
+        response = await client.post("/api/v1/tasks", json={"title": "  Ship skill  "})
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.json()["title"] == "Ship skill"
+```
+
+Do not mock internal use cases or services in integration tests. Only add
+repository, UoW, model, session, or adapter integration tests when they cover
+meaningful project-owned behavior: nontrivial mapping, query shape, exception
+translation, lifecycle policy, or a regression that would not be covered
+through a use case or route. Do not add generic CRUD round-trip tests or tests
+that prove SQLAlchemy/session/upstream behavior.
+
+Only add direct container tests when they prove a meaningful explicit binding
+or lifecycle rule. Do not add tests that only assert `container.resolve(...)`
+returns an instance.
+
+## Database Isolation
+
+For SQLAlchemy projects:
+
+- Run Alembic once for a session-scoped migrated SQLite database.
+- For each data integration test, open one connection and an outer
+  transaction.
+- Bind sessions with `join_transaction_mode="create_savepoint"`.
+- Roll back the outer transaction in teardown.
+- For SQLite/aiosqlite, create the test engine with
+  `connect_args={"autocommit": False}` so SAVEPOINT work stays inside the
+  outer transaction.
+- Migration tests still use fresh temp database files because DDL is the
+  behavior under test.
+
+Do not call `metadata.create_all()` or `drop_all()` in source or tests.
 
 ## Architecture Guardrails
 
-For full Specx service guardrails, add the tiny pytest wrapper around the
-`specx` package:
+Use the packaged architecture wrapper:
 
 ```python
 from pathlib import Path
@@ -87,83 +217,40 @@ from specx.testing.architecture import (
 
 
 def test_specx_architecture() -> None:
-    disabled_rules: frozenset[SpecxRuleId] = frozenset()
-
     assert_specx_architecture(
         SpecxArchitectureConfig(
-            project_root=Path(__file__).resolve().parents[2],
+            project_root=Path(__file__).resolve().parents[3],
             package_name="order_service",
-            disabled_rules=disabled_rules,
+            disabled_rules=frozenset(),
         )
     )
 ```
 
-Disable project-specific exceptions explicitly with stable rule IDs:
-
-```python
-disabled_rules = frozenset({
-    SpecxRuleId.CLASSES_REQUIRE_EXAMPLE_DOCSTRINGS,
-})
-```
-
-Existing workflows can render the wrapper:
-
-```bash
-cd /path/to/installed/specx-tests
-uv run python references/render_architecture_guardrails.py \
-  --package order_service \
-  --output /path/to/project/tests/architecture/test_boundaries.py
-```
-
-Do not vendor a local copy of the rule engine into generated projects. Treat
-the packaged wrapper as the default architecture-test mechanism. Add
-`extra_rules` only for project-specific guardrails that are not covered by a
-built-in `SpecxRuleId`, then keep the custom rule in the project's tests and
-pass it through `SpecxArchitectureConfig(extra_rules=...)`.
-
-```python
-from specx.testing.architecture import (
-    ArchitectureContext,
-    BaseRule,
-    SpecxArchitectureViolation,
-)
-
-
-class NoLegacyImportsRule(
-    BaseRule[str, ArchitectureContext, SpecxArchitectureViolation],
-):
-    """Reject legacy module imports while the project completes migration."""
-
-    id = "project.no-legacy-imports"
-
-    def check(
-        self,
-        context: ArchitectureContext,
-    ) -> tuple[SpecxArchitectureViolation, ...]:
-        return ()
-```
-
-## DI Tests
-
-- Override dependencies before resolving the target object graph.
-- Reset or rebuild containers per test when overrides are mutable.
-- Prefer direct construction for simple services when it is clearer than the
-  container.
-- Keep tests from reaching into private container registration details unless
-  the test is specifically about wiring.
-
-## Persistence And Migrations
-
-- SQLAlchemy projects use Alembic in tests and production paths.
-- Do not call `metadata.create_all()` or `drop_all()` in source or tests.
-- Use temporary database URLs for migration and repository tests.
-- Run `alembic upgrade head` before repository integration assertions.
-- Include a migration drift check when the project owns SQLAlchemy models.
+`SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE` is enabled by default. Disable it
+only for deliberate legacy migrations.
 
 ## Avoid
 
-- No framework request objects in unit tests for use cases or core services.
-- No global settings singleton hidden in core tests.
-- No broad fixtures that hide the behavior under test.
-- No duplicated architecture rule modules in generated projects.
-- No tests for empty folders or speculative future structure.
+- No hand-built application graphs in tests or support factories.
+- No public helper folders next to test suites. Put helper code under
+  `tests/_support`.
+- No filler tests. Before adding a test, check that it would fail for a
+  plausible bug and that the assertion protects behavior, a boundary, or a
+  contract.
+- No repository/UoW/model/session tests just to mirror source files.
+- No tests whose real assertion is that an upstream library works.
+- No tests that only assert `container.resolve(...)` returns an instance.
+- No internal use-case or service mocks in integration tests.
+- No raw integer status codes in FastAPI route assertions; use
+  `fastapi.status` constants.
+- No grouped mock fixtures that register several unrelated collaborators for a
+  test that exercises only one of them.
+- No `container.resolve(FastAPIFactory)()` inline; resolve the factory first,
+  then call it.
+- No framework request objects in unit tests.
+- No SQLAlchemy sessions, FastAPI apps, or real IO in unit tests.
+- No broad autouse fixtures that hide DB, settings, or container state.
+- No global shared containers across tests.
+- No placeholder tests for empty folders or future structure.
+- No missing test package initializers; every test directory has an empty
+  `__init__.py`.

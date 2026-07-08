@@ -144,7 +144,7 @@ migration-check:
 - Use `httpx2` in dev when FastAPI `TestClient` is used only by tests. Recent
   FastAPI/Starlette versions warn when tests rely on legacy `httpx`.
 - Add `specx` as a runtime dependency when generated projects import packaged
-  foundation bases. The standard architecture wrapper in `tests/architecture`
+  foundation bases. The standard architecture wrapper in `tests/guardrails`
   uses the same package.
 
 ## Validation
@@ -173,7 +173,7 @@ project, include:
 - Tests: `make test`
 - Targeted unit tests: `uv run pytest tests/unit`
 - Targeted integration tests: `uv run pytest tests/integration`
-- Targeted architecture tests: `uv run pytest tests/architecture`
+- Targeted guardrail tests: `uv run pytest tests/guardrails`
 ```
 
 When SQLAlchemy/Alembic exists, also include:

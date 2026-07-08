@@ -73,6 +73,12 @@ than one layer. Read `references/boundaries.md` for the full rules.
 - Keep SQL and external API calls in scope infrastructure adapters.
 - Do not create bare classes without explicit bases.
 
+## Code Style
+
+Use blank lines as logical separators in all code. Keep related statements
+together, but separate independent setup, action, assertion, response, branch,
+and transformation groups so long blocks stay readable.
+
 ## References
 
 - `references/boundaries.md` - layout, import rules, naming, and architecture

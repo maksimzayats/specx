@@ -23,7 +23,7 @@
 - Tests: `make test`
 - Targeted unit tests: `uv run pytest tests/unit`
 - Targeted integration tests: `uv run pytest tests/integration`
-- Targeted architecture tests: `uv run pytest tests/architecture`
+- Targeted guardrail tests: `uv run pytest tests/guardrails`
 - Create migration: `make makemigrations message="describe change"`
 - Apply migrations: `make migrate`
 - Check migration drift: `make migration-check`
@@ -75,17 +75,51 @@
   another model type.
 - Prefer `@dataclass(kw_only=True, slots=True)` for services, use cases,
   controllers, factories, adapters, and similar non-Pydantic behavior classes.
+- Use blank lines as logical separators in all code. Keep related statements
+  together, but separate independent setup, action, assertion, response, branch,
+  and transformation groups so long blocks stay readable.
 - Keep all `__init__.py` files empty.
 
 ## Tests
 
-- Unit tests cover core services/use cases without FastAPI, SQLAlchemy sessions,
-  or real IO.
-- Integration tests cover FastAPI routes, container resolution, SQLAlchemy UoW
-  behavior, and Alembic migrations.
+- Tests mirror source module paths under `tests/unit` or `tests/integration`.
+- Private test helpers live under `tests/_support`; this is not a test suite.
+- Architecture policy wrappers live under `tests/guardrails`.
+- Required generated tests are currently scoped to core services, use cases,
+  and capabilities.
+- Unit tests cover core services/use cases with fresh `diwire` test containers
+  and typed fakes for replaced ports; they do not use FastAPI, SQLAlchemy
+  sessions, or real IO.
+- Integration tests cover core use cases, FastAPI routes, and Alembic
+  migrations only when they protect project-owned behavior.
+- Core use-case integration tests live under `tests/integration/core/...` and
+  call resolved use cases directly against the transactional DB.
+- Delivery integration tests live under `tests/integration/delivery/...` and
+  own HTTP route/status/schema/error mapping.
+- Test bodies receive resolved components, fakes, mocks, or container-backed
+  clients from fixtures. Do not hand-build application graphs in tests or
+  support factories.
+- Before adding a test, sanity-check that it would fail for a plausible bug and
+  that its assertion protects behavior, a boundary, or a contract.
+- Add tests only when they make sense. Do not add nonsense tests just to have a
+  mirrored file, and do not prove upstream libraries such as SQLAlchemy,
+  Alembic, HTTPX, or FastAPI work.
+- Integration tests must use the real internal app graph; do not mock internal
+  use cases or services.
+- FastAPI route tests should compare response status codes with
+  `fastapi.status` constants, not raw integer literals.
+- Mock fixtures should register one external collaborator for the behavior
+  under test. Do not bundle unrelated mocks in a dict or class-keyed fixture.
+- Do not add tests that only assert `container.resolve(...)` returns an
+  instance.
+- Do not enable `diwire.integrations.pytest_plugin` or use `Injected[...]`
+  parameters in tests; keep test injection explicit with native pytest fixtures.
+- Override dependencies before resolving the graph. Resolve factories first,
+  then call them.
 - Architecture tests are part of the contract; update them only for intentional
   architecture changes.
-- DB tests should use temp `DATABASE_URL` values and Alembic `upgrade head`.
+- DB integration tests use Alembic schema setup and per-test transactional
+  rollback unless the migration itself is under test.
 
 ## Migrations
 

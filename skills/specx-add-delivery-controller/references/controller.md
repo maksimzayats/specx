@@ -156,24 +156,28 @@ class FastAPIFactory(BaseFactory):
 ## Integration Test
 
 ```python
-from fastapi.testclient import TestClient
-
-from order_service.delivery.fastapi.factory import FastAPIFactory
+from fastapi import status
 
 
-def test_register_user_returns_created_user(container: Container) -> None:
-    container.add_instance(FakeRegisterUserUseCase(user_id=123), provides=RegisterUserUseCase)
-    app = container.resolve(FastAPIFactory)()
-
-    with TestClient(app) as client:
-        response = client.post(
+async def test_register_user_returns_created_user(
+    transactional_test_async_client_factory: TestAsyncClientFactory,
+) -> None:
+    async with transactional_test_async_client_factory() as client:
+        response = await client.post(
             "/api/v1/users",
             json={"email": "ada@example.com", "password": "secret"},
         )
 
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     assert response.json() == {"user_id": 123}
 ```
+
+FastAPI integration tests use the real internal app graph and transactional
+database. Do not mock use cases or services here; keep those checks in unit
+tests.
+
+Use `fastapi.status` constants for response status assertions instead of raw
+integer literals.
 
 ## Route Rules
 

@@ -244,16 +244,27 @@ class FakeUnitOfWorkManager(BaseUnitOfWorkManager[FakeUnitOfWork]):
         return False
 
 
-async def test_register_user_rejects_duplicate_email() -> None:
+@pytest.fixture
+def container() -> Container:
+    container = get_container()
     users = FakeUsersRepository(emails={"ada@example.com"})
-    use_case = RegisterUserUseCase(
-        _identity_normalizer_service=IdentityNormalizerService(),
-        _password_hashing_service=FakePasswordHashingService(),
-        _unit_of_work_manager=FakeUnitOfWorkManager(users=users),
-    )
+    unit_of_work_manager = FakeUnitOfWorkManager(users=users)
+    container.add_instance(users, provides=FakeUsersRepository)
+    container.add_instance(unit_of_work_manager, provides=UsersUnitOfWorkManager)
+    return container
+
+
+@pytest.fixture
+def register_user_use_case(container: Container) -> RegisterUserUseCase:
+    return container.resolve(RegisterUserUseCase)
+
+
+async def test_register_user_rejects_duplicate_email(
+    register_user_use_case: RegisterUserUseCase,
+) -> None:
 
     with pytest.raises(UserAlreadyExistsError):
-        await use_case.execute(
+        await register_user_use_case.execute(
             command=RegisterUserCommand(
                 email="ada@example.com",
                 password="secret",
@@ -267,7 +278,9 @@ async def test_register_user_rejects_duplicate_email() -> None:
 - No delivery schemas in core.
 - No entities returned from use cases.
 - No SQLAlchemy/Redis/HTTP clients in core.
-- No `container.resolve(...)`.
+- No `container.resolve(...)` inside core. In tests, resolve from fixtures
+  after overrides are registered.
+- No hand-built use-case graphs in test bodies.
 - No vague names such as `UserManager` or `OrderHandler`.
 - No bare classes; inherit packaged `specx.foundation` bases or add a
   project-local foundation base only when a real class category is missing from

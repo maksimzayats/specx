@@ -36,6 +36,12 @@ Use this skill to make the repository executable and checkable. Read
 - Keep `AGENTS.md` command guidance aligned with the actual Makefile. Do not
   list migration commands before SQLAlchemy/Alembic exists.
 
+## Code Style
+
+Use blank lines as logical separators in all code. Keep related statements
+together, but separate independent setup, action, assertion, response, branch,
+and transformation groups so long blocks stay readable.
+
 ## References
 
 - `references/tooling.md` - recommended `pyproject.toml`, Makefile, and command

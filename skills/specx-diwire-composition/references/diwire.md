@@ -1,7 +1,9 @@
 # Specx Diwire Reference
 
 Use `diwire` to keep object construction in one place and application classes
-free from container access.
+free from container access. Generated projects should use `diwire` heavily in
+tests as well: fixtures configure overrides, then tests receive resolved
+components.
 
 ## Injectable Classes
 
@@ -48,13 +50,13 @@ class CreateOrderUseCase(BaseUseCase):
 ```
 
 Use private fields for dependencies and inherit the matching `specx.foundation`
-base.
-Prefer concrete project classes unless there is a real boundary.
+base. Prefer concrete project classes unless there is a real boundary.
 
 ## Container
 
 ```python
 from diwire import Container, DependencyRegistrationPolicy, MissingPolicy
+
 
 def get_container() -> Container:
     container = Container(
@@ -73,74 +75,99 @@ def _register_dependencies(container: Container) -> None:
     )
 ```
 
-## Private Registration
-
-Do not create a public `ioc/registry.py` for the default Specx shape. Keep
-explicit bindings next to container creation in private
-`_register_dependencies(...)`. Keep that function empty until an explicit
-binding is needed.
-
 Do not register SQLAlchemy repositories that require an active session directly
-in the container. Create those repositories inside the active UoW. Concrete
-stateless factories such as `AsyncHttpClientFactory` can usually be auto-wired
-and do not need manual registration. Gateway implementations that satisfy a
-core `BaseGateway` port should be registered explicitly with `provides=...`.
-Register existing client instances only when their lifecycle is owned by a
-delivery app or factory:
-
-```python
-import httpx
-
-
-def _register_runtime_instances(container: Container, *, client: httpx.AsyncClient) -> None:
-    container.add_instance(client, provides=httpx.AsyncClient)
-```
+in the runtime container. Create those repositories inside the active UoW, or
+resolve them in tests only after registering an active test session.
 
 ## FastAPI Composition
 
-Resolve the outer app factory only:
+Resolve the outer app factory only. Resolve first, then call:
 
 ```python
 from order_service.delivery.fastapi.factory import FastAPIFactory
 from order_service.ioc.container import get_container
 
 container = get_container()
-app = container.resolve(FastAPIFactory)()
+app_factory = container.resolve(FastAPIFactory)
+app = app_factory()
 ```
 
 The factory receives controllers through `Injected[...]`. Controllers receive
 use cases through `Injected[...]`.
 
+## Pytest Fixtures
+
+Use native pytest fixtures that return explicit containers. Do not enable
+`diwire.integrations.pytest_plugin`, and do not use `Injected[...]` parameters
+in test functions.
+
+```python
+@pytest.fixture
+def container() -> Container:
+    container = get_container()
+    repository = InMemoryOrderRepository()
+    unit_of_work_manager = InMemoryOrderUnitOfWorkManager(repository=repository)
+    container.add_instance(repository, provides=InMemoryOrderRepository)
+    container.add_instance(unit_of_work_manager, provides=OrderUnitOfWorkManager)
+    return container
+```
+
+Tests receive resolved components through fixtures:
+
+```python
+@pytest.fixture
+def create_order_use_case(container: Container) -> CreateOrderUseCase:
+    return container.resolve(CreateOrderUseCase)
+```
+
 ## Test Overrides
 
-Override dependencies before resolving the graph:
+Use overrides in unit tests and for external-boundary stubs. FastAPI
+integration tests should resolve the real internal graph and use a
+transactional database-backed container.
 
 ```python
-def test_app_uses_fake_repository() -> None:
-    container = get_container()
-    container.add_instance(FakeOrderRepository(), provides=OrderRepository)
-
-    app = container.resolve(FastAPIFactory)()
+@pytest.fixture
+def order_summary_gateway(container: Container) -> FakeOrderSummaryGateway:
+    gateway = FakeOrderSummaryGateway()
+    container.add_instance(gateway, provides=OrderSummaryGateway)
+    return gateway
 ```
-
-Direct constructor tests are fine for simple core classes:
 
 ```python
-use_case = CreateOrderUseCase(
-    _order_pricing_service=OrderPricingService(),
-    _unit_of_work_manager=FakeOrderUnitOfWorkManager(),
-)
+from fastapi import status
+
+
+async def test_create_order_route_persists_order(
+    transactional_test_async_client_factory: TestAsyncClientFactory,
+) -> None:
+    async with transactional_test_async_client_factory() as client:
+        response = await client.post("/api/v1/orders", json={"sku": "SKU-1"})
+
+    assert response.status_code == status.HTTP_201_CREATED
 ```
+
+For integration tests that replace persistence, register the replacement
+session factory before resolving use cases, repositories, UoWs, controllers, or
+`FastAPIFactory`.
 
 ## Do Not
 
 - Do not pass `Container` into a use case, service, controller, or adapter.
 - Do not resolve dependencies from inside core.
+- Do not instantiate use cases, services, controllers, repositories, or UoW
+  managers by hand in test bodies.
+- Do not hide manual production graph assembly in test factory classes.
+- Do not mock internal use cases or services in integration tests.
+- Do not add tests that only assert `container.resolve(...)` returns an
+  instance. Container-focused tests must prove a real binding, lifecycle rule,
+  or application behavior.
+- Do not add DI or adapter tests merely to mirror source files or prove
+  upstream library behavior.
+- Do not bundle unrelated mocks in one fixture. Register one override fixture
+  per collaborator unless the subject genuinely consumes a collection.
 - Do not register every concrete class manually.
 - Do not instantiate injected collaborators inside use cases or services.
 - Do not inject an active UoW instance or `Provider[UnitOfWork]` into a
   long-lived use case. Inject the scope `UnitOfWorkManager`; the manager opens
   and closes active UoW objects inside each use-case execution.
-- Do not hide external client/session construction inside core or adapter
-  business methods; inject clients, session factories, or project-owned
-  factories instead.

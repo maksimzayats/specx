@@ -1338,6 +1338,147 @@ class RootAgentsMDDocumentsProjectCommandsAndBoundariesRule(ArchitectureRuleBase
         return tuple(violations)
 
 
+class TestsMirrorSourceStructureRule(ArchitectureRuleBase):
+    """Require meaningful generated-service tests to mirror source modules.
+
+    The required generated scope is core services, use cases, and capabilities.
+    Existing unit and integration tests still need to mirror source modules so
+    behavior ownership stays explicit without forcing infrastructure filler.
+    """
+
+    id: SpecxRuleId = SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE
+
+    def check(self, context: ArchitectureContext) -> tuple[SpecxArchitectureViolation, ...]:
+        violations: list[SpecxArchitectureViolation] = []
+        violations.extend(self._unmapped_test_violations(context))
+        violations.extend(self._missing_required_test_violations(context))
+        return tuple(violations)
+
+    def _unmapped_test_violations(
+        self,
+        context: ArchitectureContext,
+    ) -> tuple[SpecxArchitectureViolation, ...]:
+        violations: list[SpecxArchitectureViolation] = []
+        for test_root_name in ("unit", "integration"):
+            test_root = context.project_root / "tests" / test_root_name
+            if not test_root.exists():
+                continue
+            for path in _mirrored_test_paths(context, test_root=test_root):
+                if _is_non_source_integration_test(path, test_root=test_root):
+                    continue
+                source_path = _source_path_for_test_path(
+                    path,
+                    test_root=test_root,
+                    src_root=context.src_root,
+                )
+                if source_path not in context.ast_project.files:
+                    violations.append(
+                        _violation(
+                            self.id,
+                            path=path,
+                            message=(
+                                "test does not mirror a source module; expected "
+                                f"{source_path.relative_to(context.project_root)}"
+                            ),
+                        )
+                    )
+        return tuple(violations)
+
+    def _missing_required_test_violations(
+        self,
+        context: ArchitectureContext,
+    ) -> tuple[SpecxArchitectureViolation, ...]:
+        violations: list[SpecxArchitectureViolation] = []
+        for source_path in _required_unit_test_source_paths(context):
+            expected_path = _expected_test_path_for_source_path(
+                source_path,
+                test_root=context.project_root / "tests" / "unit",
+                src_root=context.src_root,
+            )
+            if expected_path not in context.ast_project.files:
+                violations.append(
+                    _violation(
+                        self.id,
+                        path=source_path,
+                        message=(
+                            f"missing unit test {expected_path.relative_to(context.project_root)}"
+                        ),
+                    )
+                )
+        return tuple(violations)
+
+
+class TestFixturesDoNotBundleMocksRule(ArchitectureRuleBase):
+    """Reject grouped mock fixtures in generated-service tests.
+
+    A mock fixture should override one collaborator for the behavior under
+    test. Class-keyed dictionaries of unrelated mocks make tests unclear about
+    what is mocked and what behavior is actually under assertion.
+    """
+
+    id: SpecxRuleId = SpecxRuleId.TEST_FIXTURES_DO_NOT_BUNDLE_MOCKS
+
+    def check(self, context: ArchitectureContext) -> tuple[SpecxArchitectureViolation, ...]:
+        violations: list[SpecxArchitectureViolation] = []
+        test_root = context.project_root / "tests"
+        for path in sorted(context.ast_project.files):
+            if not path.is_relative_to(test_root) or path.name == "__init__.py":
+                continue
+            tree = context.tree(path)
+            aliases = context.aliases(path)
+            for node in ast.walk(tree):
+                if not isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef)):
+                    continue
+                if not _is_pytest_fixture(node, aliases):
+                    continue
+                if _fixture_bundles_mocks(node, aliases):
+                    violations.append(
+                        _violation(
+                            self.id,
+                            path=path,
+                            symbol=node.name,
+                            message=("bundles multiple mocks; use one fixture per collaborator"),
+                        )
+                    )
+        return tuple(violations)
+
+
+class IntegrationTestsDoNotMockInternalUseCasesOrServicesRule(ArchitectureRuleBase):
+    """Require integration tests to exercise the real internal application graph.
+
+    Integration tests may stub external systems, but internal use cases and
+    services should be resolved through the real container so delivery, DI,
+    transaction, and persistence behavior are covered together.
+    """
+
+    id: SpecxRuleId = SpecxRuleId.INTEGRATION_TESTS_DO_NOT_MOCK_INTERNAL_USE_CASES_OR_SERVICES
+
+    def check(self, context: ArchitectureContext) -> tuple[SpecxArchitectureViolation, ...]:
+        violations: list[SpecxArchitectureViolation] = []
+        integration_root = context.project_root / "tests" / "integration"
+        for path in sorted(context.ast_project.files):
+            if not path.is_relative_to(integration_root) or path.name == "__init__.py":
+                continue
+            tree = context.tree(path)
+            aliases = context.aliases(path)
+            for node in ast.walk(tree):
+                if not isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef)):
+                    continue
+                if _function_mocks_internal_app_collaborator(node, aliases):
+                    violations.append(
+                        _violation(
+                            self.id,
+                            path=path,
+                            symbol=node.name,
+                            message=(
+                                "mocks internal use case/service in integration tests; "
+                                "use the real app graph"
+                            ),
+                        )
+                    )
+        return tuple(violations)
+
+
 class ServicesDoNotOpenUnitOfWorkScopesRule(ArchitectureRuleBase):
     """Reject service-owned unit-of-work scopes.
 
@@ -1540,6 +1681,194 @@ class InitFilesAreEmptyRule(ArchitectureRuleBase):
         return tuple(violations)
 
 
+def _mirrored_test_paths(
+    context: ArchitectureContext,
+    *,
+    test_root: Path,
+) -> tuple[Path, ...]:
+    return tuple(
+        path
+        for path in sorted(context.ast_project.files)
+        if path.is_relative_to(test_root)
+        and path.name.startswith("test_")
+        and path.name.endswith(".py")
+    )
+
+
+def _source_path_for_test_path(
+    path: Path,
+    *,
+    test_root: Path,
+    src_root: Path,
+) -> Path:
+    relative = path.relative_to(test_root)
+    source_file_name = f"{relative.name.removeprefix('test_')}"
+    return src_root / relative.parent / source_file_name
+
+
+def _expected_test_path_for_source_path(
+    path: Path,
+    *,
+    test_root: Path,
+    src_root: Path,
+) -> Path:
+    relative = path.relative_to(src_root)
+    return test_root / relative.parent / f"test_{relative.name}"
+
+
+def _is_non_source_integration_test(path: Path, *, test_root: Path) -> bool:
+    relative = path.relative_to(test_root)
+    return relative.parts[:1] == ("migrations",)
+
+
+def _required_unit_test_source_paths(context: ArchitectureContext) -> tuple[Path, ...]:
+    core_root = context.src_root / "core"
+    required_package_names = {"capabilities", "services", "use_cases"}
+    return tuple(
+        path
+        for path in sorted(context.ast_project.files)
+        if path.is_relative_to(core_root)
+        and path.name != "__init__.py"
+        and len((relative := path.relative_to(core_root)).parts) >= 3
+        and relative.parts[1] in required_package_names
+    )
+
+
+def _is_pytest_fixture(
+    node: ast.AsyncFunctionDef | ast.FunctionDef,
+    aliases: dict[str, str],
+) -> bool:
+    for decorator in node.decorator_list:
+        expression = decorator.func if isinstance(decorator, ast.Call) else decorator
+        if annotation_name(expression, aliases) == "fixture":
+            return True
+    return False
+
+
+def _function_mocks_internal_app_collaborator(
+    node: ast.AsyncFunctionDef | ast.FunctionDef,
+    aliases: dict[str, str],
+) -> bool:
+    if node.name.endswith("_use_case_mock") or node.name.endswith("_service_mock"):
+        return True
+    for child in ast.walk(node):
+        if isinstance(child, ast.Call):
+            if _mock_call_uses_internal_app_collaborator_spec(child, aliases):
+                return True
+            if _container_add_instance_provides_internal_app_collaborator(child, aliases):
+                return True
+    return False
+
+
+def _mock_call_uses_internal_app_collaborator_spec(
+    node: ast.Call,
+    aliases: dict[str, str],
+) -> bool:
+    if not _is_mock_factory_call(node, aliases):
+        return False
+    spec_name = _mock_call_spec_name(node, aliases)
+    return _is_internal_app_collaborator_name(spec_name)
+
+
+def _mock_call_spec_name(node: ast.Call, aliases: dict[str, str]) -> str:
+    for keyword in node.keywords:
+        if keyword.arg in {"spec", "spec_set"}:
+            return annotation_name(keyword.value, aliases)
+    if node.args:
+        return annotation_name(node.args[0], aliases)
+    return ""
+
+
+def _container_add_instance_provides_internal_app_collaborator(
+    node: ast.Call,
+    aliases: dict[str, str],
+) -> bool:
+    if not isinstance(node.func, ast.Attribute) or node.func.attr != "add_instance":
+        return False
+    provides = next((keyword.value for keyword in node.keywords if keyword.arg == "provides"), None)
+    return _is_internal_app_collaborator_name(annotation_name(provides, aliases))
+
+
+def _is_internal_app_collaborator_name(name: str) -> bool:
+    return name.endswith(("UseCase", "Service"))
+
+
+def _fixture_bundles_mocks(
+    node: ast.AsyncFunctionDef | ast.FunctionDef,
+    aliases: dict[str, str],
+) -> bool:
+    mock_names = _fixture_mock_assignment_names(node, aliases)
+    if _fixture_returns_mock_dict(node, aliases):
+        return True
+    if len(mock_names) <= 1:
+        return False
+    if node.name.endswith("_mocks"):
+        return True
+    if _returns_dict_of_names(node, mock_names):
+        return True
+    return _container_add_instance_call_count(node) > 1
+
+
+def _fixture_returns_mock_dict(
+    node: ast.AsyncFunctionDef | ast.FunctionDef,
+    aliases: dict[str, str],
+) -> bool:
+    return_annotation = annotation_name(node.returns, aliases)
+    return return_annotation.startswith("dict[") and "Mock" in return_annotation
+
+
+def _fixture_mock_assignment_names(
+    node: ast.AsyncFunctionDef | ast.FunctionDef,
+    aliases: dict[str, str],
+) -> set[str]:
+    mock_names: set[str] = set()
+    for child in ast.walk(node):
+        if isinstance(child, ast.Assign) and _is_mock_factory_call(child.value, aliases):
+            for target in child.targets:
+                if isinstance(target, ast.Name):
+                    mock_names.add(target.id)
+        elif (
+            isinstance(child, ast.AnnAssign)
+            and isinstance(child.target, ast.Name)
+            and _is_mock_factory_call(child.value, aliases)
+        ):
+            mock_names.add(child.target.id)
+    return mock_names
+
+
+def _is_mock_factory_call(expression: ast.expr | None, aliases: dict[str, str]) -> bool:
+    if not isinstance(expression, ast.Call):
+        return False
+    return annotation_name(expression.func, aliases) in {
+        "AsyncMock",
+        "MagicMock",
+        "Mock",
+        "create_autospec",
+    }
+
+
+def _returns_dict_of_names(
+    node: ast.AsyncFunctionDef | ast.FunctionDef,
+    names: set[str],
+) -> bool:
+    for child in ast.walk(node):
+        if not isinstance(child, ast.Return) or not isinstance(child.value, ast.Dict):
+            continue
+        if any(isinstance(value, ast.Name) and value.id in names for value in child.value.values):
+            return True
+    return False
+
+
+def _container_add_instance_call_count(node: ast.AsyncFunctionDef | ast.FunctionDef) -> int:
+    return sum(
+        1
+        for child in ast.walk(node)
+        if isinstance(child, ast.Call)
+        and isinstance(child.func, ast.Attribute)
+        and child.func.attr == "add_instance"
+    )
+
+
 BUILT_IN_RULES: tuple[type[ArchitectureRuleBase], ...] = (
     CoreInnerPackagesDoNotImportOuterLayersOrIOLibrariesRule,
     ScopeInfrastructureDoesNotImportDeliveryRule,
@@ -1569,6 +1898,9 @@ BUILT_IN_RULES: tuple[type[ArchitectureRuleBase], ...] = (
     PublicRoutesUseFullAPIV1PathsRule,
     NoSchemaBootstrapCallsInSourceOrTestsRule,
     RootAgentsMDDocumentsProjectCommandsAndBoundariesRule,
+    TestsMirrorSourceStructureRule,
+    TestFixturesDoNotBundleMocksRule,
+    IntegrationTestsDoNotMockInternalUseCasesOrServicesRule,
     ServicesDoNotOpenUnitOfWorkScopesRule,
     UseCasesOpenAtMostOneUnitOfWorkScopeRule,
     UseCasesInjectUnitOfWorkManagersRule,

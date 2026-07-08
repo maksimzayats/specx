@@ -56,6 +56,11 @@ class SpecxRuleId(StrEnum):
     ROOT_AGENTS_MD_DOCUMENTS_PROJECT_COMMANDS_AND_BOUNDARIES = (
         "agents-md.documents-commands-and-boundaries"
     )
+    TESTS_MIRROR_SOURCE_STRUCTURE = "tests.mirror-source-structure"
+    TEST_FIXTURES_DO_NOT_BUNDLE_MOCKS = "tests.fixtures-do-not-bundle-mocks"
+    INTEGRATION_TESTS_DO_NOT_MOCK_INTERNAL_USE_CASES_OR_SERVICES = (
+        "tests.integration-does-not-mock-internal-use-cases-or-services"
+    )
     SERVICES_DO_NOT_OPEN_UNIT_OF_WORK_SCOPES = "uow.services-do-not-open-scopes"
     USE_CASES_OPEN_AT_MOST_ONE_UNIT_OF_WORK_SCOPE = "uow.use-cases-open-at-most-one-scope"
     USE_CASES_INJECT_UNIT_OF_WORK_MANAGERS = "uow.use-cases-inject-managers"

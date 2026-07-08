@@ -388,14 +388,21 @@ transaction for each use-case execution.
 
 ## Integration Tests
 
-- Use real adapters against temporary databases or stub servers.
+- Add adapter integration tests only when they cover project-owned behavior:
+  nontrivial mapping, query shape, exception translation, lifecycle policy, or
+  a regression that is not already covered through a use case or route.
+- Use real adapters against temporary databases or stub servers only for those
+  meaningful cases.
 - For SQLAlchemy, run `alembic upgrade head` against the temporary database
-  before exercising repositories or HTTP routes.
+  before exercising repositories or HTTP routes when such a test is justified.
 - Add a migration smoke test that verifies expected tables and
   `alembic_version` exist.
 - Add an Alembic drift test with `alembic check` or the equivalent command API.
 - Keep delivery integration tests away from SQLAlchemy models and sessions.
 - Test exception translation at the adapter boundary when callers depend on it.
+- Do not add generic CRUD round-trip repository tests, model declaration tests,
+  or session factory tests just to prove SQLAlchemy, Redis, HTTP clients, or
+  other upstream libraries work.
 
 ## Avoid
 

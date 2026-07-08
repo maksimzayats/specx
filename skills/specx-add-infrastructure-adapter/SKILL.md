@@ -31,9 +31,17 @@ Use this skill whenever code talks to external systems. Read
    `UnitOfWorkManager`; register the manager, not a UoW provider.
 9. Register adapter bindings in private `_register_dependencies(...)` inside
    `ioc/container.py`.
-10. Add focused integration tests for adapter behavior.
+10. Add focused integration tests only when the adapter has meaningful
+    project-owned behavior to protect; do not add generic CRUD or upstream
+    library tests just because an adapter file exists.
 11. For SQLAlchemy adapters, add or update Alembic migrations with
    `$specx-sqlalchemy-migrations`.
+
+## Code Style
+
+Use blank lines as logical separators in all code. Keep related statements
+together, but separate independent setup, action, assertion, response, branch,
+and transformation groups so long blocks stay readable.
 
 ## References
 

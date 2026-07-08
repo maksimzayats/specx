@@ -33,6 +33,12 @@ category may need a project-local foundation base. Read
 9. Keep business rules, delivery behavior, adapter code, and runtime wiring out
    of project-local foundation modules.
 
+## Code Style
+
+Use blank lines as logical separators in all code. Keep related statements
+together, but separate independent setup, action, assertion, response, branch,
+and transformation groups so long blocks stay readable.
+
 ## References
 
 - `references/foundation.md` - packaged base catalog, import paths, extension

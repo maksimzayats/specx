@@ -42,9 +42,51 @@ src/order_service/
     __init__.py
     container.py
 tests/
+  __init__.py
+  _support/
+    __init__.py
+    bases/
+      __init__.py
+    clients/
+      __init__.py
+    db/
+      __init__.py
+    fakes/
+      __init__.py
   unit/
+    __init__.py
+    core/
+      __init__.py
+      health/
+        __init__.py
+        services/
+          __init__.py
+          test_health_reporter_service.py
+        use_cases/
+          __init__.py
+          test_check_health.py
   integration/
-  architecture/
+    __init__.py
+    core/
+      __init__.py
+      health/
+        __init__.py
+        use_cases/
+          __init__.py
+          test_check_health.py
+    delivery/
+      __init__.py
+      fastapi/
+        __init__.py
+        controllers/
+          __init__.py
+          test_health.py
+        test_factory.py
+  guardrails/
+    __init__.py
+    architecture/
+      __init__.py
+      test_boundaries.py
 ```
 
 Create only directories that contain real files. Import default bases from
@@ -57,6 +99,8 @@ as OpenAI, payments, email, queues, or external HTTP APIs. Add
 `core/<scope>/infrastructure/` only when the scope has technical IO adapters.
 Add `delivery/<framework>/services/` only when controllers need delivery-only
 helpers such as auth or rate limiting. Keep every `__init__.py` empty.
+Every created test directory also gets an empty `__init__.py`; do not add test
+package re-exports or setup behavior there.
 
 When stable cross-scope application primitives exist, add `shared/`. When
 SQLAlchemy exists, add top-level `infrastructure/sqlalchemy/`, `alembic.ini`,
@@ -96,7 +140,7 @@ Recommended content:
 - Tests: `make test`
 - Targeted unit tests: `uv run pytest tests/unit`
 - Targeted integration tests: `uv run pytest tests/integration`
-- Targeted architecture tests: `uv run pytest tests/architecture`
+- Targeted guardrail tests: `uv run pytest tests/guardrails`
 
 ## Architecture Rules
 
@@ -144,6 +188,40 @@ Recommended content:
 - Prefer `@dataclass(kw_only=True, slots=True)` for services, use cases,
   controllers, factories, adapters, and similar non-Pydantic behavior classes.
 - Keep all `__init__.py` files empty.
+
+## Tests
+
+- Tests mirror source module paths under `tests/unit` or `tests/integration`.
+- Private test helpers live under `tests/_support`; this is not a test suite.
+- Architecture policy wrappers live under `tests/guardrails`.
+- Every test directory has an empty `__init__.py`.
+- Required generated tests are currently scoped to core services, use cases,
+  and capabilities.
+- Unit tests use fresh `diwire` test containers with typed fakes for replaced
+  ports, then resolve services and use cases from the container.
+- Integration tests use the real internal app graph and override only external
+  systems or the transactional test session factory.
+- Core use-case integration tests live under `tests/integration/core/...` and
+  call resolved use cases directly against the transactional DB.
+- Delivery integration tests live under `tests/integration/delivery/...` and
+  own HTTP route/status/schema/error mapping.
+- Test bodies should receive resolved components, fakes, mocks, or
+  container-backed clients from fixtures.
+- Do not hand-build application graphs in tests or support factories.
+- Before adding a test, sanity-check that it would fail for a plausible bug and
+  that its assertion protects behavior, a boundary, or a contract.
+- Do not add tests just to have mirrored files. Cover real project behavior,
+  not upstream library behavior.
+- Do not mock internal use cases or services in integration tests.
+- Do not add tests that only assert `container.resolve(...)` returns an
+  instance.
+- FastAPI route tests compare response status codes with `fastapi.status`
+  constants, not raw integer literals.
+- Mock fixtures should register one external collaborator for the behavior
+  under test. Do not bundle unrelated mocks in a dict or class-keyed fixture.
+- Do not enable `diwire.integrations.pytest_plugin` or use `Injected[...]`
+  parameters in tests; keep test injection explicit with native pytest
+  fixtures.
 ```
 
 When SQLAlchemy/Alembic exists, also add the migration shape, commands, and
@@ -354,7 +432,8 @@ from order_service.delivery.fastapi.factory import FastAPIFactory
 from order_service.ioc.container import get_container
 
 container = get_container()
-app = container.resolve(FastAPIFactory)()
+app_factory = container.resolve(FastAPIFactory)
+app = app_factory()
 ```
 
 Container:

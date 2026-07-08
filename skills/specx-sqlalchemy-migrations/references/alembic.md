@@ -239,7 +239,11 @@ def test_alembic_model_discovery_finds_every_core_model_module() -> None:
 ```
 
 Repository and delivery integration tests should use migrated temporary
-databases. They should not call `create_all`.
+databases. Prefer one migrated database plus per-test outer transactions and
+SQLAlchemy savepoints; for SQLite/aiosqlite create the test engine with
+`connect_args={"autocommit": False}`. Migration tests use fresh temp database
+files because DDL is the behavior under test. Tests should not call
+`create_all`.
 
 ## Avoid
 

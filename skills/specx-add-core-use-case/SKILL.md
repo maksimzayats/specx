@@ -41,6 +41,12 @@ not an active UoW instance. Read/effect services may receive the active
 Commands are allowed to change state. Queries are read-only and should not call
 repository mutators such as `add`, `save`, `create`, `update`, or `delete`.
 
+## Code Style
+
+Use blank lines as logical separators in all code. Keep related statements
+together, but separate independent setup, action, assertion, response, branch,
+and transformation groups so long blocks stay readable.
+
 ## References
 
 - `references/use-case.md` - use-case class shape, DTO examples, UoW examples,
