@@ -1,55 +1,98 @@
-# Modern Python Template
+# Specx Skills
 
-**A FastAPI service template with clean boundaries, async persistence, and strict guardrails.**
+Install from this repo with:
 
-Modern Python Template gives you a production-shaped starting point for API
-services without carrying old-framework baggage. It combines FastAPI, async
-SQLAlchemy, Alembic, dependency injection, authentication flows, Redis-backed
-rate limiting, and strict checks in a layout that keeps application decisions
-separate from adapters.
+```bash
+npx skills add maksimzayats/specx --skill '*' --agent codex -y
+```
 
-[Documentation](https://template.zayats.dev) ·
-[Contribute](CONTRIBUTING.md)
+List locally before installing:
 
-## Key Benefits
+```bash
+npx skills add . --list --full-depth
+```
 
-- **Clean boundaries from the first commit.** Use cases, services, DTOs,
-  repository contracts, delivery adapters, and SQLAlchemy adapters live in
-  focused modules with architecture tests that keep those lines visible.
-- **Real API behavior included.** The template ships with user registration,
-  JWT issue/refresh/revoke flows, current-user and staff lookup endpoints,
-  health checks, and rate limiting as working examples.
-- **Async persistence without hidden transactions.** Database work goes through
-  repositories inside unit-of-work scopes, with Alembic migrations and
-  PostgreSQL-ready local infrastructure.
-- **Strict quality checks as guardrails.** Ruff, WPS/flake8, mypy, strict
-  pytest, architecture tests, meaningful docstring checks, and 100% coverage
-  keep the template clear for people and future agents.
+Validate the catalog:
 
-## What You Get
+```bash
+make check
+```
 
-- A FastAPI-only service foundation with full `/api/v1/...` routes.
-- SQLAlchemy async repositories and explicit unit-of-work transactions.
-- Dependency injection through `diwire` without framework leakage into core
-  code.
-- Docker Compose services for PostgreSQL, PgBouncer, and Redis.
-- Documentation that explains the boundaries, workflows, and operating model.
-- Agent rules that preserve scoped files, repository usage, and test DI
-  discipline.
+## new:
 
-## Why Modern Python Template
+```text
+src/<package>/
+  foundation/
+    command.py               # base for state-changing use-case inputs
+    dto.py                   # base for result payloads
+    entity.py                # base for framework-free state
+    exceptions.py            # application exception bases
+    factory.py               # base for app/client/session factories
+    repository.py            # base for repository ports
+    service.py               # base for core services
+    settings.py              # base for pydantic-settings classes
+    query.py                 # base for read-only use-case inputs
+    unit_of_work.py          # base for active UoW contracts
+    unit_of_work_manager.py  # base for UoW lifecycle managers
+    use_case.py              # base for application actions
+    delivery/
+      controller.py          # base for delivery controllers
+      service.py             # base for auth/rate-limit/request helpers
+      fastapi/schema.py      # base for FastAPI schemas
+    infrastructure/
+      sqlalchemy/model.py    # base for SQLAlchemy models
+  core/
+    <scope>/                  # application/domain boundary, e.g. tasks
+      dtos/                   # use-case result DTOs
+      entities/               # framework-free state
+      exceptions/             # application errors
+      repositories/           # ports/contracts for external IO
+      services/               # reusable core behavior
+      use_cases/              # externally meaningful actions
+      infrastructure/         # scope-owned DB/Redis/HTTP adapters, if needed
+  delivery/
+    fastapi/
+      app.py                  # runtime import target
+      factory.py              # app composition/lifespan
+      controllers/            # one controller per scoped use-case set
+      schemas/                # request/response models
+      services/               # auth/rate-limit/request helpers, if needed
+  infrastructure/              # shared technical resources
+    sqlalchemy/                # app-wide engine/session/settings, if needed
+  ioc/                        # diwire container and private registrations
+  shared/                     # optional stable cross-scope primitives
+migrations/                    # Alembic migration environment, if SQL exists
+```
 
-Modern Python services are easiest to evolve when the default path is already
-boring in the right places: clear modules, explicit transactions, small
-controllers, tested adapters, and checks that catch drift before it spreads.
-This template keeps those decisions ready to copy so a new service can start
-with useful structure instead of cleanup work.
+`core/<scope>/delivery/` is intentionally not part of the structure. Delivery
+logic lives in top-level `delivery/`.
+Every non-foundation class should inherit an explicit base and use the suffix
+implied by foundation base ancestry: `Command`, `Query`, `DTO`, `Entity`,
+`Schema`, `Service`, `Repository`, `UnitOfWork`, `UnitOfWorkManager`, `UseCase`,
+`Controller`, `Factory`, `Settings`, `Enum`, `Model`, etc. Major classes should
+include a docstring that explains the class scope and shows a concrete
+`Example:`. Use case inputs are same-file `Command` or `Query` classes:
+commands are state-changing, queries are read-only, and empty inputs are still
+explicit. Use cases return DTOs, not entities. Persistence use cases inject a
+`UnitOfWorkManager` and open an active `UnitOfWork` inside `execute(...)`; do
+not inject `Provider[UnitOfWork]`. Deterministic use cases with no external IO
+do not need a UoW. Add a new foundation base only when a real class category
+exists and no current base fits. SQLAlchemy projects use Alembic migrations, not
+`metadata.create_all` application bootstraps.
 
-## Contributing
+## Skills
 
-Developer setup, commands, project layout, architecture rules, and validation
-workflow live in [CONTRIBUTING.md](CONTRIBUTING.md).
+- `specx-project-structure` - Create the `core`, `delivery`, `ioc`, optional `shared`, and test roots.
+- `specx-foundation` - Add explicit base classes and guardrails for project class inheritance.
+- `specx-project-tooling` - Set up `uv`, Ruff, mypy, pytest, Makefile targets, and local checks.
+- `specx-diwire-composition` - Wire `diwire.Container`, `Injected[...]`, private registrations, and overrides.
 
-## License
+- `specx-component-architecture` - Define scope boundaries, import rules, DTO/schema placement, and shared conventions.
+- `specx-add-core-use-case` - Add one application action with `execute(...)`, DTOs, services, and UoW ownership.
+- `specx-add-core-service` - Add focused reusable core behavior without transaction ownership.
+- `specx-add-infrastructure-adapter` - Add DB, Redis, network, repository, or UoW adapters for core ports.
+- `specx-sqlalchemy-migrations` - Add async Alembic config, revisions, commands, and migration tests.
+- `specx-add-delivery-controller` - Add FastAPI controllers, schemas, and delivery-only helpers.
 
-Modern Python Template is released under the [MIT License](LICENSE.md).
+- `specx-settings` - Add focused `pydantic-settings` classes and inject config instead of reading env in core.
+- `specx-tests` - Add unit, integration, e2e, and architecture tests for behavior, wiring, and boundaries.

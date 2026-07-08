@@ -1,0 +1,4 @@
+interface:
+  display_name: "Specx Add Core Use Case"
+  short_description: "Add class-based core use cases"
+  default_prompt: "Use $specx-add-core-use-case to add a class-based application use case."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Specx Foundation"
+  short_description: "Add explicit foundation bases"
+  default_prompt: "Use $specx-foundation to add or extend Specx foundation base classes."
