@@ -42,14 +42,28 @@ creating Python backend services with a clean `foundation` / `core` /
 
 - Every non-foundation project class inherits an explicit foundation base.
 - Use cases accept exactly one same-file `Command` or `Query` and return DTOs.
-- Services do not open unit-of-work scopes.
+- Small injectable collaborators inherit `BaseCapability`, live under
+  `core/<scope>/capabilities/`, and do not pretend to be services,
+  repositories, gateways, helpers, managers, or generic dependencies.
+- Direct concrete subclasses of `BaseCapability` end with `Capability`; narrower
+  foundation families such as `BaseClock` or `BaseGenerator` use their narrower
+  suffix.
+- Gateway ports inherit `BaseGateway`, live under `core/<scope>/gateways/`,
+  declare external effects, use business language, and do not return entities.
+- Concrete gateway implementations live under
+  `core/<scope>/infrastructure/<tech>/`.
+- Core services inherit `BasePureService`, `BaseReadService`, or
+  `BaseEffectService`, keep the `Service` suffix, and do not open unit-of-work
+  scopes.
+- Do not add `base_` prefixes to foundation module filenames; class names stay
+  prefixed, for example `capability.py` defines `BaseCapability`.
 - Persistence use cases inject a `UnitOfWorkManager`, not an active UoW or
   provider.
 - Delivery schemas live under the delivery layer, usually
   `delivery/<framework>/schemas/`; use-case DTOs live in `core/<scope>/dtos/`.
 - SQLAlchemy projects use Alembic migrations, not `metadata.create_all`.
-- `diwire.Container` belongs in `ioc`, top-level delivery app/factory modules,
-  and tests only.
+- `diwire.Container` belongs in `ioc`, top-level delivery `__main__.py`/factory
+  modules, and tests only.
 
 ## Working Rules For Agents
 

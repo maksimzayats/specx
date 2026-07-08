@@ -118,7 +118,7 @@ class RegisterUserResultDTO(BaseDTO):
 ## Transaction Rules
 
 - A use case does not need a UoW when all collaborators are deterministic
-  core services and no external persistence is involved.
+  core services/capabilities and no external persistence is involved.
 - Open at most one UoW scope inside `execute(...)`.
 - Open the scope only when the use case needs transactional persistence.
 - Commands may change state. Queries are read-only and should not call
@@ -126,12 +126,31 @@ class RegisterUserResultDTO(BaseDTO):
 - Inject the scope `UnitOfWorkManager`, not `Provider[UnitOfWork]` and not an
   active UoW instance. The manager opens a fresh active UoW for each
   `execute(...)` call.
-- Pass the active `uow` to services that need repositories.
+- Pass the active `unit_of_work` to `BaseReadService` or `BaseEffectService`
+  collaborators that need repositories.
 - Do not let services open transactions.
 - Do not commit, rollback, or close sessions outside the UoW implementation.
 - Return DTOs from use cases. Do not return entities from `execute(...)`.
-- If repositories return entities, map them to result DTOs inside the use case
-  before returning.
+- If repositories return entities, map them to result DTOs before returning
+  from `execute(...)`; a read/effect service may own that DTO mapping when the
+  use case delegates to it.
+
+Good service delegation:
+
+```python
+async with self._unit_of_work_manager as unit_of_work:
+    return await self._task_completion_service.complete(
+        unit_of_work=unit_of_work,
+        task_id=command.task_id,
+    )
+```
+
+Bad service implementation:
+
+```python
+async with self._unit_of_work_manager as unit_of_work:
+    ...
+```
 
 ## Exceptions
 

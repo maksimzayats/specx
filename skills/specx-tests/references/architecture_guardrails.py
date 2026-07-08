@@ -6,9 +6,11 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SRC_ROOT = PROJECT_ROOT / "src" / "__SPECX_PACKAGE_NAME__"
 
 INNER_PACKAGE_NAMES = {
+    "capabilities",
     "dtos",
     "entities",
     "exceptions",
+    "gateways",
     "repositories",
     "services",
     "use_cases",
@@ -22,8 +24,10 @@ BASE_SUFFIXES = (
     "SQLAlchemyModel",
     "Configurator",
     "UnitOfWorkManager",
+    "Capability",
     "Command",
     "Controller",
+    "Gateway",
     "Repository",
     "UnitOfWork",
     "UseCase",
@@ -43,11 +47,69 @@ BASE_SUFFIX_OVERRIDES = {
     "ApplicationValueError": "ValueError",
     "DeliveryService": "Service",
     "FastAPISchema": "Schema",
+    "PureService": "Service",
+    "ReadService": "Service",
+    "EffectService": "Service",
     "RuntimeSettings": "Settings",
     "SQLAlchemyModel": "Model",
 }
 USE_CASE_INPUT_BASE_NAMES = {"BaseCommand", "BaseQuery"}
 USE_CASE_INPUT_ARGUMENTS = {"command", "query"}
+CORE_SERVICE_BASE_NAMES = {"BasePureService", "BaseReadService", "BaseEffectService"}
+CAPABILITY_FORBIDDEN_NAME_SUFFIXES = (
+    "Dependency",
+    "Gateway",
+    "Helper",
+    "Manager",
+    "Repository",
+    "Service",
+    "Util",
+    "Utils",
+    "UseCase",
+)
+GATEWAY_EFFECT_DECLARATION_MARKERS = ("External effect:", "External effects:")
+PURE_SERVICE_FORBIDDEN_DEPENDENCY_FRAGMENTS = (
+    "UnitOfWorkManager",
+    "UnitOfWork",
+    "Repository",
+    "Gateway",
+    "Client",
+    "Settings",
+    "Clock",
+    "UUID",
+    "Random",
+)
+PURE_SERVICE_FORBIDDEN_IMPORT_ROOTS = {
+    "fastapi",
+    "httpx",
+    "openai",
+    "random",
+    "redis",
+    "requests",
+    "sqlalchemy",
+    "time",
+    "uuid",
+}
+PURE_SERVICE_FORBIDDEN_IMPORT_PARTS = {
+    "delivery",
+    "infrastructure",
+    "ioc",
+    "repositories",
+    "settings",
+}
+READ_SERVICE_FORBIDDEN_CALL_NAMES = {
+    "charge",
+    "charge_money",
+    "commit",
+    "publish",
+    "publish_event",
+    "rollback",
+    "send_email",
+    "send_message",
+}
+READ_SERVICE_FORBIDDEN_CALL_PREFIXES = ("charge_", "publish_", "send_")
+EFFECT_SERVICE_FORBIDDEN_IMPORT_ROOTS = {"fastapi", "starlette"}
+EFFECT_SERVICE_FORBIDDEN_IMPORT_PARTS = {"delivery"}
 READ_REPOSITORY_METHOD_NAMES = {"count", "exists", "find", "get", "list", "search"}
 READ_REPOSITORY_METHOD_PREFIXES = (
     "count_by_",
@@ -69,6 +131,18 @@ def _source_paths() -> list[Path]:
     return [path for path in SRC_ROOT.rglob("*.py") if path.name != "__init__.py"]
 
 
+def _core_service_paths() -> list[Path]:
+    return [
+        path
+        for path in (SRC_ROOT / "core").glob("*/services/**/*.py")
+        if path.name != "__init__.py"
+    ]
+
+
+def _core_paths() -> list[Path]:
+    return [path for path in (SRC_ROOT / "core").glob("*/*/**/*.py") if path.name != "__init__.py"]
+
+
 def _tree(path: Path) -> ast.Module:
     return ast.parse(path.read_text(encoding="utf-8"))
 
@@ -85,9 +159,7 @@ def _imports(path: Path) -> set[str]:
                 modules.add(module_name)
             separator = "" if module_name == "" or module_name.endswith(".") else "."
             modules.update(
-                f"{module_name}{separator}{alias.name}"
-                for alias in node.names
-                if alias.name != "*"
+                f"{module_name}{separator}{alias.name}" for alias in node.names if alias.name != "*"
             )
     return modules
 
@@ -114,9 +186,7 @@ def _import_aliases(tree: ast.Module) -> dict[str, str]:
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             for alias in node.names:
-                aliases[alias.asname or alias.name.split(".")[0]] = alias.name.split(
-                    "."
-                )[-1]
+                aliases[alias.asname or alias.name.split(".")[0]] = alias.name.split(".")[-1]
         elif isinstance(node, ast.ImportFrom):
             for alias in node.names:
                 aliases[alias.asname or alias.name] = alias.name
@@ -156,9 +226,7 @@ def _base_name(base: ast.expr, aliases: dict[str, str] | None = None) -> str:
     return ast.unparse(base)
 
 
-def _annotation_name(
-    annotation: ast.expr | None, aliases: dict[str, str] | None = None
-) -> str:
+def _annotation_name(annotation: ast.expr | None, aliases: dict[str, str] | None = None) -> str:
     aliases = aliases or {}
     if annotation is None:
         return ""
@@ -172,9 +240,7 @@ def _annotation_name(
             f"[{_annotation_name(annotation.slice, aliases)}]"
         )
     if isinstance(annotation, ast.Tuple):
-        return ", ".join(
-            _annotation_name(element, aliases) for element in annotation.elts
-        )
+        return ", ".join(_annotation_name(element, aliases) for element in annotation.elts)
     if isinstance(annotation, ast.BinOp) and isinstance(annotation.op, ast.BitOr):
         return (
             f"{_annotation_name(annotation.left, aliases)} | "
@@ -193,6 +259,30 @@ def _class_suffix_from_base(base_name: str) -> str | None:
     )
 
 
+def _capability_family_suffix_from_base(
+    base_name: str,
+    class_base_name_index: dict[str, set[str]],
+) -> str | None:
+    if base_name == "BaseCapability" or not base_name.startswith("Base"):
+        return None
+    if "BaseCapability" not in _foundation_base_names_for_class(
+        base_name,
+        class_base_name_index,
+    ):
+        return None
+    return base_name.removeprefix("Base")
+
+
+def _category_suffix_from_base(
+    base_name: str,
+    class_base_name_index: dict[str, set[str]],
+) -> str | None:
+    return _class_suffix_from_base(base_name) or _capability_family_suffix_from_base(
+        base_name,
+        class_base_name_index,
+    )
+
+
 def _has_scoped_example_docstring(node: ast.ClassDef) -> bool:
     docstring = ast.get_docstring(node)
     if docstring is None or "Example:" not in docstring:
@@ -202,6 +292,13 @@ def _has_scoped_example_docstring(node: ast.ClassDef) -> bool:
         return False
     example_lines = [line.strip() for line in example.splitlines() if line.strip()]
     return scope.strip() != "" and example_lines != []
+
+
+def _declares_external_effect(node: ast.ClassDef) -> bool:
+    docstring = ast.get_docstring(node)
+    return docstring is not None and any(
+        marker in docstring for marker in GATEWAY_EFFECT_DECLARATION_MARKERS
+    )
 
 
 def _field_aliases_for_self_fields(
@@ -299,9 +396,7 @@ def _call_is_rooted_in_names(call: ast.Call, names: set[str]) -> bool:
     return isinstance(call.func, ast.Attribute) and _root_name(call.func.value) in names
 
 
-def _expression_is_rooted_in_names(
-    expression: ast.expr | None, names: set[str]
-) -> bool:
+def _expression_is_rooted_in_names(expression: ast.expr | None, names: set[str]) -> bool:
     return expression is not None and _root_name(expression) in names
 
 
@@ -321,18 +416,11 @@ def _expression_is_rooted_in_self_attributes(
     expression: ast.expr | None,
     attribute_names: set[str],
 ) -> bool:
-    return (
-        expression is not None
-        and _self_attribute_root_name(expression) in attribute_names
-    )
+    return expression is not None and _self_attribute_root_name(expression) in attribute_names
 
 
-def _call_is_rooted_in_self_attributes(
-    call: ast.Call, attribute_names: set[str]
-) -> bool:
-    return isinstance(
-        call.func, ast.Attribute
-    ) and _expression_is_rooted_in_self_attributes(
+def _call_is_rooted_in_self_attributes(call: ast.Call, attribute_names: set[str]) -> bool:
+    return isinstance(call.func, ast.Attribute) and _expression_is_rooted_in_self_attributes(
         call.func.value,
         attribute_names,
     )
@@ -357,17 +445,34 @@ def _active_uow_names(function: ast.AsyncFunctionDef | ast.FunctionDef) -> set[s
     return names
 
 
+def _unit_of_work_argument_names(
+    function: ast.AsyncFunctionDef | ast.FunctionDef,
+    aliases: dict[str, str],
+) -> set[str]:
+    names: set[str] = set()
+    arguments = [*function.args.args, *function.args.kwonlyargs]
+    for argument in arguments:
+        if argument.arg == "self":
+            continue
+        annotation_name = _annotation_name(argument.annotation, aliases)
+        if "UnitOfWork" in annotation_name or argument.arg in {"unit_of_work", "uow"}:
+            names.add(argument.arg)
+    return names
+
+
 def _active_repository_names(
     function: ast.AsyncFunctionDef | ast.FunctionDef,
     *,
+    root_names: set[str] | None = None,
     self_attribute_names: set[str] | None = None,
 ) -> set[str]:
+    root_names = root_names or set()
     self_attribute_names = self_attribute_names or set()
     repository_names: set[str] = set()
     changed = True
     while changed:
         changed = False
-        known_names = _active_uow_names(function) | repository_names
+        known_names = _active_uow_names(function) | root_names | repository_names
         for node in ast.walk(function):
             value: ast.expr | None
             targets: list[ast.expr]
@@ -394,12 +499,19 @@ def _active_repository_names(
 def _repository_result_variable_names(
     function: ast.AsyncFunctionDef | ast.FunctionDef,
     *,
+    root_names: set[str] | None = None,
     self_attribute_names: set[str] | None = None,
 ) -> set[str]:
+    root_names = root_names or set()
     self_attribute_names = self_attribute_names or set()
-    repository_roots = _active_uow_names(function) | _active_repository_names(
-        function,
-        self_attribute_names=self_attribute_names,
+    repository_roots = (
+        _active_uow_names(function)
+        | root_names
+        | _active_repository_names(
+            function,
+            root_names=root_names,
+            self_attribute_names=self_attribute_names,
+        )
     )
     repository_results: set[str] = set()
     changed = True
@@ -454,10 +566,7 @@ def _is_read_repository_method_name(method_name: str) -> bool:
 
 
 def _is_schema_bootstrap_call(call: ast.Call) -> bool:
-    return (
-        isinstance(call.func, ast.Attribute)
-        and call.func.attr in SCHEMA_BOOTSTRAP_METHOD_NAMES
-    )
+    return isinstance(call.func, ast.Attribute) and call.func.attr in SCHEMA_BOOTSTRAP_METHOD_NAMES
 
 
 def _class_direct_base_names(node: ast.ClassDef, aliases: dict[str, str]) -> set[str]:
@@ -522,7 +631,7 @@ def _nearest_foundation_base_names_for_class(
     visited.add(class_name)
     nearest_base_names: set[str] = set()
     for base_name in class_base_name_index.get(class_name, set()):
-        if _class_suffix_from_base(base_name) is not None:
+        if _category_suffix_from_base(base_name, class_base_name_index) is not None:
             nearest_base_names.add(base_name)
             continue
         nearest_base_names.update(
@@ -538,9 +647,7 @@ def _nearest_foundation_base_names_for_class(
 def _execute_methods_with_classes(
     tree: ast.Module,
 ) -> list[tuple[ast.ClassDef, ast.AsyncFunctionDef | ast.FunctionDef]]:
-    execute_methods: list[
-        tuple[ast.ClassDef, ast.AsyncFunctionDef | ast.FunctionDef]
-    ] = []
+    execute_methods: list[tuple[ast.ClassDef, ast.AsyncFunctionDef | ast.FunctionDef]] = []
     for class_node in ast.walk(tree):
         if not isinstance(class_node, ast.ClassDef):
             continue
@@ -560,13 +667,9 @@ def _class_injected_repository_field_names(
 ) -> set[str]:
     field_names: set[str] = set()
     for child in class_node.body:
-        if not isinstance(child, ast.AnnAssign) or not isinstance(
-            child.target, ast.Name
-        ):
+        if not isinstance(child, ast.AnnAssign) or not isinstance(child.target, ast.Name):
             continue
-        dependency_name = _injected_type_name(
-            child.annotation, aliases
-        ) or _annotation_name(
+        dependency_name = _injected_type_name(child.annotation, aliases) or _annotation_name(
             child.annotation,
             aliases,
         )
@@ -585,9 +688,7 @@ def _class_injected_unit_of_work_manager_field_names(
 ) -> set[str]:
     field_names: set[str] = set()
     for child in class_node.body:
-        if not isinstance(child, ast.AnnAssign) or not isinstance(
-            child.target, ast.Name
-        ):
+        if not isinstance(child, ast.AnnAssign) or not isinstance(child.target, ast.Name):
             continue
         injected_type_name = _injected_type_name(child.annotation, aliases)
         if injected_type_name.endswith("UnitOfWorkManager"):
@@ -601,19 +702,77 @@ def _class_unit_of_work_field_names(
 ) -> set[str]:
     field_names: set[str] = set()
     for child in class_node.body:
-        if not isinstance(child, ast.AnnAssign) or not isinstance(
-            child.target, ast.Name
-        ):
+        if not isinstance(child, ast.AnnAssign) or not isinstance(child.target, ast.Name):
             continue
-        dependency_name = _injected_type_name(
-            child.annotation, aliases
-        ) or _annotation_name(
+        dependency_name = _injected_type_name(child.annotation, aliases) or _annotation_name(
             child.annotation,
             aliases,
         )
         if "UnitOfWork" in dependency_name:
             field_names.add(child.target.id)
     return field_names
+
+
+def _class_dependency_annotations(
+    class_node: ast.ClassDef,
+    aliases: dict[str, str],
+) -> list[str]:
+    annotations: list[str] = []
+    for child in class_node.body:
+        if isinstance(child, ast.AnnAssign):
+            annotations.append(
+                _injected_type_name(child.annotation, aliases)
+                or _annotation_name(child.annotation, aliases)
+            )
+        if isinstance(child, ast.AsyncFunctionDef | ast.FunctionDef):
+            arguments = [*child.args.args, *child.args.kwonlyargs]
+            for argument in arguments:
+                if argument.arg == "self":
+                    continue
+                annotations.append(_annotation_name(argument.annotation, aliases))
+            annotations.append(_annotation_name(child.returns, aliases))
+    return [annotation for annotation in annotations if annotation]
+
+
+def _class_has_any_foundation_base(
+    class_name: str,
+    foundation_base_names: set[str],
+    class_base_name_index: dict[str, set[str]],
+) -> bool:
+    return any(
+        _class_has_foundation_base(class_name, foundation_base_name, class_base_name_index)
+        for foundation_base_name in foundation_base_names
+    )
+
+
+def _forbidden_dependency_fragments(
+    dependency_name: str,
+    fragments: tuple[str, ...],
+) -> list[str]:
+    lowered_dependency_name = dependency_name.lower()
+    return [fragment for fragment in fragments if fragment.lower() in lowered_dependency_name]
+
+
+def _calls_forbidden_method(
+    call: ast.Call,
+    method_names: set[str],
+    prefixes: tuple[str, ...],
+) -> bool:
+    return isinstance(call.func, ast.Attribute) and (
+        call.func.attr in method_names or call.func.attr.startswith(prefixes)
+    )
+
+
+def _module_has_forbidden_parts(
+    module: str,
+    *,
+    roots: set[str],
+    parts: set[str],
+) -> bool:
+    module_parts = _module_parts(module)
+    return bool(module_parts) and (
+        module_parts[0] in roots or any(part in parts for part in module_parts)
+    )
 
 
 def test_core_inner_packages_do_not_import_outer_layers_or_io_libraries() -> None:
@@ -665,20 +824,14 @@ def test_use_cases_do_not_import_or_return_entities() -> None:
             if isinstance(node, ast.Import):
                 for alias in node.names:
                     if "entities" in alias.name.split("."):
-                        violations.append(
-                            f"{path.relative_to(PROJECT_ROOT)} imports {alias.name}"
-                        )
+                        violations.append(f"{path.relative_to(PROJECT_ROOT)} imports {alias.name}")
             elif isinstance(node, ast.ImportFrom):
                 module = node.module or ""
                 module_parts = module.split(".")
                 imports_entity_module = "entities" in module_parts
-                imports_entity_name = any(
-                    alias.name.endswith("Entity") for alias in node.names
-                )
+                imports_entity_name = any(alias.name.endswith("Entity") for alias in node.names)
                 if imports_entity_module or (node.level > 0 and imports_entity_name):
-                    violations.append(
-                        f"{path.relative_to(PROJECT_ROOT)} imports {module}"
-                    )
+                    violations.append(f"{path.relative_to(PROJECT_ROOT)} imports {module}")
 
         for class_node, execute in _execute_methods_with_classes(tree):
             repository_attribute_names = _class_injected_repository_field_names(
@@ -705,9 +858,7 @@ def test_use_cases_do_not_import_or_return_entities() -> None:
                     violations.append(
                         f"{path.relative_to(PROJECT_ROOT)} returns repository result directly",
                     )
-                if _expression_is_rooted_in_names(
-                    return_node.value, repository_results
-                ):
+                if _expression_is_rooted_in_names(return_node.value, repository_results):
                     violations.append(
                         f"{path.relative_to(PROJECT_ROOT)} returns repository result expression",
                     )
@@ -775,11 +926,7 @@ def test_use_case_inputs_are_local_commands_or_queries() -> None:
                 continue
             base_names = _class_direct_base_names(node, aliases)
             input_base_name = next(
-                (
-                    base_name
-                    for base_name in base_names
-                    if base_name in USE_CASE_INPUT_BASE_NAMES
-                ),
+                (base_name for base_name in base_names if base_name in USE_CASE_INPUT_BASE_NAMES),
                 None,
             )
             if input_base_name is not None:
@@ -799,9 +946,7 @@ def test_use_case_inputs_are_local_commands_or_queries() -> None:
                 and node.name == "execute"
             ]
             if len(execute_methods) != 1:
-                violations.append(
-                    f"{path.relative_to(PROJECT_ROOT)}:{use_case_class.name}"
-                )
+                violations.append(f"{path.relative_to(PROJECT_ROOT)}:{use_case_class.name}")
                 continue
             execute = execute_methods[0]
             args = execute.args
@@ -813,35 +958,23 @@ def test_use_case_inputs_are_local_commands_or_queries() -> None:
                 or len(args.kwonlyargs) != 1
                 or args.kw_defaults != [None]
             ):
-                violations.append(
-                    f"{path.relative_to(PROJECT_ROOT)}:{use_case_class.name}"
-                )
+                violations.append(f"{path.relative_to(PROJECT_ROOT)}:{use_case_class.name}")
                 continue
             input_arg = args.kwonlyargs[0]
             input_name = input_arg.arg
             input_annotation = _annotation_name(input_arg.annotation, aliases)
             input_base_name = local_input_classes.get(input_annotation)
             if input_name not in USE_CASE_INPUT_ARGUMENTS or input_base_name is None:
-                violations.append(
-                    f"{path.relative_to(PROJECT_ROOT)}:{use_case_class.name}"
-                )
+                violations.append(f"{path.relative_to(PROJECT_ROOT)}:{use_case_class.name}")
                 continue
             consumed_input_classes.add(input_annotation)
             if input_name == "command" and input_base_name != "BaseCommand":
-                violations.append(
-                    f"{path.relative_to(PROJECT_ROOT)}:{use_case_class.name}"
-                )
+                violations.append(f"{path.relative_to(PROJECT_ROOT)}:{use_case_class.name}")
             if input_name == "query" and input_base_name != "BaseQuery":
-                violations.append(
-                    f"{path.relative_to(PROJECT_ROOT)}:{use_case_class.name}"
-                )
+                violations.append(f"{path.relative_to(PROJECT_ROOT)}:{use_case_class.name}")
 
-        for input_class_name in sorted(
-            set(local_input_classes) - consumed_input_classes
-        ):
-            violations.append(
-                f"{path.relative_to(PROJECT_ROOT)}:{input_class_name} is unused"
-            )
+        for input_class_name in sorted(set(local_input_classes) - consumed_input_classes):
+            violations.append(f"{path.relative_to(PROJECT_ROOT)}:{input_class_name} is unused")
     assert violations == []
 
 
@@ -860,6 +993,164 @@ def test_command_and_query_classes_live_with_use_cases() -> None:
     assert violations == []
 
 
+def test_capabilities_live_in_expected_packages_and_use_expected_suffixes() -> None:
+    violations = []
+    class_base_name_index = _class_base_name_index()
+    for path in _source_paths():
+        if "foundation" in path.relative_to(SRC_ROOT).parts:
+            continue
+        relative_parts = path.relative_to(SRC_ROOT).parts
+        tree = _tree(path)
+        aliases = _import_aliases(tree)
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.ClassDef):
+                continue
+            if not _class_has_foundation_base(
+                node.name,
+                "BaseCapability",
+                class_base_name_index,
+            ):
+                continue
+            if relative_parts[0] == "core":
+                inner_package = relative_parts[2] if len(relative_parts) > 2 else ""
+                if inner_package != "capabilities":
+                    violations.append(
+                        f"{path.relative_to(PROJECT_ROOT)}:{node.name} "
+                        "capability outside capabilities",
+                    )
+            elif relative_parts[0] != "shared":
+                violations.append(
+                    f"{path.relative_to(PROJECT_ROOT)}:{node.name} capability outside core/shared",
+                )
+            direct_base_names = _class_direct_base_names(node, aliases)
+            if "BaseCapability" in direct_base_names and not node.name.endswith("Capability"):
+                violations.append(
+                    f"{path.relative_to(PROJECT_ROOT)}:{node.name} "
+                    "direct BaseCapability subclass must end with Capability",
+                )
+    assert violations == []
+
+
+def test_capabilities_do_not_own_workflows_or_other_port_roles() -> None:
+    violations = []
+    class_base_name_index = _class_base_name_index()
+    for path in _source_paths():
+        if "foundation" in path.relative_to(SRC_ROOT).parts:
+            continue
+        tree = _tree(path)
+        aliases = _import_aliases(tree)
+        for class_node in [node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)]:
+            if not _class_has_foundation_base(
+                class_node.name,
+                "BaseCapability",
+                class_base_name_index,
+            ):
+                continue
+            capability_role_name = class_node.name.removesuffix("Capability")
+            forbidden_suffix = next(
+                (
+                    suffix
+                    for suffix in CAPABILITY_FORBIDDEN_NAME_SUFFIXES
+                    if class_node.name.endswith(suffix) or capability_role_name.endswith(suffix)
+                ),
+                None,
+            )
+            if forbidden_suffix is not None:
+                violations.append(
+                    f"{path.relative_to(PROJECT_ROOT)}:{class_node.name} "
+                    f"uses {forbidden_suffix} role name",
+                )
+            for incompatible_base_name in ("BaseRepository", "BaseGateway", "BaseUseCase"):
+                if _class_has_foundation_base(
+                    class_node.name,
+                    incompatible_base_name,
+                    class_base_name_index,
+                ):
+                    violations.append(
+                        f"{path.relative_to(PROJECT_ROOT)}:{class_node.name} "
+                        f"also inherits {incompatible_base_name}",
+                    )
+            unit_of_work_fields = _class_unit_of_work_field_names(class_node, aliases)
+            if unit_of_work_fields:
+                violations.append(
+                    f"{path.relative_to(PROJECT_ROOT)}:{class_node.name} "
+                    f"depends on {sorted(unit_of_work_fields)}",
+                )
+            for child in class_node.body:
+                if not isinstance(child, ast.AsyncFunctionDef | ast.FunctionDef):
+                    continue
+                context_fields = _context_self_fields(child, unit_of_work_fields)
+                if context_fields:
+                    violations.append(
+                        f"{path.relative_to(PROJECT_ROOT)}:{class_node.name} "
+                        f"opens {sorted(context_fields)}",
+                    )
+    assert violations == []
+
+
+def test_gateway_ports_and_implementations_live_in_expected_packages() -> None:
+    violations = []
+    class_base_name_index = _class_base_name_index()
+    for path in _core_paths():
+        relative_parts = path.relative_to(SRC_ROOT / "core").parts
+        if len(relative_parts) < 2:
+            continue
+        inner_package = relative_parts[1]
+        tree = _tree(path)
+        aliases = _import_aliases(tree)
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.ClassDef):
+                continue
+            if not _class_has_foundation_base(
+                node.name,
+                "BaseGateway",
+                class_base_name_index,
+            ):
+                continue
+            direct_base_names = _class_direct_base_names(node, aliases)
+            if "BaseGateway" in direct_base_names and inner_package != "gateways":
+                violations.append(
+                    f"{path.relative_to(PROJECT_ROOT)}:{node.name} port outside gateways",
+                )
+            if "BaseGateway" not in direct_base_names and inner_package != "infrastructure":
+                violations.append(
+                    f"{path.relative_to(PROJECT_ROOT)}:{node.name} implementation "
+                    "outside infrastructure",
+                )
+    assert violations == []
+
+
+def test_gateways_declare_external_effects_and_do_not_return_entities() -> None:
+    violations = []
+    class_base_name_index = _class_base_name_index()
+    for path in _core_paths():
+        tree = _tree(path)
+        aliases = _import_aliases(tree)
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.ClassDef):
+                continue
+            if not _class_has_foundation_base(
+                node.name,
+                "BaseGateway",
+                class_base_name_index,
+            ):
+                continue
+            if not _declares_external_effect(node):
+                violations.append(
+                    f"{path.relative_to(PROJECT_ROOT)}:{node.name} missing external effect",
+                )
+            for child in node.body:
+                if not isinstance(child, ast.AsyncFunctionDef | ast.FunctionDef):
+                    continue
+                return_annotation = _annotation_name(child.returns, aliases)
+                if "Entity" in return_annotation:
+                    violations.append(
+                        f"{path.relative_to(PROJECT_ROOT)}:{node.name}.{child.name} "
+                        f"returns {return_annotation}",
+                    )
+    assert violations == []
+
+
 def test_query_use_cases_do_not_call_repository_mutators() -> None:
     repository_mutator_method_names = _repository_mutator_method_names()
     violations = []
@@ -873,14 +1164,9 @@ def test_query_use_cases_do_not_call_repository_mutators() -> None:
             if isinstance(node, ast.ClassDef)
         }
         for class_node, execute in _execute_methods_with_classes(tree):
-            if (
-                len(execute.args.kwonlyargs) != 1
-                or execute.args.kwonlyargs[0].arg != "query"
-            ):
+            if len(execute.args.kwonlyargs) != 1 or execute.args.kwonlyargs[0].arg != "query":
                 continue
-            query_annotation = _annotation_name(
-                execute.args.kwonlyargs[0].annotation, aliases
-            )
+            query_annotation = _annotation_name(execute.args.kwonlyargs[0].annotation, aliases)
             if "BaseQuery" not in local_input_classes.get(query_annotation, set()):
                 continue
             repository_attribute_names = _class_injected_repository_field_names(
@@ -900,9 +1186,7 @@ def test_query_use_cases_do_not_call_repository_mutators() -> None:
                 and call.func.attr in repository_mutator_method_names
                 and (
                     _call_is_rooted_in_names(call, repository_roots)
-                    or _call_is_rooted_in_self_attributes(
-                        call, repository_attribute_names
-                    )
+                    or _call_is_rooted_in_self_attributes(call, repository_attribute_names)
                 )
             ]
             if mutator_calls:
@@ -929,9 +1213,7 @@ def test_classes_have_scoped_docstrings_with_examples() -> None:
     for path in _source_paths():
         tree = _tree(path)
         for node in ast.walk(tree):
-            if isinstance(node, ast.ClassDef) and not _has_scoped_example_docstring(
-                node
-            ):
+            if isinstance(node, ast.ClassDef) and not _has_scoped_example_docstring(node):
                 violations.append(f"{path.relative_to(PROJECT_ROOT)}:{node.name}")
     assert violations == []
 
@@ -947,6 +1229,192 @@ def test_service_classes_use_service_suffix() -> None:
         for node in ast.walk(tree):
             if isinstance(node, ast.ClassDef) and not node.name.endswith("Service"):
                 violations.append(f"{path.relative_to(PROJECT_ROOT)}:{node.name}")
+    assert violations == []
+
+
+def test_core_services_use_effect_specific_service_bases() -> None:
+    violations = []
+    class_base_name_index = _class_base_name_index()
+    for path in _core_service_paths():
+        tree = _tree(path)
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.ClassDef):
+                continue
+            if not _class_has_any_foundation_base(
+                node.name,
+                CORE_SERVICE_BASE_NAMES,
+                class_base_name_index,
+            ):
+                violations.append(f"{path.relative_to(PROJECT_ROOT)}:{node.name}")
+    assert violations == []
+
+
+def test_generic_base_service_is_not_used() -> None:
+    violations = []
+    for path in _source_paths():
+        tree = _tree(path)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef) and node.name == "BaseService":
+                violations.append(f"{path.relative_to(PROJECT_ROOT)}:{node.name}")
+            if isinstance(node, ast.ImportFrom):
+                imported_names = {alias.name for alias in node.names}
+                if "BaseService" in imported_names:
+                    violations.append(f"{path.relative_to(PROJECT_ROOT)} imports BaseService")
+    assert violations == []
+
+
+def test_pure_services_do_not_depend_on_io_or_runtime_state() -> None:
+    violations = []
+    class_base_name_index = _class_base_name_index()
+    for path in _core_service_paths():
+        tree = _tree(path)
+        aliases = _import_aliases(tree)
+        pure_service_classes = [
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ClassDef)
+            and _class_has_foundation_base(
+                node.name,
+                "BasePureService",
+                class_base_name_index,
+            )
+        ]
+        if not pure_service_classes:
+            continue
+        for module in _imports(path):
+            if _module_has_forbidden_parts(
+                module,
+                roots=PURE_SERVICE_FORBIDDEN_IMPORT_ROOTS,
+                parts=PURE_SERVICE_FORBIDDEN_IMPORT_PARTS,
+            ):
+                violations.append(f"{path.relative_to(PROJECT_ROOT)} imports {module}")
+        for class_node in pure_service_classes:
+            for dependency_name in _class_dependency_annotations(class_node, aliases):
+                fragments = _forbidden_dependency_fragments(
+                    dependency_name,
+                    PURE_SERVICE_FORBIDDEN_DEPENDENCY_FRAGMENTS,
+                )
+                if fragments:
+                    violations.append(
+                        f"{path.relative_to(PROJECT_ROOT)}:{class_node.name} "
+                        f"uses {dependency_name}",
+                    )
+    assert violations == []
+
+
+def test_read_services_do_not_perform_writes_or_own_transactions() -> None:
+    violations = []
+    class_base_name_index = _class_base_name_index()
+    repository_mutator_method_names = _repository_mutator_method_names()
+    for path in _core_service_paths():
+        tree = _tree(path)
+        aliases = _import_aliases(tree)
+        read_service_classes = [
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ClassDef)
+            and _class_has_foundation_base(
+                node.name,
+                "BaseReadService",
+                class_base_name_index,
+            )
+        ]
+        for class_node in read_service_classes:
+            manager_fields = _class_injected_unit_of_work_manager_field_names(
+                class_node,
+                aliases,
+            )
+            if manager_fields:
+                violations.append(
+                    f"{path.relative_to(PROJECT_ROOT)}:{class_node.name} "
+                    f"injects {sorted(manager_fields)}",
+                )
+            for child in class_node.body:
+                if not isinstance(child, ast.AsyncFunctionDef | ast.FunctionDef):
+                    continue
+                unit_of_work_argument_names = _unit_of_work_argument_names(child, aliases)
+                repository_roots = unit_of_work_argument_names | _active_repository_names(
+                    child,
+                    root_names=unit_of_work_argument_names,
+                )
+                for call in (node for node in ast.walk(child) if isinstance(node, ast.Call)):
+                    call_method_name = (
+                        call.func.attr if isinstance(call.func, ast.Attribute) else ""
+                    )
+                    if _calls_forbidden_method(
+                        call,
+                        READ_SERVICE_FORBIDDEN_CALL_NAMES,
+                        READ_SERVICE_FORBIDDEN_CALL_PREFIXES,
+                    ):
+                        violations.append(
+                            f"{path.relative_to(PROJECT_ROOT)}:{class_node.name} "
+                            f"calls {call_method_name}",
+                        )
+                    if (
+                        isinstance(call.func, ast.Attribute)
+                        and call.func.attr in repository_mutator_method_names
+                        and _call_is_rooted_in_names(call, repository_roots)
+                    ):
+                        violations.append(
+                            f"{path.relative_to(PROJECT_ROOT)}:{class_node.name} "
+                            f"calls repository mutator {call.func.attr}",
+                        )
+    assert violations == []
+
+
+def test_effect_services_do_not_own_transactions_or_import_delivery() -> None:
+    violations = []
+    class_base_name_index = _class_base_name_index()
+    for path in _core_service_paths():
+        tree = _tree(path)
+        aliases = _import_aliases(tree)
+        effect_service_classes = [
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ClassDef)
+            and _class_has_foundation_base(
+                node.name,
+                "BaseEffectService",
+                class_base_name_index,
+            )
+        ]
+        if not effect_service_classes:
+            continue
+        for module in _imports(path):
+            if _module_has_forbidden_parts(
+                module,
+                roots=EFFECT_SERVICE_FORBIDDEN_IMPORT_ROOTS,
+                parts=EFFECT_SERVICE_FORBIDDEN_IMPORT_PARTS,
+            ):
+                violations.append(f"{path.relative_to(PROJECT_ROOT)} imports {module}")
+        for class_node in effect_service_classes:
+            manager_fields = _class_injected_unit_of_work_manager_field_names(
+                class_node,
+                aliases,
+            )
+            if manager_fields:
+                violations.append(
+                    f"{path.relative_to(PROJECT_ROOT)}:{class_node.name} "
+                    f"injects {sorted(manager_fields)}",
+                )
+            for child in class_node.body:
+                if not isinstance(child, ast.AsyncFunctionDef | ast.FunctionDef):
+                    continue
+                return_annotation = _annotation_name(child.returns, aliases)
+                if "Entity" in return_annotation:
+                    violations.append(
+                        f"{path.relative_to(PROJECT_ROOT)}:{class_node.name} "
+                        f"returns {return_annotation}",
+                    )
+                for call in (node for node in ast.walk(child) if isinstance(node, ast.Call)):
+                    if isinstance(call.func, ast.Attribute) and call.func.attr in {
+                        "commit",
+                        "rollback",
+                    }:
+                        violations.append(
+                            f"{path.relative_to(PROJECT_ROOT)}:{class_node.name} "
+                            f"calls {call.func.attr}",
+                        )
     assert violations == []
 
 
@@ -967,7 +1435,8 @@ def test_classes_use_suffix_from_most_specific_foundation_category() -> None:
             suffixes = {
                 suffix
                 for base_name in foundation_base_names
-                if (suffix := _class_suffix_from_base(base_name)) is not None
+                if (suffix := _category_suffix_from_base(base_name, class_base_name_index))
+                is not None
             }
             if not suffixes:
                 violations.append(
@@ -1000,9 +1469,7 @@ def test_non_foundation_classes_do_not_use_raw_common_bases() -> None:
         for node in ast.walk(tree):
             if not isinstance(node, ast.ClassDef):
                 continue
-            raw_bases = {
-                _base_name(base, aliases) for base in node.bases
-            } & raw_base_names
+            raw_bases = {_base_name(base, aliases) for base in node.bases} & raw_base_names
             if raw_bases:
                 violations.append(
                     f"{path.relative_to(PROJECT_ROOT)}:{node.name} uses {sorted(raw_bases)}",
@@ -1019,7 +1486,7 @@ def test_only_ioc_delivery_app_and_tests_import_container() -> None:
         relative = path.relative_to(SRC_ROOT)
         allowed = (
             relative == Path("ioc/container.py")
-            or relative == Path("delivery/fastapi/app.py")
+            or relative == Path("delivery/fastapi/__main__.py")
             or relative == Path("delivery/fastapi/factory.py")
         )
         if not allowed:
@@ -1034,25 +1501,18 @@ def test_public_routes_use_full_api_v1_paths() -> None:
         for node in ast.walk(tree):
             if not isinstance(node, ast.Call):
                 continue
-            if (
-                not isinstance(node.func, ast.Attribute)
-                or node.func.attr != "add_api_route"
-            ):
+            if not isinstance(node.func, ast.Attribute) or node.func.attr != "add_api_route":
                 continue
             path_keyword = next(
                 (keyword for keyword in node.keywords if keyword.arg == "path"),
                 None,
             )
             if path_keyword is None or not isinstance(path_keyword.value, ast.Constant):
-                violations.append(
-                    f"{path.relative_to(PROJECT_ROOT)} has dynamic route path"
-                )
+                violations.append(f"{path.relative_to(PROJECT_ROOT)} has dynamic route path")
                 continue
             route_path = path_keyword.value.value
             if not isinstance(route_path, str) or not route_path.startswith("/api/v1/"):
-                violations.append(
-                    f"{path.relative_to(PROJECT_ROOT)} uses {route_path!r}"
-                )
+                violations.append(f"{path.relative_to(PROJECT_ROOT)} uses {route_path!r}")
     assert violations == []
 
 
@@ -1074,20 +1534,23 @@ def test_root_agents_md_documents_project_commands_and_boundaries() -> None:
     text = (PROJECT_ROOT / "AGENTS.md").read_text(encoding="utf-8")
     required_fragments = {
         "Package lives under `src/__SPECX_PACKAGE_NAME__`",
-        "FastAPI entrypoint: `__SPECX_PACKAGE_NAME__.delivery.fastapi.app:app`",
+        "FastAPI entrypoint: `__SPECX_PACKAGE_NAME__.delivery.fastapi.__main__:app`",
         "make check",
         "make lint",
         "make test",
         "make migration-check",
         "make makemigrations",
+        "BaseCapability",
+        "BaseGateway",
+        "BasePureService",
+        "BaseReadService",
+        "BaseEffectService",
         "Use cases return DTOs, not entities",
         "Query use cases must not call repository mutators",
         "Do not use `create_all()` or `drop_all()`",
     }
 
-    missing_fragments = sorted(
-        fragment for fragment in required_fragments if fragment not in text
-    )
+    missing_fragments = sorted(fragment for fragment in required_fragments if fragment not in text)
     missing_make_targets = sorted(_documented_make_targets(text) - _makefile_targets())
 
     assert missing_fragments == []
@@ -1099,9 +1562,7 @@ def test_services_do_not_open_unit_of_work_scopes() -> None:
     for path in (SRC_ROOT / "core").glob("*/services/**/*.py"):
         tree = _tree(path)
         aliases = _import_aliases(tree)
-        for class_node in [
-            node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)
-        ]:
+        for class_node in [node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)]:
             unit_of_work_fields = _class_unit_of_work_field_names(class_node, aliases)
             if not unit_of_work_fields:
                 continue
@@ -1129,9 +1590,7 @@ def test_use_cases_open_at_most_one_unit_of_work_scope() -> None:
             )
             count = _uow_manager_context_count(execute, manager_fields)
             if count > 1:
-                violations.append(
-                    f"{path.relative_to(PROJECT_ROOT)} opens {count} UoWs"
-                )
+                violations.append(f"{path.relative_to(PROJECT_ROOT)} opens {count} UoWs")
     assert violations == []
 
 
@@ -1141,9 +1600,7 @@ def test_use_cases_inject_unit_of_work_managers() -> None:
     for path in (SRC_ROOT / "core").glob("*/use_cases/**/*.py"):
         tree = _tree(path)
         aliases = _import_aliases(tree)
-        for class_node in [
-            node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)
-        ]:
+        for class_node in [node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)]:
             base_names = _class_direct_base_names(class_node, aliases)
             if "BaseUseCase" not in base_names and not _class_has_foundation_base(
                 class_node.name,
@@ -1161,15 +1618,10 @@ def test_use_cases_inject_unit_of_work_managers() -> None:
                     continue
                 annotation_name = _annotation_name(child.annotation, aliases)
                 injected_type_name = _injected_type_name(child.annotation, aliases)
-                field_name = (
-                    child.target.id if isinstance(child.target, ast.Name) else ""
-                )
+                field_name = child.target.id if isinstance(child.target, ast.Name) else ""
                 if "Provider" in annotation_name:
                     bad_dependency_fields.append(f"{field_name}:{annotation_name}")
-                if (
-                    "UnitOfWork" in annotation_name
-                    and "UnitOfWorkManager" not in annotation_name
-                ):
+                if "UnitOfWork" in annotation_name and "UnitOfWorkManager" not in annotation_name:
                     bad_dependency_fields.append(f"{field_name}:{annotation_name}")
                 if "UnitOfWorkManager" in annotation_name:
                     if injected_type_name.endswith("UnitOfWorkManager"):
@@ -1180,18 +1632,14 @@ def test_use_cases_inject_unit_of_work_managers() -> None:
                     isinstance(child, ast.AsyncFunctionDef | ast.FunctionDef)
                     and child.name == "execute"
                 ):
-                    context_fields = _uow_manager_context_fields(
-                        child, injected_manager_fields
-                    )
+                    context_fields = _uow_manager_context_fields(child, injected_manager_fields)
                     unknown_context_fields = context_fields - injected_manager_fields
                     if unknown_context_fields:
                         bad_dependency_fields.append(
                             f"opens non-injected manager fields {sorted(unknown_context_fields)}",
                         )
                     if injected_manager_fields and not context_fields:
-                        bad_dependency_fields.append(
-                            "injects UoW manager but does not open it"
-                        )
+                        bad_dependency_fields.append("injects UoW manager but does not open it")
             if bad_dependency_fields:
                 violations.append(
                     f"{path.relative_to(PROJECT_ROOT)}:{class_node.name} {bad_dependency_fields}",
@@ -1223,9 +1671,7 @@ def test_ioc_container_does_not_register_active_unit_of_work() -> None:
             None,
         )
         provides_name = _annotation_name(provides, aliases)
-        if provides_name.endswith("UnitOfWork") and not provides_name.endswith(
-            "UnitOfWorkManager"
-        ):
+        if provides_name.endswith("UnitOfWork") and not provides_name.endswith("UnitOfWorkManager"):
             violations.append(f"registers active {provides_name}")
     assert violations == []
 

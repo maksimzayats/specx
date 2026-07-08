@@ -8,6 +8,9 @@ from task_db_service.core.tasks.exceptions.task_not_found_error import TaskNotFo
 from task_db_service.core.tasks.infrastructure.sqlalchemy.task_unit_of_work import (
     SQLAlchemyTaskUnitOfWorkManager,
 )
+from task_db_service.core.tasks.services.task_completion_service import TaskCompletionService
+from task_db_service.core.tasks.services.task_creation_service import TaskCreationService
+from task_db_service.core.tasks.services.task_lookup_service import TaskLookupService
 from task_db_service.core.tasks.services.task_title_normalizer_service import (
     TaskTitleNormalizerService,
 )
@@ -45,13 +48,25 @@ def migrated_database_url(
 @pytest.mark.anyio
 async def test_sqlalchemy_task_use_cases_persist_tasks(migrated_database_url: str) -> None:
     unit_of_work_manager = _unit_of_work_manager(database_url=migrated_database_url)
+    task_lookup_service = TaskLookupService()
     create_task = CreateTaskUseCase(
-        _task_title_normalizer_service=TaskTitleNormalizerService(),
+        _task_creation_service=TaskCreationService(
+            _task_title_normalizer_service=TaskTitleNormalizerService(),
+        ),
         _unit_of_work_manager=unit_of_work_manager,
     )
-    get_task = GetTaskUseCase(_unit_of_work_manager=unit_of_work_manager)
-    list_tasks = ListTasksUseCase(_unit_of_work_manager=unit_of_work_manager)
-    complete_task = CompleteTaskUseCase(_unit_of_work_manager=unit_of_work_manager)
+    get_task = GetTaskUseCase(
+        _task_lookup_service=task_lookup_service,
+        _unit_of_work_manager=unit_of_work_manager,
+    )
+    list_tasks = ListTasksUseCase(
+        _task_lookup_service=task_lookup_service,
+        _unit_of_work_manager=unit_of_work_manager,
+    )
+    complete_task = CompleteTaskUseCase(
+        _task_completion_service=TaskCompletionService(),
+        _unit_of_work_manager=unit_of_work_manager,
+    )
 
     created = await create_task.execute(command=CreateTaskCommand(title="  Ship skill  "))
     listed = await list_tasks.execute(query=ListTasksQuery())
@@ -78,7 +93,10 @@ async def test_sqlalchemy_task_unit_of_work_manager_rolls_back_on_exception(
     with pytest.raises(RuntimeError, match="boom"):
         await add_then_fail()
 
-    list_tasks = ListTasksUseCase(_unit_of_work_manager=unit_of_work_manager)
+    list_tasks = ListTasksUseCase(
+        _task_lookup_service=TaskLookupService(),
+        _unit_of_work_manager=unit_of_work_manager,
+    )
     result = await list_tasks.execute(query=ListTasksQuery())
 
     assert result.tasks == []
@@ -99,6 +117,7 @@ async def test_sqlalchemy_task_unit_of_work_manager_rejects_nested_scopes(
 @pytest.mark.anyio
 async def test_get_task_raises_when_missing(migrated_database_url: str) -> None:
     get_task = GetTaskUseCase(
+        _task_lookup_service=TaskLookupService(),
         _unit_of_work_manager=_unit_of_work_manager(database_url=migrated_database_url),
     )
 

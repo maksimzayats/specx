@@ -8,6 +8,7 @@ inherit raw external bases directly when a project-owned base exists.
 
 ```text
 foundation/
+  capability.py
   command.py
   configurator.py
   dto.py
@@ -15,9 +16,12 @@ foundation/
   enums.py
   exceptions.py
   factory.py
+  gateway.py
+  effect_service.py
+  pure_service.py
+  read_service.py
   repository.py
   query.py
-  service.py
   settings.py
   unit_of_work.py
   unit_of_work_manager.py
@@ -32,21 +36,31 @@ foundation/
       model.py
 ```
 
-Create only the files needed by real classes. Plain marker bases in foundation
-should use `class BaseThing:` with a scoped docstring and the smallest useful
-body.
+Create only the files needed by real classes. Foundation modules should use
+unprefixed filenames such as `capability.py`, `gateway.py`, and
+`pure_service.py`. Foundation class names stay prefixed, for example
+`BaseCapability`, `BaseGateway`, `BasePureService`, `BaseReadService`, and
+`BaseEffectService`. New narrower capability-family bases stay prefixed too,
+for example `BaseClock` or `BaseGenerator`.
 
 Concrete class names use the suffix implied by their foundation base ancestry:
 `BaseCommand` -> `Command`, `BaseQuery` -> `Query`, `BaseDTO` -> `DTO`,
 `BaseEntity` -> `Entity`, `BaseFastAPISchema` -> `Schema`,
-`BaseUseCase` -> `UseCase`, `BaseService` -> `Service`,
-`BaseRepository` -> `Repository`, `BaseUnitOfWork` -> `UnitOfWork`,
-`BaseUnitOfWorkManager` -> `UnitOfWorkManager`, `BaseController` ->
-`Controller`, `BaseFactory` -> `Factory`, `BaseConfigurator` ->
-`Configurator`, `BaseRuntimeSettings` -> `Settings`, `BaseStrEnum` -> `Enum`,
-`BaseDeliveryService` -> `Service`, `BaseApplicationError` -> `Error`,
-`BaseApplicationValueError` -> `ValueError`, and `BaseSQLAlchemyModel` ->
-`Model`.
+`BaseUseCase` -> `UseCase`, `BaseCapability` -> `Capability`,
+`BaseGateway` -> `Gateway`, `BasePureService` / `BaseReadService` /
+`BaseEffectService` -> `Service`, `BaseRepository` -> `Repository`,
+`BaseUnitOfWork` -> `UnitOfWork`, `BaseUnitOfWorkManager` ->
+`UnitOfWorkManager`, `BaseController` -> `Controller`, `BaseFactory` ->
+`Factory`, `BaseConfigurator` -> `Configurator`, `BaseRuntimeSettings` ->
+`Settings`, `BaseStrEnum` -> `Enum`, `BaseDeliveryService` -> `Service`,
+`BaseApplicationError` -> `Error`, `BaseApplicationValueError` ->
+`ValueError`, and `BaseSQLAlchemyModel` -> `Model`.
+
+Direct concrete subclasses of `BaseCapability` use the `Capability` suffix.
+When a capability family becomes common or needs stronger review rules, add a
+narrower foundation base inheriting `BaseCapability`; concrete classes then use
+the narrower suffix, for example `BaseClock` -> `SystemClock` and
+`BaseGenerator` -> `UUID7Generator`.
 
 ## Base Catalog
 
@@ -56,10 +70,21 @@ Use these names unless the repo already has stronger local names:
 - `BaseQuery` for read-only use-case inputs.
 - `BaseDTO` for result DTOs and other core payloads.
 - `BaseEntity` for framework-free entities and value objects.
-- `BaseService` for focused reusable application behavior. Concrete core
-  services still use the `Service` suffix.
+- `BaseCapability` for small injectable collaborators that do one narrow thing,
+  may be faked or swapped, and do not own application workflows, UoW scopes,
+  repositories, or gateways.
+- `BaseGateway` for core-facing outbound business capability ports to external
+  systems. Gateway ports live under `core/<scope>/gateways/`, use business
+  language, declare external effects, and do not return entities.
+- `BasePureService` for deterministic core helpers with no IO, UoW,
+  repository, gateway, client, settings, clock, UUID, random, time, SQLAlchemy,
+  Redis, OpenAI SDK, or framework dependency.
+- `BaseReadService` for read-only orchestration helpers that may read through
+  repositories/read gateways, preferably via an active UoW passed by the caller.
+- `BaseEffectService` for helpers that perform or coordinate side effects
+  through an active UoW or effect gateways. They must not open UoW scopes.
 - `BaseUseCase` for externally meaningful application actions.
-- `BaseRepository` for repository/port contracts.
+- `BaseRepository` for owned-persistence repository ports and adapters.
 - `BaseUnitOfWork` for active unit-of-work contracts exposed inside manager
   scopes.
 - `BaseUnitOfWorkManager` for objects that open, finish, and close active units
@@ -124,13 +149,79 @@ class BaseQuery(BaseDTO):
 ```
 
 ```python
-class BaseService:
-    """Base for focused reusable core behavior.
+class BaseCapability:
+    """Base class for small injectable collaborators.
+
+    Capabilities do one narrow thing, may be injected or faked, and do not own
+    application workflows, unit-of-work scopes, repositories, or gateways.
 
     Example:
-        class OrderPricingService(BaseService):
-            def calculate_total(self, *, subtotal: int) -> int:
-                return subtotal
+        SlugGeneratingCapability creates slugs for display labels.
+        BaseClock can be introduced later for concrete clocks such as SystemClock.
+        BaseGenerator can be introduced later for classes such as UUID7Generator.
+    """
+```
+
+```python
+class BaseGateway:
+    """Base class for outbound business capabilities.
+
+    Gateways are core-facing interfaces to external systems. A gateway should
+    expose business language, not SDK or HTTP details.
+
+    Example:
+        TaskSummaryGateway generates summaries for task descriptions.
+        PaymentGateway charges customers.
+        EmailGateway sends transactional emails.
+    """
+```
+
+```python
+class BasePureService:
+    """Base class for deterministic business helpers.
+
+    Pure services do not perform I/O, do not use repositories, do not use
+    gateways, and do not depend on unit-of-work objects, settings, clocks,
+    UUID generators, random numbers, HTTP clients, SQLAlchemy, Redis, or SDKs.
+
+    Example:
+        class TaskTitleNormalizerService(BasePureService):
+            def normalize(self, *, title: str) -> str:
+                return " ".join(title.split())
+    """
+```
+
+```python
+class BaseReadService:
+    """Base class for read-only orchestration helpers.
+
+    Read services may read from repositories or read gateways, usually through
+    an active unit of work passed by the caller. They may map entities to DTOs,
+    but they must not commit, roll back, call repository mutators, publish
+    messages, send email, charge money, or call external write APIs.
+
+    Example:
+        class TaskLookupService(BaseReadService):
+            async def get(self, *, unit_of_work: TaskUnitOfWork, task_id: int) -> TaskDTO:
+                task = await unit_of_work.tasks.get(task_id=task_id)
+                return TaskDTO.model_validate(task)
+    """
+```
+
+```python
+class BaseEffectService:
+    """Base class for helpers that perform or coordinate side effects.
+
+    Effect services may mutate owned state through an active unit of work
+    passed by a use case, or call outbound gateways with real side effects.
+    They must not open unit-of-work scopes, own transaction lifecycle, return
+    entities outward, or import delivery/framework code.
+
+    Example:
+        class TaskCompletionService(BaseEffectService):
+            async def complete(self, *, unit_of_work: TaskUnitOfWork, task_id: int) -> TaskDTO:
+                task = await unit_of_work.tasks.complete(task_id=task_id)
+                return TaskDTO.model_validate(task)
     """
 ```
 
@@ -259,11 +350,11 @@ class BaseSQLAlchemyModel(DeclarativeBase):
 ```python
 from dataclasses import dataclass
 
-from order_service.foundation.service import BaseService
+from order_service.foundation.pure_service import BasePureService
 
 
 @dataclass(kw_only=True, slots=True)
-class OrderPricingService(BaseService):
+class OrderPricingService(BasePureService):
     """Service that prices orders.
 
     Example:
@@ -326,6 +417,22 @@ Useful checks:
 - foundation classes have scoped docstrings with concrete examples;
 - major non-foundation classes have scoped docstrings with concrete examples;
 - class names use the suffix implied by their foundation base ancestry;
+- direct concrete `BaseCapability` subclasses use the `Capability` suffix;
+- narrower foundation bases inheriting `BaseCapability` use their narrower
+  suffix, for example `BaseClock` -> `SystemClock`;
+- capabilities do not open UoW scopes, inherit repository/gateway bases, or use
+  generic `Helper`, `Utils`, `Manager`, or `Dependency` names;
+- gateway ports live under `core/<scope>/gateways/`, concrete gateway
+  implementations live under `core/<scope>/infrastructure/<technology>/`,
+  gateway docstrings declare external effects, and gateway methods do not
+  return entities;
+- core services inherit `BasePureService`, `BaseReadService`, or
+  `BaseEffectService`, not a generic `BaseService`;
+- pure services do not import IO/runtime-state dependencies;
+- read services do not call repository mutators or transaction lifecycle
+  methods;
+- effect services do not inject UoW managers, open UoW scopes, commit, roll
+  back, return entities outward, or import delivery/framework code;
 - non-foundation classes do not directly inherit `BaseModel`, `BaseSettings`,
   `ABC`, `Exception`, `ValueError`, `DeclarativeBase`, `StrEnum`, or `object`;
 - foundation does not import `core`, `delivery`, `ioc`, or scope

@@ -4,9 +4,7 @@ from diwire import Injected
 
 from task_db_service.core.tasks.dtos.task_dto import TaskDTO
 from task_db_service.core.tasks.repositories.task_unit_of_work import TaskUnitOfWorkManager
-from task_db_service.core.tasks.services.task_title_normalizer_service import (
-    TaskTitleNormalizerService,
-)
+from task_db_service.core.tasks.services.task_creation_service import TaskCreationService
 from task_db_service.foundation.command import BaseCommand
 from task_db_service.foundation.use_case import BaseUseCase
 
@@ -29,11 +27,12 @@ class CreateTaskUseCase(BaseUseCase):
         task = await use_case.execute(command=CreateTaskCommand(title="Ship skill"))
     """
 
-    _task_title_normalizer_service: Injected[TaskTitleNormalizerService]
+    _task_creation_service: Injected[TaskCreationService]
     _unit_of_work_manager: Injected[TaskUnitOfWorkManager]
 
     async def execute(self, *, command: CreateTaskCommand) -> TaskDTO:
-        title = self._task_title_normalizer_service.normalize(title=command.title)
         async with self._unit_of_work_manager as unit_of_work:
-            task = await unit_of_work.tasks.add(title=title)
-        return TaskDTO.model_validate(task)
+            return await self._task_creation_service.create(
+                unit_of_work=unit_of_work,
+                title=command.title,
+            )

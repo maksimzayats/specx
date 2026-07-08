@@ -1,6 +1,6 @@
 ---
 name: specx-component-architecture
-description: Design or review Specx core scope boundaries in Python services. Use when deciding where code belongs across `foundation/`, `core/`, top-level `delivery/`, top-level infrastructure, scope infrastructure adapters, `shared/`, and `ioc`; when adding import guardrails; or when splitting use cases, services, DTOs, schemas, ports, adapters, and foundation bases.
+description: Design or review Specx core scope boundaries in Python services. Use when deciding where code belongs across `foundation/`, `core/`, capabilities, top-level `delivery/`, top-level infrastructure, scope infrastructure adapters, `shared/`, and `ioc`; when adding import guardrails; or when splitting use cases, services, capabilities, DTOs, schemas, ports, adapters, and foundation bases.
 ---
 
 # Specx Scope Architecture
@@ -11,8 +11,8 @@ than one layer. Read `references/boundaries.md` for the full rules.
 ## Boundary Model
 
 - `core/<scope>/`: application behavior and contracts. Inner packages are
-  `dtos/`, `entities`, `exceptions/`, `repositories/`, `services/`, and
-  `use_cases/`.
+  `capabilities/`, `dtos/`, `entities`, `exceptions/`, `gateways/`,
+  `repositories/`, `services/`, and `use_cases/`.
 - `core/<scope>/infrastructure/`: scope-owned external IO adapters such as
   SQLAlchemy repositories, Redis stores, HTTP clients, file storage, and queues.
   Inner core packages must not import it.
@@ -30,8 +30,22 @@ than one layer. Read `references/boundaries.md` for the full rules.
 ## Decision Rules
 
 - Use a use case for an externally meaningful action.
-- Use a service for focused reusable behavior.
+- Use a service for focused reusable business/application behavior.
+- Use a capability for one small replaceable injectable ability that is
+  narrower than a service.
 - Name every service class with a `Service` suffix.
+- Name direct concrete `BaseCapability` subclasses with a `Capability` suffix.
+- Do not call small collaborators services by default.
+- Core services inherit `BasePureService`, `BaseReadService`, or
+  `BaseEffectService`; do not add or use a generic `BaseService`.
+- Do not add `base_` prefixes to foundation module filenames. Class names stay
+  prefixed, for example `capability.py` defines `BaseCapability`.
+- Use gateway ports under `core/<scope>/gateways/` for outbound business
+  capabilities such as OpenAI summaries, payments, email, queues, and external
+  APIs. Gateway ports inherit `BaseGateway`, declare external effects, and do
+  not return entities.
+- Put concrete gateway implementations under
+  `core/<scope>/infrastructure/<technology>/`.
 - Use existing foundation bases before adding new ones.
 - Add a new foundation base only when a real class category exists and no
   existing base fits.
@@ -47,6 +61,8 @@ than one layer. Read `references/boundaries.md` for the full rules.
 - Use cases return DTOs, not entities.
 - Persistence use cases inject `UnitOfWorkManager` for transactional work and
   open the active UoW inside `execute(...)`.
+- Services may receive an active UoW from a use case, but services must not
+  open UoW scopes or own commit/rollback.
 - Give major classes a docstring that explains scope and includes a concrete
   `Example:`.
 - Keep controller-only helpers such as auth and rate limiting in `delivery/`.

@@ -1,6 +1,6 @@
 ---
 name: specx-project-structure
-description: Create or reshape a Python service repo into the Specx clean core/delivery/foundation layout. Use when starting a new backend repo, converting a template into skills, adding the first src package, or establishing `AGENTS.md`, `foundation/`, `core/`, `delivery/`, top-level `infrastructure/`, `ioc/`, optional `shared/`, conditional migrations, and test roots for FastAPI, `diwire`, and class-based application code.
+description: Create or reshape a Python service repo into the Specx clean core/delivery/foundation layout. Use when starting a new backend repo, converting a template into skills, adding the first src package, or establishing `AGENTS.md`, `foundation/`, `core/`, optional `capabilities/`, `delivery/`, top-level `infrastructure/`, `ioc/`, optional `shared/`, conditional migrations, and test roots for FastAPI, `diwire`, and class-based application code.
 ---
 
 # Specx Project Structure
@@ -15,9 +15,10 @@ details, read `references/blueprint.md`.
 2. Create `src/<package>/` with empty `__init__.py` files only.
 3. Add `foundation/` with the base classes used by the classes that exist now.
 4. Use `core/<scope>/` as the main boundary. Put application packages at the
-   scope root: `dtos/`, `entities/`, `exceptions/`, `repositories/`,
-   `services/`, and `use_cases/`. Put scope-owned technical adapters under
-   `infrastructure/` only when real IO exists.
+   scope root: `capabilities/`, `dtos/`, `entities/`, `exceptions/`,
+   `gateways/`, `repositories/`, `services/`, and `use_cases/`. Put
+   scope-owned technical adapters under `infrastructure/` only when real IO
+   exists.
 5. Add top-level `delivery/` for runnable framework apps, controllers,
    request/response schemas, and delivery-only services.
 6. Add top-level `infrastructure/` for shared technical resources such as
@@ -39,30 +40,48 @@ details, read `references/blueprint.md`.
 
 - Keep `__init__.py` files empty.
 - Every project class must inherit an explicit base class.
-- Prefer foundation bases such as `BaseDTO`, `BaseEntity`, `BaseService`,
+- Prefer foundation bases such as `BaseDTO`, `BaseEntity`, `BaseCapability`,
+  `BaseGateway`, `BasePureService`, `BaseReadService`, `BaseEffectService`,
   `BaseCommand`, `BaseQuery`, `BaseUseCase`, `BaseRepository`, `BaseUnitOfWork`,
   `BaseUnitOfWorkManager`, `BaseController`, `BaseFastAPISchema`, and
   `BaseFactory`.
+- Do not add `base_` prefixes to foundation module filenames. Class names stay
+  prefixed, for example `capability.py` defines `BaseCapability`.
 - Every major class should have a docstring that explains the class scope and
   includes a concrete `Example:`.
 - Extend `foundation/` with a new base class only when a real class category
   exists and no existing base fits.
-- Core application code (`dtos/`, `entities/`, `exceptions/`, `repositories/`,
-  `services/`, `use_cases/`) must not import FastAPI, SQLAlchemy, Redis, HTTP
-  clients, `delivery`, or the DI container.
+- Core application code (`capabilities/`, `dtos/`, `entities/`, `exceptions/`,
+  `gateways/`, `repositories/`, `services/`, `use_cases/`) must not import
+  FastAPI, SQLAlchemy, Redis, HTTP clients, `delivery`, or the DI container.
+- Capabilities inherit `BaseCapability`, live under
+  `core/<scope>/capabilities/`, do one narrow injectable thing, and do not own
+  workflows, open UoW scopes, or act as repositories/gateways/services.
+- Direct concrete `BaseCapability` subclasses use the `Capability` suffix.
+  Narrower foundation families such as `BaseClock` or `BaseGenerator` use their
+  narrower suffix.
+- Gateway ports inherit `BaseGateway`, live under `core/<scope>/gateways/`, use
+  business language, declare external effects in docstrings, and do not return
+  entities.
+- Concrete gateway implementations live under
+  `core/<scope>/infrastructure/<technology>/`.
 - Do not put a `delivery/` folder under `core/<scope>/`.
 - Delivery maps framework input/output and calls use cases.
 - Use one controller per scoped set of use cases, for example one
   `TasksController` for create/get/list task routes.
 - Put delivery-only logic such as auth dependencies, rate limiting, request
   context, and controller helpers under `delivery/`, not `core/`.
-- Every class under a `services/` package must end with `Service`.
+- Every class under a `services/` package must end with `Service`. Core
+  services choose `BasePureService`, `BaseReadService`, or `BaseEffectService`;
+  do not create a generic `BaseService`.
+- Use cases open UoW scopes. Core services may use an active UoW passed by a
+  use case, but services must not open UoW scopes or own commit/rollback.
 - Infrastructure contains technical IO only. No business decisions there.
 - App-wide technical infrastructure must not live inside one core scope.
 - SQLAlchemy schema is managed with Alembic migrations, not application
   `metadata.create_all` calls.
-- `ioc/` and top-level delivery app/factory modules may import across layers to
-  compose the app.
+- `ioc/` and top-level delivery `__main__.py`/factory modules may import across
+  layers to compose the app.
 - Prefer one primary public class per file.
 - Prefer class-based use cases, services, controllers, factories, and adapters.
 - Prefer `@dataclass(kw_only=True, slots=True)` for non-Pydantic services, use

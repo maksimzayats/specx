@@ -20,9 +20,9 @@ Use this skill for one application action at a time. Read
    DTOs inherit `BaseDTO`.
 6. `execute(...)` accepts exactly one keyword-only argument named `command` or
    `query` and returns DTOs, not entities.
-7. Inject services, ports, and settings with `Injected[...]`. For transactional
-   persistence, inject the scope `UnitOfWorkManager` and open the active unit
-   of work inside `execute(...)`.
+7. Inject services, capabilities, repositories, gateways, and settings with
+   `Injected[...]`. For transactional persistence, inject the scope
+   `UnitOfWorkManager` and open the active unit of work inside `execute(...)`.
 8. Keep framework schemas, routers, ORM models, Redis clients, HTTP clients,
    and entity return types
    out of the use case.
@@ -32,8 +32,8 @@ Use this skill for one application action at a time. Read
 
 A use case may open one unit-of-work scope inside `execute(...)` when database
 work is part of the action. Inject the manager, not `Provider[UnitOfWork]` and
-not an active UoW instance. Services may receive the active `uow`, but services
-do not open transactions.
+not an active UoW instance. Read/effect services may receive the active
+`unit_of_work`, but services do not open transactions.
 
 Commands are allowed to change state. Queries are read-only and should not call
 repository mutators such as `add`, `save`, `create`, `update`, or `delete`.

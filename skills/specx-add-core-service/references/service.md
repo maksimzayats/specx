@@ -4,6 +4,11 @@ Services own focused reusable core behavior. Delivery-only helpers such as
 auth dependencies, rate limiting, and request-context adapters live under
 `delivery/`, not `core/<scope>/services/`.
 
+Do not call small collaborators services by default. Use `Service` for reusable
+business/application behavior. Use `BaseCapability` for small replaceable abilities
+that do one narrow thing, can be faked or swapped, and do not own workflows,
+UoW scopes, repositories, or gateways.
+
 ## Class Shape
 
 ```python
@@ -11,11 +16,11 @@ from dataclasses import dataclass
 
 from diwire import Injected
 
-from order_service.foundation.service import BaseService
+from order_service.foundation.pure_service import BasePureService
 
 
 @dataclass(kw_only=True, slots=True)
-class OrderPricingService(BaseService):
+class OrderPricingService(BasePureService):
     """Service that prices orders from items and tax policy.
 
     Example:
@@ -30,8 +35,72 @@ class OrderPricingService(BaseService):
         return subtotal + tax
 ```
 
-Use `BaseService` and `Injected[...]` for dependencies. Keep methods
-keyword-only. Every service class name must end with `Service`.
+Choose `BasePureService`, `BaseReadService`, or `BaseEffectService` and use
+`Injected[...]` for dependencies. Keep methods keyword-only. Every service
+class name must end with `Service`. Do not add or use a generic `BaseService`.
+
+## Service Base Choice
+
+Use `BasePureService` for deterministic business helpers.
+
+Allowed:
+
+- primitives;
+- entities passed as arguments;
+- value objects;
+- DTOs when needed;
+- other pure services.
+
+Forbidden:
+
+- `UnitOfWorkManager`;
+- active `UnitOfWork`;
+- repositories;
+- gateways;
+- clients;
+- settings;
+- clocks;
+- UUID generators;
+- random/time;
+- HTTP;
+- SQLAlchemy;
+- Redis;
+- OpenAI SDK.
+
+Use `BaseReadService` for read-only orchestration helpers.
+
+Allowed:
+
+- repository reads, preferably through an active UoW passed by the caller;
+- read gateways;
+- pure services;
+- DTO mapping.
+
+Forbidden:
+
+- commit/rollback;
+- `UnitOfWorkManager`;
+- repository mutators;
+- external write gateways;
+- message publishing;
+- sending email;
+- charging money.
+
+Use `BaseEffectService` for helpers that perform or coordinate side effects.
+
+Allowed:
+
+- effect gateways;
+- active UoW passed by a command use case;
+- repository mutators through that active UoW;
+- pure services.
+
+Forbidden:
+
+- opening UoW scopes;
+- owning transaction lifecycle;
+- returning entities outward;
+- importing delivery/framework code.
 
 ## Dependency Choice
 
@@ -47,51 +116,83 @@ deliberately part of the application behavior or a starter/demo implementation
 with no external IO. Name it honestly with the `Service` suffix, for example
 `OrderSummaryStoreService` or `StaticCatalogService`, and keep it under
 `services/` only while it has no database, network, filesystem, Redis, clock, or
-randomness dependency. Move it behind a core port and infrastructure adapter as
-soon as it becomes external IO.
+randomness dependency. If it is just one small replaceable ability, make it a
+`BaseCapability` under `core/<scope>/capabilities/` instead. Move it behind a core
+gateway port and infrastructure adapter as soon as it becomes external IO.
 
-Inject a core port/ABC when:
+Inject a core repository or gateway port when:
 
 - it wraps external IO;
 - it hides a framework or SDK;
 - it has multiple real implementations;
 - replacing it in tests is important.
 
+Repository ports live under `core/<scope>/repositories/` and model owned
+persistence. Gateway ports live under `core/<scope>/gateways/` and model
+outbound business capabilities such as OpenAI summaries, payments, email, or
+external APIs.
+
 ## UoW Parameters
 
-Services may receive an active UoW as a method argument:
+Read/effect services may receive an active UoW as a method argument:
 
 ```python
+from order_service.foundation.read_service import BaseReadService
+
+
 @dataclass(kw_only=True, slots=True)
-class UserCredentialCheckingService(BaseService):
-    """Service that checks user credentials inside an active UoW.
+class TaskLookupService(BaseReadService):
+    """Service that reads task DTOs from an active task unit of work.
 
     Example:
-        user = await service.authenticate(uow=uow, email=email, password=password)
+        task = await service.get(unit_of_work=unit_of_work, task_id=1)
     """
 
-    _password_hashing_service: Injected[PasswordHashingService]
-
-    async def authenticate(
-        self,
-        *,
-        uow: UnitOfWork,
-        email: str,
-        password: str,
-    ) -> User | None:
-        user = await uow.users.find_by_email(email=email)
-        if user is None:
-            return None
-        password_valid = self._password_hashing_service.verify(
-            raw_password=password,
-            password_hash=user.password_hash,
-        )
-        if not password_valid:
-            return None
-        return user
+    async def get(self, *, unit_of_work: TaskUnitOfWork, task_id: int) -> TaskDTO:
+        task = await unit_of_work.tasks.get(task_id=task_id)
+        if task is None:
+            raise TaskNotFoundError(task_id=task_id)
+        return TaskDTO.model_validate(task)
 ```
 
-The service does not open `async with uow`. The use case owns the transaction.
+The service does not open `async with self._unit_of_work_manager`. The use case
+owns the transaction:
+
+```python
+async with self._unit_of_work_manager as unit_of_work:
+    return await self._task_completion_service.complete(
+        unit_of_work=unit_of_work,
+        task_id=command.task_id,
+    )
+```
+
+This service implementation is wrong because it hides transaction lifecycle:
+
+```python
+async with self._unit_of_work_manager as unit_of_work:
+    ...
+```
+
+Effect services follow the same active-UoW rule:
+
+```python
+from order_service.foundation.effect_service import BaseEffectService
+
+
+@dataclass(kw_only=True, slots=True)
+class TaskCompletionService(BaseEffectService):
+    """Service that completes tasks inside an active task unit of work.
+
+    Example:
+        task = await service.complete(unit_of_work=unit_of_work, task_id=1)
+    """
+
+    async def complete(self, *, unit_of_work: TaskUnitOfWork, task_id: int) -> TaskDTO:
+        task = await unit_of_work.tasks.complete(task_id=task_id)
+        if task is None:
+            raise TaskNotFoundError(task_id=task_id)
+        return TaskDTO.model_validate(task)
+```
 
 ## Unit Tests
 
@@ -111,6 +212,7 @@ def test_order_pricer_adds_tax() -> None:
 ## Avoid
 
 - No `Manager`, `Helper`, `Utils`, or vague `Handler` names.
+- No small swappable ability modeled as a service; use `BaseCapability`.
 - No framework imports.
 - No SQLAlchemy/Redis/HTTP clients.
 - No transaction scopes.

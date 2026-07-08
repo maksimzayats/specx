@@ -1,6 +1,7 @@
 # Specx Infrastructure Adapter Reference
 
-Infrastructure adapters perform technical IO for core repository/port contracts.
+Infrastructure adapters perform technical IO for core repository and gateway
+contracts.
 
 ## Core Port
 
@@ -25,10 +26,37 @@ class UserDirectoryRepository(BaseRepository):
         raise NotImplementedError
 ```
 
-Define ports in `core/<scope>/repositories/` only when there is real
-boundary pressure.
+Define repositories in `core/<scope>/repositories/` for owned persistence.
+Define gateways in `core/<scope>/gateways/` for outbound business capabilities
+provided by external systems.
 
-## HTTP Adapter
+## Core Gateway Port
+
+```python
+from order_service.core.tasks.dtos.task_summary_dto import TaskSummaryDTO
+from order_service.foundation.gateway import BaseGateway
+
+
+class TaskSummaryGateway(BaseGateway):
+    """Gateway that generates task summaries.
+
+    External effect: calls a configured text-generation provider.
+
+    Example:
+        summary = await gateway.generate_summary(description="Ship the skill")
+    """
+
+    async def generate_summary(self, *, description: str) -> TaskSummaryDTO:
+        raise NotImplementedError
+```
+
+Gateway ports expose business capabilities, not provider mechanics. Avoid names
+such as `OpenAIClientGateway` for the core port. Use
+`TaskSummaryGateway.generate_summary(...)`, not `post_chat_completion(...)`.
+Gateway methods must not return entities, ORM models, SDK responses, or raw HTTP
+responses.
+
+## HTTP Or SDK Gateway Adapter
 
 Inject a network client or a project-owned client factory. Do not instantiate
 `httpx.AsyncClient` directly inside `find_*`, `send_*`, or other adapter
@@ -102,6 +130,44 @@ Settings can live near the adapter if only that adapter consumes them.
 If the app needs a long-lived shared client, create and dispose it in an
 delivery app lifespan or factory, add it to the container as an instance, and
 inject that instance into the adapter. Keep lifecycle ownership outside core.
+
+OpenAI-style gateway implementation:
+
+```python
+from dataclasses import dataclass
+
+from diwire import Injected
+from openai import AsyncOpenAI
+
+from order_service.core.tasks.dtos.task_summary_dto import TaskSummaryDTO
+from order_service.core.tasks.gateways.task_summary_gateway import TaskSummaryGateway
+from order_service.core.tasks.infrastructure.openai.settings import OpenAISettings
+
+
+@dataclass(kw_only=True, slots=True)
+class OpenAITaskSummaryGateway(TaskSummaryGateway):
+    """OpenAI adapter for task summary generation.
+
+    External effect: calls the OpenAI API.
+
+    Example:
+        summary = await gateway.generate_summary(description="Ship the skill")
+    """
+
+    _client: Injected[AsyncOpenAI]
+    _settings: Injected[OpenAISettings]
+
+    async def generate_summary(self, *, description: str) -> TaskSummaryDTO:
+        response = await self._client.responses.create(
+            model=self._settings.summary_model,
+            input=f"Summarize this task: {description}",
+        )
+        return TaskSummaryDTO(text=response.output_text)
+```
+
+Concrete gateway implementations live under
+`core/<scope>/infrastructure/<technology>/` and inherit the scope gateway port,
+not `BaseGateway` directly.
 
 ## SQLAlchemy Repository
 
@@ -315,6 +381,7 @@ or close directly.
 ```python
 def _register_dependencies(container: Container) -> None:
     container.add(HttpUserDirectoryRepository, provides=UserDirectoryRepository)
+    container.add(OpenAITaskSummaryGateway, provides=TaskSummaryGateway)
     container.add(
         SQLAlchemyUnitOfWorkManager,
         provides=UnitOfWorkManager,
@@ -342,5 +409,9 @@ transaction for each use-case execution.
 - No delivery imports.
 - No framework schemas as return values.
 - No raw SDK objects returned to core.
+- No gateway ports under `repositories/`.
+- No concrete gateway implementations outside
+  `core/<scope>/infrastructure/<technology>/`.
+- No entities returned from gateway methods.
 - No bare adapter, repository, factory, or UoW classes.
 - No schema bootstrap helper in `src/`.

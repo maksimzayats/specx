@@ -1,7 +1,7 @@
 .PHONY: check dev format lint makemigrations migrate migration-check test
 
 dev:
-	uv run uvicorn task_db_service.delivery.fastapi.app:app --reload --host 0.0.0.0 --port 8000
+	uv run uvicorn task_db_service.delivery.fastapi.__main__:app --reload --host 0.0.0.0 --port 8000
 
 check: lint migration-check test
 

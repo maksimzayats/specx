@@ -12,15 +12,19 @@ src/order_service/
   __init__.py
   foundation/
     __init__.py
+    capability.py
     command.py
     dto.py
     entity.py
     enums.py
     exceptions.py
     factory.py
+    gateway.py
+    effect_service.py
+    pure_service.py
+    read_service.py
     repository.py
     query.py
-    service.py
     settings.py
     unit_of_work.py
     unit_of_work_manager.py
@@ -54,7 +58,7 @@ src/order_service/
     __init__.py
     fastapi/
       __init__.py
-      app.py
+      __main__.py
       factory.py
       controllers/
         __init__.py
@@ -75,10 +79,13 @@ tests/
 ```
 
 Create only directories that contain real files. Add only the foundation bases
-needed by current classes. Add `core/<scope>/infrastructure/` only when the
-scope has technical IO adapters. Add `delivery/<framework>/services/` only when
-controllers need delivery-only helpers such as auth or rate limiting. Keep every
-`__init__.py` empty.
+needed by current classes. Add `core/<scope>/capabilities/` only when the scope
+has small injectable collaborators narrower than services. Add
+`core/<scope>/gateways/` only when the scope has real outbound capabilities such
+as OpenAI, payments, email, queues, or external HTTP APIs. Add
+`core/<scope>/infrastructure/` only when the scope has technical IO adapters.
+Add `delivery/<framework>/services/` only when controllers need delivery-only
+helpers such as auth or rate limiting. Keep every `__init__.py` empty.
 
 When stable cross-scope application primitives exist, add `shared/`. When
 SQLAlchemy exists, add top-level `infrastructure/sqlalchemy/`, `alembic.ini`,
@@ -98,7 +105,7 @@ Recommended content:
 ## Project Shape
 
 - Package lives under `src/order_service`.
-- FastAPI entrypoint: `order_service.delivery.fastapi.app:app`.
+- FastAPI entrypoint: `order_service.delivery.fastapi.__main__:app`.
 - Core behavior lives in `src/order_service/core/<scope>/`.
 - Delivery lives in `src/order_service/delivery`.
 - Shared technical infrastructure lives in `src/order_service/infrastructure`.
@@ -126,11 +133,32 @@ Recommended content:
 - Command/query classes live in the same use-case module.
 - Use cases return DTOs, not entities or raw repository results.
 - DTOs live in `core/<scope>/dtos`.
-- Services stay focused, end with `Service`, and do not open UoW scopes.
+- Capabilities live in `core/<scope>/capabilities`, subclass `BaseCapability`,
+  do one narrow injectable thing, and do not act as services, repositories, or
+  gateways.
+- Direct concrete `BaseCapability` subclasses end with `Capability`; narrower
+  foundation families such as `BaseClock` or `BaseGenerator` use their narrower
+  suffix.
+- Do not add `base_` prefixes to foundation module filenames. Class names stay
+  prefixed, for example `capability.py` defines `BaseCapability`.
+- Gateway ports live in `core/<scope>/gateways`, subclass `BaseGateway`, use
+  business language, declare external effects, and do not return entities.
+- Concrete gateway implementations live under
+  `core/<scope>/infrastructure/<tech>`.
+- Core services inherit `BasePureService`, `BaseReadService`, or
+  `BaseEffectService`, end with `Service`, and do not open UoW scopes.
+- Pure services are deterministic and do not depend on UoWs, repositories,
+  gateways, clients, settings, clocks, UUID/random/time, SQLAlchemy, Redis, or
+  SDKs.
+- Read/effect services may use an active UoW passed by a use case, but they do
+  not open UoW scopes or own commit/rollback.
+- Read services do not call repository mutators or external write gateways.
+- Effect services do not return entities outward or import delivery/framework
+  code.
 - Query use cases must not call repository mutators.
 - Persistence use cases inject `UnitOfWorkManager`, not active UoWs or
   providers.
-- Only `ioc`, top-level delivery app/factory code, and tests may use
+- Only `ioc`, top-level delivery `__main__.py`/factory code, and tests may use
   `diwire.Container`.
 - Non-foundation source classes need explicit foundation/category bases,
   matching suffixes, and scoped docstrings with concrete `Example:` blocks.
@@ -190,11 +218,11 @@ Core service:
 from dataclasses import dataclass
 
 from order_service.core.health.dtos.health_status_dto import HealthStatusDTO
-from order_service.foundation.service import BaseService
+from order_service.foundation.pure_service import BasePureService
 
 
 @dataclass(kw_only=True, slots=True)
-class HealthReporterService(BaseService):
+class HealthReporterService(BasePureService):
     """Service that reports deterministic application health state.
 
     Example:
@@ -330,9 +358,15 @@ class FastAPIFactory(BaseFactory):
         return app
 ```
 
-Delivery app:
+Delivery entrypoint (`delivery/fastapi/__main__.py`):
 
 ```python
+"""FastAPI runtime entrypoint.
+
+Example:
+    uv run uvicorn order_service.delivery.fastapi.__main__:app
+"""
+
 from order_service.delivery.fastapi.factory import FastAPIFactory
 from order_service.ioc.container import get_container
 
@@ -375,9 +409,23 @@ def get_container() -> Container:
 - Do not add package re-exports to `__init__.py`.
 - Do not create empty scope folders for future features.
 - Do not add bare `class Foo:` declarations.
+- Do not call small collaborators services by default. Use `Service` for
+  reusable business/application behavior and `BaseCapability` for small
+  replaceable abilities.
+- Do not name capabilities `Helper`, `Utils`, `Manager`, or `Dependency`.
+- Do not put gateway ports under `repositories/` or concrete gateway
+  implementations outside `core/<scope>/infrastructure/<technology>/`.
+- Do not return entities from gateways. Return DTOs, primitives, value objects,
+  or explicit result objects instead.
 - Do not inherit raw common bases such as `BaseModel`, `BaseSettings`, `ABC`,
   `Exception`, `ValueError`, or `DeclarativeBase` outside `foundation/` when a
   project foundation base exists.
+- Do not add a generic `BaseService`; choose `BasePureService`,
+  `BaseReadService`, or `BaseEffectService` for every core service.
+- Do not add `base_` prefixes to foundation module filenames. Class names stay
+  prefixed, for example `pure_service.py` defines `BasePureService`.
+- Do not open UoW scopes inside services. Use cases own transaction lifecycle
+  and pass the active UoW into read/effect services when needed.
 - Name classes with the suffix implied by their foundation base ancestry, such
   as `CreateTaskCommand`, `ListTasksQuery`, `TaskDTO`, `TaskEntity`,
   `TaskResponseSchema`, `TaskRepository`, `TaskUnitOfWork`,

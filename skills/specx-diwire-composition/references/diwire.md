@@ -64,6 +64,7 @@ def get_container() -> Container:
 
 
 def _register_dependencies(container: Container) -> None:
+    container.add(OpenAITaskSummaryGateway, provides=TaskSummaryGateway)
     container.add(
         SQLAlchemyOrderUnitOfWorkManager,
         provides=OrderUnitOfWorkManager,
@@ -80,8 +81,10 @@ binding is needed.
 Do not register SQLAlchemy repositories that require an active session directly
 in the container. Create those repositories inside the active UoW. Concrete
 stateless factories such as `AsyncHttpClientFactory` can usually be auto-wired
-and do not need manual registration. Register existing client instances only
-when their lifecycle is owned by a delivery app or factory:
+and do not need manual registration. Gateway implementations that satisfy a
+core `BaseGateway` port should be registered explicitly with `provides=...`.
+Register existing client instances only when their lifecycle is owned by a
+delivery app or factory:
 
 ```python
 import httpx

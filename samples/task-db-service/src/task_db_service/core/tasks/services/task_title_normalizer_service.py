@@ -3,11 +3,11 @@ from dataclasses import dataclass
 from task_db_service.core.tasks.exceptions.invalid_task_title_value_error import (
     InvalidTaskTitleValueError,
 )
-from task_db_service.foundation.service import BaseService
+from task_db_service.foundation.pure_service import BasePureService
 
 
 @dataclass(kw_only=True, slots=True)
-class TaskTitleNormalizerService(BaseService):
+class TaskTitleNormalizerService(BasePureService):
     """Service that normalizes and validates task titles.
 
     Example:

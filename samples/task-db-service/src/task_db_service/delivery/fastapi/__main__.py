@@ -1,3 +1,9 @@
+"""FastAPI runtime entrypoint.
+
+Example:
+    uv run uvicorn task_db_service.delivery.fastapi.__main__:app
+"""
+
 from task_db_service.delivery.fastapi.factory import FastAPIFactory
 from task_db_service.ioc.container import get_container
 

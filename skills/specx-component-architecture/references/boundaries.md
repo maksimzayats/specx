@@ -7,14 +7,18 @@ base-class layer.
 
 ```text
 foundation/
+  capability.py
   command.py
   dto.py
   entity.py
   exceptions.py
   factory.py
+  gateway.py
+  effect_service.py
+  pure_service.py
+  read_service.py
   repository.py
   query.py
-  service.py
   settings.py
   unit_of_work.py
   unit_of_work_manager.py
@@ -25,9 +29,11 @@ foundation/
     fastapi/
       schema.py
 core/<scope>/
+  capabilities/
   dtos/
   entities/
   exceptions/
+  gateways/
   repositories/
   services/
   use_cases/
@@ -37,7 +43,7 @@ core/<scope>/
     http/
 delivery/
   fastapi/
-    app.py
+    __main__.py
     factory.py
     controllers/
     schemas/
@@ -70,9 +76,10 @@ controller-specific policies.
 - Delivery controllers, schemas, and delivery services may import core use
   cases, DTOs, and application exceptions plus framework APIs.
 - Delivery controllers should not import infrastructure directly.
-- Delivery app/factory modules may import delivery controllers, top-level
-  infrastructure, `ioc`, and factories to compose the runtime. They must not
-  import scope infrastructure, ORM models, repositories, or schema DDL helpers.
+- Delivery `__main__.py`/factory modules may import delivery controllers,
+  top-level infrastructure, `ioc`, and factories to compose the runtime. They
+  must not import scope infrastructure, ORM models, repositories, or schema DDL
+  helpers.
 - `ioc` may import any concrete class needed for composition.
 - `core/<scope>/delivery/` is not allowed.
 
@@ -85,7 +92,11 @@ bases:
 - `BaseCommand`
 - `BaseQuery`
 - `BaseEntity`
-- `BaseService`
+- `BaseCapability`
+- `BaseGateway`
+- `BasePureService`
+- `BaseReadService`
+- `BaseEffectService`
 - `BaseUseCase`
 - `BaseRepository`
 - `BaseUnitOfWork`
@@ -104,7 +115,7 @@ bases:
 It is fine to extend foundation with a new base class when a real class category
 appears and no existing base fits. Do not add speculative bases.
 
-## Use Cases vs Services
+## Use Cases, Services, And Capabilities
 
 Use a use case for externally meaningful actions:
 
@@ -118,6 +129,55 @@ Use a core service for focused reusable application behavior:
 - `OrderPricingService`
 - `AccessPolicyService`
 - `TokenIssuingService`
+
+Use a capability for small replaceable abilities that are narrower than a
+service:
+
+- `SlugGeneratingCapability`
+- `PasswordPepperCapability`
+- `RequestSigningCapability`
+
+A capability:
+
+- does one narrow thing;
+- may be injected, faked, or swapped;
+- does not own an application workflow;
+- does not open unit-of-work scopes;
+- does not act as a repository or gateway;
+- is not a generic helper, util, manager, or dependency.
+
+Direct concrete subclasses of `BaseCapability` must end with `Capability`.
+
+When a capability family becomes common or needs stronger review rules, add a
+narrower foundation base that inherits from `BaseCapability`, such as
+`BaseClock` or `BaseGenerator`. Concrete classes should then use the narrower
+suffix: `SystemClock`, `UUID7Generator`, and so on.
+
+Do not add `base_` prefixes to foundation module filenames. Class names stay
+prefixed: `capability.py` defines `BaseCapability`, `gateway.py` defines
+`BaseGateway`, and `pure_service.py` defines `BasePureService`.
+
+Do not call small collaborators services by default. Use `Service` for reusable
+business/application behavior. Use `BaseCapability` for small replaceable
+abilities.
+
+Choose the core service base by effect:
+
+- `BasePureService` for deterministic helpers. Allowed: primitives, entities
+  passed as arguments, value objects, DTOs if needed, and other pure services.
+  Forbidden: `UnitOfWorkManager`, `UnitOfWork`, repositories, gateways,
+  clients, settings, clocks, UUID generators, random/time, HTTP, SQLAlchemy,
+  Redis, OpenAI SDK, and other external IO.
+- `BaseReadService` for read-only orchestration helpers. Allowed: repository
+  reads, preferably through an active UoW passed by the caller; read gateways;
+  pure services; and DTO mapping. Forbidden: commit/rollback, repository
+  mutators, external write gateways, message publishing, sending email, and
+  charging money.
+- `BaseEffectService` for helpers that perform or coordinate side effects.
+  Allowed: effect gateways, repository mutators through an active UoW passed by
+  a command use case, and pure services. Forbidden: opening UoW scopes, owning
+  transaction lifecycle, returning entities outward, and importing
+  delivery/framework code.
 
 Use a delivery service only for framework-facing behavior:
 
@@ -134,6 +194,58 @@ Every major concrete class should include a docstring that states the class
 scope and includes a concrete `Example:` block. This applies to use cases,
 services, ports, adapters, controllers, factories, settings, DTOs, entities,
 schemas, unit-of-work classes, and unit-of-work managers.
+
+## Gateways
+
+Use a gateway port for outbound business capabilities to external systems:
+
+- `TaskSummaryGateway` for OpenAI or another summarization provider;
+- `PaymentGateway` for payment charging/capture/refund capabilities;
+- `EmailGateway` for transactional email;
+- `ShipmentGateway` for external shipping APIs.
+
+Gateway ports:
+
+- live under `core/<scope>/gateways/`;
+- inherit `BaseGateway`;
+- use business language, not SDK, HTTP, queue, or provider details;
+- declare external effects in the class docstring with an `External effect:`
+  or `External effects:` line;
+- return DTOs, primitives, value objects, or explicit result objects, not
+  entities or SDK responses.
+
+Concrete gateway implementations:
+
+- live under `core/<scope>/infrastructure/<technology>/`, for example
+  `core/tasks/infrastructure/openai/openai_task_summary_gateway.py`;
+- inherit the scope gateway port, not `BaseGateway` directly;
+- translate SDK/HTTP responses into the gateway return type;
+- translate low-level exceptions into core exceptions only when callers need to
+  handle them.
+
+Example gateway port:
+
+```python
+from order_service.core.tasks.dtos.task_summary_dto import TaskSummaryDTO
+from order_service.foundation.gateway import BaseGateway
+
+
+class TaskSummaryGateway(BaseGateway):
+    """Gateway that generates task summaries.
+
+    External effect: calls a configured text-generation provider.
+
+    Example:
+        summary = await gateway.generate_summary(description="Ship the skill")
+    """
+
+    async def generate_summary(self, *, description: str) -> TaskSummaryDTO:
+        raise NotImplementedError
+```
+
+Use repositories for owned persistence. Use gateways for external capabilities
+that are not owned persistence, even when the technical implementation is HTTP,
+OpenAI, Redis, a queue, or another SDK.
 
 ## Commands, Queries, DTOs, Schemas, Entities
 
@@ -157,7 +269,11 @@ schemas, unit-of-work classes, and unit-of-work managers.
 
 ## Ports and Adapters
 
-Use a repository or port ABC under `core/<scope>/repositories/` when:
+Use a repository under `core/<scope>/repositories/` when modeling owned
+persistence. Use a gateway under `core/<scope>/gateways/` when modeling an
+outbound capability provided by an external system.
+
+Use a repository or gateway port when:
 
 - the implementation performs external IO;
 - a framework object must be hidden from core;
@@ -184,6 +300,23 @@ sessions, beginning transactions, committing or rolling back, and closing
 resources. Deterministic use cases with no external IO do not need a UoW.
 Services may receive the active UoW as a method argument, but services do not
 open UoW scopes or call lifecycle methods directly.
+
+Good service call from a use case:
+
+```python
+async with self._unit_of_work_manager as unit_of_work:
+    return await self._task_completion_service.complete(
+        unit_of_work=unit_of_work,
+        task_id=command.task_id,
+    )
+```
+
+Bad service implementation:
+
+```python
+async with self._unit_of_work_manager as unit_of_work:
+    ...
+```
 
 ## Shared Code
 
@@ -212,12 +345,26 @@ resources inside one core scope.
 - Non-foundation classes do not directly inherit raw common bases such as
   `BaseModel`, `BaseSettings`, `ABC`, `Exception`, `ValueError`,
   `DeclarativeBase`, `StrEnum`, or `object`.
+- Capabilities live under `core/<scope>/capabilities/`, direct concrete
+  `BaseCapability` subclasses use the `Capability` suffix, and capability
+  classes do not use `Helper`, `Utils`, `Manager`, or `Dependency` names.
 - `core/<scope>/delivery/` does not exist.
 - Delivery controllers do not import infrastructure.
 - Infrastructure does not import delivery.
 - App code does not call `metadata.create_all` or `drop_all`.
 - Core inner packages do not import FastAPI, SQLAlchemy, Redis, or HTTP
   clients.
-- Only `ioc`, top-level delivery app/factory modules, and tests access
+- Only `ioc`, top-level delivery `__main__.py`/factory modules, and tests access
   `diwire.Container`.
 - Public HTTP routes use full `/api/v1/...` paths.
+- Gateway ports live under `core/<scope>/gateways/`, concrete gateway
+  implementations live under `core/<scope>/infrastructure/<technology>/`,
+  gateway docstrings declare external effects, and gateway methods do not
+  return entities.
+- Core services inherit `BasePureService`, `BaseReadService`, or
+  `BaseEffectService`, not a generic `BaseService`.
+- Pure services do not import IO/runtime-state dependencies.
+- Read services do not call repository mutators or transaction lifecycle
+  methods.
+- Effect services do not inject UoW managers, open UoW scopes, commit, roll
+  back, return entities outward, or import delivery/framework code.

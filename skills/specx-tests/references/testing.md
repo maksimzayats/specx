@@ -88,8 +88,9 @@ If running the renderer is not practical, copy
 module contains stricter checks for most-specific foundation base ancestry,
 same-file command/query inputs, result DTO placement, direct entity imports,
 direct repository result returns, active-UoW and injected repository mutators,
-`Injected[*UnitOfWorkManager]`, documented `AGENTS.md` command drift, and
-repeated UoW manager scopes.
+`Injected[*UnitOfWorkManager]`, capability placement and suffixes, gateway
+placement and effect declarations, pure/read/effect service categories,
+documented `AGENTS.md` command drift, and repeated UoW manager scopes.
 
 ```python
 import ast
@@ -184,9 +185,11 @@ def _source_paths() -> list[Path]:
 
 
 INNER_PACKAGE_NAMES = {
+    "capabilities",
     "dtos",
     "entities",
     "exceptions",
+    "gateways",
     "repositories",
     "services",
     "use_cases",
@@ -200,8 +203,10 @@ BASE_SUFFIXES = (
     "SQLAlchemyModel",
     "Configurator",
     "UnitOfWorkManager",
+    "Capability",
     "Command",
     "Controller",
+    "Gateway",
     "Repository",
     "UnitOfWork",
     "UseCase",
@@ -583,6 +588,14 @@ Add separate tests for:
 - delivery controllers do not import infrastructure;
 - non-foundation source classes have explicit base classes;
 - service classes use the `Service` suffix;
+- core services inherit `BasePureService`, `BaseReadService`, or
+  `BaseEffectService`, never a generic `BaseService`;
+- pure services do not depend on UoWs, repositories, gateways, clients,
+  settings, clocks, UUID/random/time, SQLAlchemy, Redis, OpenAI SDK, or HTTP;
+- read services do not commit, roll back, call repository mutators, publish
+  messages, send email, charge money, or call external write APIs;
+- effect services do not inject UoW managers, open UoW scopes, commit, roll
+  back, return entities outward, or import delivery/framework code;
 - class names use the suffix implied by their most-specific foundation
   ancestry, including intermediate project bases;
 - every use case accepts exactly one same-file `Command` or `Query` input;
@@ -592,6 +605,16 @@ Add separate tests for:
 - use cases return DTOs and do not import or return entities;
 - result DTO classes live under `core/<scope>/dtos/`, not inside use-case
   files;
+- capabilities live under `core/<scope>/capabilities/` or stable `shared/`
+  locations, direct concrete `BaseCapability` subclasses use the `Capability`
+  suffix, narrower `BaseCapability` families use the narrower suffix, and
+  capability classes do not pose as helpers, utilities, managers, services,
+  repositories, gateways, or use cases;
+- gateway ports live under `core/<scope>/gateways/`, directly inherit
+  `BaseGateway`, declare external effects in docstrings, and do not return
+  entities;
+- concrete gateway implementations inherit the scope gateway port and live
+  under `core/<scope>/infrastructure/<technology>/`;
 - use cases do not return repository result variables directly; wrap repository
   entities in DTO constructors or `DTO.model_validate(...)`;
 - query use cases do not call mutating repository methods. Derive mutators from
@@ -604,7 +627,7 @@ Add separate tests for:
 - foundation classes have scoped docstrings with concrete examples;
 - major non-foundation classes have scoped docstrings with concrete examples;
 - non-foundation classes do not directly inherit raw common bases;
-- only `ioc`, top-level delivery app/factory modules, and tests use
+- only `ioc`, top-level delivery `__main__.py`/factory modules, and tests use
   `diwire.Container`; catch both `from diwire import Container` and
   `import diwire` aliases used as `diwire.Container`;
 - public route paths start with `/api/v1/`;
@@ -612,8 +635,8 @@ Add separate tests for:
   `metadata.create_all` or `drop_all`; use AST call checks for `.create_all()`
   and `.drop_all()`, not substring search;
 - SQLAlchemy projects have an Alembic drift check;
-- services do not open UoW scopes; check context managers rooted in typed UoW
-  fields, not every `async with`;
+- services do not open UoW scopes; use cases own transaction lifecycle and pass
+  active UoWs into read/effect services when needed;
 - persistence use cases inject `Injected[*UnitOfWorkManager]`, not
   `Provider[UnitOfWork]` and not an active `*UnitOfWork`;
 - use cases open at most one UoW manager scope inside `execute(...)`;
