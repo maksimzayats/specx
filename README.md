@@ -21,6 +21,7 @@ make check
 ## new:
 
 ```text
+AGENTS.md                     # coding-agent project instructions
 src/<package>/
   foundation/
     command.py               # base for state-changing use-case inputs

@@ -1,6 +1,6 @@
 ---
 name: specx-project-structure
-description: Create or reshape a Python service repo into the Specx clean core/delivery/foundation layout. Use when starting a new backend repo, converting a template into skills, adding the first src package, or establishing `foundation/`, `core/`, `delivery/`, top-level `infrastructure/`, `ioc/`, optional `shared/`, conditional migrations, and test roots for FastAPI, `diwire`, and class-based application code.
+description: Create or reshape a Python service repo into the Specx clean core/delivery/foundation layout. Use when starting a new backend repo, converting a template into skills, adding the first src package, or establishing `AGENTS.md`, `foundation/`, `core/`, `delivery/`, top-level `infrastructure/`, `ioc/`, optional `shared/`, conditional migrations, and test roots for FastAPI, `diwire`, and class-based application code.
 ---
 
 # Specx Project Structure
@@ -29,7 +29,10 @@ details, read `references/blueprint.md`.
 9. Add `migrations/` with Alembic when SQLAlchemy models exist.
 10. Create a tiny health scope as the first vertical slice when the user asks
    for a new repo from scratch.
-11. Add tests only where there is real code to test. Do not create empty folders
+11. Create root `AGENTS.md` for every new repo. Include runnable project
+   commands from `$specx-project-tooling` and Specx boundaries from
+   `$specx-component-architecture`.
+12. Add tests only where there is real code to test. Do not create empty folders
    just to satisfy the diagram.
 
 ## Hard Rules
@@ -62,7 +65,11 @@ details, read `references/blueprint.md`.
   compose the app.
 - Prefer one primary public class per file.
 - Prefer class-based use cases, services, controllers, factories, and adapters.
-- Prefer `@dataclass(kw_only=True, slots=True)` for application classes.
+- Prefer `@dataclass(kw_only=True, slots=True)` for non-Pydantic services, use
+  cases, controllers, factories, adapters, entities, and similar classes.
+- Generated projects must include root `AGENTS.md`. Keep its Commands section
+  aligned with the Makefile and include only commands that exist in that
+  project.
 
 ## References
 

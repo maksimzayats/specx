@@ -31,9 +31,19 @@ Read `references/testing.md` before creating test files.
 - Add architecture tests that persistence use cases inject
   `Injected[*UnitOfWorkManager]`, not `Provider[UnitOfWork]` or an active
   `*UnitOfWork`.
+- Add architecture tests that root `AGENTS.md` exists, documents project
+  commands plus the core Specx boundaries, and only documents `make <target>`
+  commands that exist in the Makefile.
+- For full Specx service guardrails, render the bundled
+  `references/architecture_guardrails.py` template with
+  `references/render_architecture_guardrails.py`.
 - Add architecture tests only for rules that are likely to regress.
 
 ## References
 
 - `references/testing.md` - folder layout, fixtures, unit/integration examples,
   and architecture guardrail snippets.
+- `references/architecture_guardrails.py` - canonical full architecture
+  guardrail pytest module template.
+- `references/render_architecture_guardrails.py` - renderer for the canonical
+  architecture guardrail module.

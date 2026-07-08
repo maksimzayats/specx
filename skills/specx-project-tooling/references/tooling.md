@@ -154,3 +154,30 @@ uv run ruff check .
 uv run mypy .
 uv run pytest
 ```
+
+## AGENTS.md Commands
+
+Keep root `AGENTS.md` aligned with the actual Makefile. For the standard FastAPI
+project, include:
+
+```markdown
+- Install: `uv sync --all-groups`
+- Dev server: `make dev`
+- Full check: `make check`
+- Lint/type/format check: `make lint`
+- Format/fix: `make format`
+- Tests: `make test`
+- Targeted unit tests: `uv run pytest tests/unit`
+- Targeted integration tests: `uv run pytest tests/integration`
+- Targeted architecture tests: `uv run pytest tests/architecture`
+```
+
+When SQLAlchemy/Alembic exists, also include:
+
+```markdown
+- Create migration: `make makemigrations message="describe change"`
+- Apply migrations: `make migrate`
+- Check migration drift: `make migration-check`
+```
+
+Do not list commands that do not exist in that project.

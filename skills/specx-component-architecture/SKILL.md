@@ -40,6 +40,8 @@ than one layer. Read `references/boundaries.md` for the full rules.
 - Use one delivery controller per scoped set of use cases.
 - Keep request/response schemas in top-level `delivery/`. Keep use-case DTOs in
   `core/<scope>/dtos/`.
+- When creating or reshaping a repo, keep root `AGENTS.md` architecture
+  guidance aligned with these boundaries.
 - Define each use-case input as a same-file `Command` or `Query`: commands are
   state-changing, queries are read-only, and even empty inputs are explicit.
 - Use cases return DTOs, not entities.

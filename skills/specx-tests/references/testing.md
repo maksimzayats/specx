@@ -73,13 +73,23 @@ def container() -> Container:
 Use AST checks for rules that are easy to regress:
 
 The example below is a starter subset for small projects. For a full Specx
-service, copy the current sample guardrail module from
-`samples/task-db-service/tests/architecture/test_boundaries.py` and replace the
-package name. That sample contains the stricter checks for most-specific
-foundation base ancestry, same-file command/query inputs, result DTO placement,
-direct entity imports, direct repository result returns, active-UoW and injected
-repository mutators, `Injected[*UnitOfWorkManager]`, and repeated UoW manager
-scopes.
+service, render the canonical guardrail module bundled with this skill:
+
+```bash
+cd /path/to/installed/specx-tests
+uv run python references/render_architecture_guardrails.py \
+  --package order_service \
+  --output /path/to/project/tests/architecture/test_boundaries.py
+```
+
+If running the renderer is not practical, copy
+`references/architecture_guardrails.py` and replace every
+`__SPECX_PACKAGE_NAME__` placeholder with the real import package. The canonical
+module contains stricter checks for most-specific foundation base ancestry,
+same-file command/query inputs, result DTO placement, direct entity imports,
+direct repository result returns, active-UoW and injected repository mutators,
+`Injected[*UnitOfWorkManager]`, documented `AGENTS.md` command drift, and
+repeated UoW manager scopes.
 
 ```python
 import ast
@@ -100,9 +110,21 @@ def _imports(path: Path) -> set[str]:
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             modules.update(alias.name for alias in node.names)
-        elif isinstance(node, ast.ImportFrom) and node.module:
-            modules.add(node.module)
+        elif isinstance(node, ast.ImportFrom):
+            module_name = "." * node.level + (node.module or "")
+            if module_name:
+                modules.add(module_name)
+            separator = "" if module_name == "" or module_name.endswith(".") else "."
+            modules.update(
+                f"{module_name}{separator}{alias.name}"
+                for alias in node.names
+                if alias.name != "*"
+            )
     return modules
+
+
+def _module_parts(module: str) -> tuple[str, ...]:
+    return tuple(part for part in module.split(".") if part)
 
 
 def _import_aliases(tree: ast.Module) -> dict[str, str]:
@@ -293,11 +315,12 @@ def test_core_inner_packages_do_not_import_outer_layers_or_io_libraries() -> Non
         if len(relative_parts) < 2 or relative_parts[1] not in INNER_PACKAGE_NAMES:
             continue
         for module in _imports(path):
-            if ".delivery." in module or ".infrastructure." in module:
+            parts = _module_parts(module)
+            if "delivery" in parts or "infrastructure" in parts:
                 violations.append(f"{path.relative_to(PROJECT_ROOT)} imports {module}")
-            if ".ioc." in module:
+            if "ioc" in parts:
                 violations.append(f"{path.relative_to(PROJECT_ROOT)} imports {module}")
-            if module.startswith(("fastapi", "sqlalchemy", "redis", "httpx")):
+            if parts and parts[0] in {"fastapi", "httpx", "redis", "sqlalchemy"}:
                 violations.append(f"{path.relative_to(PROJECT_ROOT)} imports {module}")
 
     assert violations == []
@@ -549,7 +572,7 @@ def test_delivery_controllers_do_not_import_infrastructure() -> None:
         if path.name == "__init__.py":
             continue
         for module in _imports(path):
-            if ".infrastructure." in module:
+            if "infrastructure" in _module_parts(module):
                 violations.append(f"{path.relative_to(PROJECT_ROOT)} imports {module}")
 
     assert violations == []
@@ -575,17 +598,22 @@ Add separate tests for:
   repository port methods, treat names such as `get`, `list`, `find`, `count`,
   and `exists` as reads, and flag mutator calls rooted in active UoW
   repositories or injected repository fields;
+- root `AGENTS.md` exists, documents project commands plus the core Specx
+  boundaries, and only documents `make <target>` commands that exist in the
+  Makefile;
 - foundation classes have scoped docstrings with concrete examples;
 - major non-foundation classes have scoped docstrings with concrete examples;
 - non-foundation classes do not directly inherit raw common bases;
-- only `ioc`, top-level delivery app/factory modules, and tests import
-  `diwire.Container`;
+- only `ioc`, top-level delivery app/factory modules, and tests use
+  `diwire.Container`; catch both `from diwire import Container` and
+  `import diwire` aliases used as `diwire.Container`;
 - public route paths start with `/api/v1/`;
 - SQLAlchemy projects run Alembic migrations in tests instead of calling
   `metadata.create_all` or `drop_all`; use AST call checks for `.create_all()`
   and `.drop_all()`, not substring search;
 - SQLAlchemy projects have an Alembic drift check;
-- services do not open UoW scopes;
+- services do not open UoW scopes; check context managers rooted in typed UoW
+  fields, not every `async with`;
 - persistence use cases inject `Injected[*UnitOfWorkManager]`, not
   `Provider[UnitOfWork]` and not an active `*UnitOfWork`;
 - use cases open at most one UoW manager scope inside `execute(...)`;

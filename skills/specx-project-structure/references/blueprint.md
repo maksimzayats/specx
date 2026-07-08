@@ -7,6 +7,7 @@ Use this reference to create a new Python backend repo from scratch.
 For project `order-service`, use package `order_service`:
 
 ```text
+AGENTS.md
 src/order_service/
   __init__.py
   foundation/
@@ -82,6 +83,85 @@ controllers need delivery-only helpers such as auth or rate limiting. Keep every
 When stable cross-scope application primitives exist, add `shared/`. When
 SQLAlchemy exists, add top-level `infrastructure/sqlalchemy/`, `alembic.ini`,
 and `migrations/` with `$specx-sqlalchemy-migrations`.
+
+## Root AGENTS.md
+
+Create root `AGENTS.md` for every generated repo. Keep it concise, practical,
+and aligned with the actual Makefile targets. Include only commands that exist
+for that project.
+
+Recommended content:
+
+```markdown
+# Agent Instructions
+
+## Project Shape
+
+- Package lives under `src/order_service`.
+- FastAPI entrypoint: `order_service.delivery.fastapi.app:app`.
+- Core behavior lives in `src/order_service/core/<scope>/`.
+- Delivery lives in `src/order_service/delivery`.
+- Shared technical infrastructure lives in `src/order_service/infrastructure`.
+- Scope-owned adapters live under `core/<scope>/infrastructure`.
+- DI composition lives in `src/order_service/ioc/container.py`.
+
+## Commands
+
+- Install: `uv sync --all-groups`
+- Dev server: `make dev`
+- Full check: `make check`
+- Lint/type/format check: `make lint`
+- Format/fix: `make format`
+- Tests: `make test`
+- Targeted unit tests: `uv run pytest tests/unit`
+- Targeted integration tests: `uv run pytest tests/integration`
+- Targeted architecture tests: `uv run pytest tests/architecture`
+
+## Architecture Rules
+
+- Controllers call injected use cases and never import infrastructure.
+- Public FastAPI routes use full `/api/v1/...` paths in controllers.
+- Use cases expose exactly one `execute(*, command=...)` or
+  `execute(*, query=...)`.
+- Command/query classes live in the same use-case module.
+- Use cases return DTOs, not entities or raw repository results.
+- DTOs live in `core/<scope>/dtos`.
+- Services stay focused, end with `Service`, and do not open UoW scopes.
+- Query use cases must not call repository mutators.
+- Persistence use cases inject `UnitOfWorkManager`, not active UoWs or
+  providers.
+- Only `ioc`, top-level delivery app/factory code, and tests may use
+  `diwire.Container`.
+- Non-foundation source classes need explicit foundation/category bases,
+  matching suffixes, and scoped docstrings with concrete `Example:` blocks.
+- Prefer `@dataclass(kw_only=True, slots=True)` for non-Pydantic services, use
+  cases, controllers, factories, adapters, entities, and similar classes.
+- Keep all `__init__.py` files empty.
+```
+
+When SQLAlchemy/Alembic exists, also add the migration shape, commands, and
+rules:
+
+```markdown
+## Project Shape
+
+- Alembic migrations live in `migrations`.
+
+## Commands
+
+- Create migration: `make makemigrations message="describe change"`
+- Apply migrations: `make migrate`
+- Check migration drift: `make migration-check`
+
+## Migrations
+
+- Do not use `create_all()` or `drop_all()` in source or tests.
+- Add new SQLAlchemy model modules to Alembic's model loader.
+- Generate revisions with `make makemigrations`, review them, then run
+  `make migration-check`.
+```
+
+Replace `order_service` with the real package name and entrypoint.
 
 ## First Vertical Slice
 
@@ -282,6 +362,7 @@ def get_container() -> Container:
 - Add tooling with `$specx-project-tooling`.
 - Add DI with `$specx-diwire-composition`.
 - Add Alembic with `$specx-sqlalchemy-migrations` when SQLAlchemy models exist.
+- Create root `AGENTS.md` with project commands and architecture boundaries.
 - Add tests with `$specx-tests`.
 - Run `uv run pytest`, `uv run ruff check .`,
   `uv run ruff format --check .`, and `uv run mypy .` when tooling exists.

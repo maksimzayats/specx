@@ -58,6 +58,7 @@ from __future__ import annotations
 import asyncio
 from importlib import import_module
 from logging.config import fileConfig
+from pkgutil import walk_packages
 from typing import Any, cast
 
 from alembic import context
@@ -65,6 +66,7 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+import order_service.core as core_package
 from order_service.foundation.infrastructure.sqlalchemy.model import BaseSQLAlchemyModel
 from order_service.infrastructure.sqlalchemy.settings import DatabaseSettings
 
@@ -74,9 +76,10 @@ if config.config_file_name is not None:
 
 
 def _load_model_modules() -> None:
-    for module_name in (
-        "order_service.core.orders.infrastructure.sqlalchemy.models.order",
-    ):
+    for module in walk_packages(core_package.__path__, prefix=f"{core_package.__name__}."):
+        module_name = module.name
+        if module.ispkg or ".infrastructure.sqlalchemy.models." not in module_name:
+            continue
         import_module(module_name)
 
 
@@ -223,12 +226,44 @@ def test_alembic_migrations_match_models(monkeypatch, tmp_path) -> None:
     command.check(alembic_config())
 ```
 
+Add a discovery guardrail so `alembic check` cannot pass against incomplete
+metadata:
+
+```python
+from pathlib import Path
+from pkgutil import walk_packages
+
+import order_service.core as core_package
+
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+SRC_ROOT = PROJECT_ROOT / "src" / "order_service"
+
+
+def test_alembic_model_discovery_finds_every_core_model_module() -> None:
+    expected = {
+        "order_service."
+        + ".".join(path.relative_to(SRC_ROOT).with_suffix("").parts)
+        for path in (SRC_ROOT / "core").glob("*/infrastructure/sqlalchemy/models/*.py")
+        if path.name != "__init__.py"
+    }
+
+    discovered = {
+        module.name
+        for module in walk_packages(core_package.__path__, prefix=f"{core_package.__name__}.")
+        if ".infrastructure.sqlalchemy.models." in module.name and not module.ispkg
+    }
+
+    assert discovered == expected
+```
+
 Repository and delivery integration tests should use migrated temporary
 databases. They should not call `create_all`.
 
 ## Avoid
 
 - No `metadata.create_all` or `drop_all` in `src/`.
+- No hard-coded ORM model module tuples in `migrations/env.py`; discover model
+  modules from `core`.
 - No schema helpers imported by delivery app factories.
 - No ORM model imports in delivery controllers.
 - No app-wide SQLAlchemy session factory under one core scope.
