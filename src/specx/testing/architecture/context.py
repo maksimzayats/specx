@@ -1,0 +1,754 @@
+from __future__ import annotations
+
+import ast
+import re
+from dataclasses import dataclass
+from pathlib import Path
+
+from specx._internal.python_ast.scanner import PythonAstProject
+from specx.testing.architecture.models import SpecxArchitectureConfig
+
+INNER_PACKAGE_NAMES = {
+    "capabilities",
+    "dtos",
+    "entities",
+    "exceptions",
+    "gateways",
+    "repositories",
+    "services",
+    "use_cases",
+}
+BASE_SUFFIXES = (
+    "ApplicationValueError",
+    "ApplicationError",
+    "DeliveryService",
+    "FastAPISchema",
+    "RuntimeSettings",
+    "SQLAlchemyModel",
+    "Lifecycle",
+    "Configurator",
+    "UnitOfWorkManager",
+    "Capability",
+    "Command",
+    "Controller",
+    "Gateway",
+    "Repository",
+    "UnitOfWork",
+    "UseCase",
+    "Entity",
+    "Factory",
+    "Model",
+    "Schema",
+    "Service",
+    "Settings",
+    "ValueError",
+    "Enum",
+    "Error",
+    "DTO",
+    "Query",
+)
+BASE_SUFFIX_OVERRIDES = {
+    "ApplicationError": "Error",
+    "ApplicationValueError": "ValueError",
+    "DeliveryService": "Service",
+    "FastAPISchema": "Schema",
+    "PureService": "Service",
+    "ReadService": "Service",
+    "EffectService": "Service",
+    "RuntimeSettings": "Settings",
+    "SQLAlchemyModel": "Model",
+    "StrEnum": "Enum",
+}
+USE_CASE_INPUT_BASE_NAMES = {"BaseCommand", "BaseQuery"}
+USE_CASE_INPUT_ARGUMENTS = {"command", "query"}
+CORE_SERVICE_BASE_NAMES = {"BasePureService", "BaseReadService", "BaseEffectService"}
+CAPABILITY_FORBIDDEN_NAME_SUFFIXES = (
+    "Dependency",
+    "Gateway",
+    "Helper",
+    "Manager",
+    "Repository",
+    "Service",
+    "Util",
+    "Utils",
+    "UseCase",
+)
+GATEWAY_EFFECT_DECLARATION_MARKERS = ("External effect:", "External effects:")
+PURE_SERVICE_FORBIDDEN_DEPENDENCY_FRAGMENTS = (
+    "UnitOfWorkManager",
+    "UnitOfWork",
+    "Repository",
+    "Gateway",
+    "Client",
+    "Settings",
+    "Clock",
+    "UUID",
+    "Random",
+)
+PURE_SERVICE_FORBIDDEN_IMPORT_ROOTS = {
+    "fastapi",
+    "httpx",
+    "openai",
+    "random",
+    "redis",
+    "requests",
+    "sqlalchemy",
+    "time",
+    "uuid",
+}
+PURE_SERVICE_FORBIDDEN_IMPORT_PARTS = {
+    "delivery",
+    "infrastructure",
+    "ioc",
+    "repositories",
+    "settings",
+}
+READ_SERVICE_FORBIDDEN_CALL_NAMES = {
+    "charge",
+    "charge_money",
+    "commit",
+    "publish",
+    "publish_event",
+    "rollback",
+    "send_email",
+    "send_message",
+}
+READ_SERVICE_FORBIDDEN_CALL_PREFIXES = ("charge_", "publish_", "send_")
+EFFECT_SERVICE_FORBIDDEN_IMPORT_ROOTS = {"fastapi", "starlette"}
+EFFECT_SERVICE_FORBIDDEN_IMPORT_PARTS = {"delivery"}
+READ_REPOSITORY_METHOD_NAMES = {"count", "exists", "find", "get", "list", "search"}
+READ_REPOSITORY_METHOD_PREFIXES = (
+    "count_by_",
+    "exists_by_",
+    "find_by_",
+    "find_for_",
+    "get_by_",
+    "get_for_",
+    "list_by_",
+    "list_for_",
+    "search_by_",
+)
+SCHEMA_BOOTSTRAP_METHOD_NAMES = {"create_all", "drop_all"}
+MAKE_COMMAND_PATTERN = re.compile(r"`make\s+([a-zA-Z0-9_.-]+)(?:\s|`)")
+MAKE_TARGET_PATTERN = re.compile(r"^([a-zA-Z0-9_.-]+):(?:\s|$)", re.MULTILINE)
+
+
+@dataclass(frozen=True, kw_only=True, slots=True)
+class ArchitectureContext:
+    """Shared static project model used by all Specx architecture rules."""
+
+    config: SpecxArchitectureConfig
+    ast_project: PythonAstProject
+
+    @property
+    def project_root(self) -> Path:
+        return self.config.project_root
+
+    @property
+    def src_root(self) -> Path:
+        return self.project_root / "src" / self.config.package_name
+
+    def source_paths(self) -> tuple[Path, ...]:
+        return tuple(
+            path
+            for path in sorted(self.ast_project.files)
+            if path.is_relative_to(self.src_root) and path.name != "__init__.py"
+        )
+
+    def core_paths(self) -> tuple[Path, ...]:
+        core_root = self.src_root / "core"
+        return tuple(
+            path
+            for path in sorted(self.ast_project.files)
+            if path.is_relative_to(core_root)
+            and path.name != "__init__.py"
+            and len(path.relative_to(core_root).parts) >= 3
+        )
+
+    def core_service_paths(self) -> tuple[Path, ...]:
+        return tuple(
+            path
+            for path in self.source_paths()
+            if _path_has_parts(path.relative_to(self.src_root), ("core", "*", "services"))
+        )
+
+    def tree(self, path: Path) -> ast.Module:
+        return self.ast_project.source_file(path).tree
+
+    def imports(self, path: Path) -> frozenset[str]:
+        return self.ast_project.source_file(path).imports
+
+    def aliases(self, path: Path) -> dict[str, str]:
+        return self.ast_project.source_file(path).aliases
+
+    def makefile_targets(self) -> set[str]:
+        path = self.project_root / "Makefile"
+        if not path.exists():
+            return set()
+        text = path.read_text(encoding="utf-8")
+        return {
+            match.group(1)
+            for match in MAKE_TARGET_PATTERN.finditer(text)
+            if not match.group(1).startswith(".")
+        }
+
+
+def documented_make_targets(text: str) -> set[str]:
+    return set(MAKE_COMMAND_PATTERN.findall(text))
+
+
+def module_parts(module: str) -> tuple[str, ...]:
+    return tuple(part for part in module.split(".") if part)
+
+
+def base_name(base: ast.expr, aliases: dict[str, str] | None = None) -> str:
+    aliases = aliases or {}
+    if isinstance(base, ast.Name):
+        return aliases.get(base.id, base.id)
+    if isinstance(base, ast.Attribute):
+        return base.attr
+    if isinstance(base, ast.Subscript):
+        return base_name(base.value, aliases)
+    return ast.unparse(base)
+
+
+def annotation_name(annotation: ast.expr | None, aliases: dict[str, str] | None = None) -> str:
+    aliases = aliases or {}
+    if annotation is None:
+        return ""
+    if isinstance(annotation, ast.Name):
+        return aliases.get(annotation.id, annotation.id)
+    if isinstance(annotation, ast.Attribute):
+        return annotation.attr
+    if isinstance(annotation, ast.Subscript):
+        value_name = annotation_name(annotation.value, aliases)
+        slice_name = annotation_name(annotation.slice, aliases)
+        return f"{value_name}[{slice_name}]"
+    if isinstance(annotation, ast.Tuple):
+        return ", ".join(annotation_name(element, aliases) for element in annotation.elts)
+    if isinstance(annotation, ast.BinOp) and isinstance(annotation.op, ast.BitOr):
+        return (
+            f"{annotation_name(annotation.left, aliases)} | "
+            f"{annotation_name(annotation.right, aliases)}"
+        )
+    return ast.unparse(annotation)
+
+
+def class_suffix_from_base(base: str) -> str | None:
+    normalized_base_name = base.removeprefix("Base")
+    if normalized_base_name in BASE_SUFFIX_OVERRIDES:
+        return BASE_SUFFIX_OVERRIDES[normalized_base_name]
+    return next(
+        (suffix for suffix in BASE_SUFFIXES if normalized_base_name.endswith(suffix)),
+        None,
+    )
+
+
+def capability_family_suffix_from_base(
+    base: str,
+    class_base_name_index: dict[str, set[str]],
+) -> str | None:
+    if base == "BaseCapability":
+        return "Capability"
+    if "BaseCapability" in foundation_base_names_for_class(base, class_base_name_index):
+        return base.removeprefix("Base")
+    return None
+
+
+def category_suffix_from_base(
+    base: str,
+    class_base_name_index: dict[str, set[str]],
+) -> str | None:
+    capability_suffix = capability_family_suffix_from_base(base, class_base_name_index)
+    if capability_suffix is not None:
+        return capability_suffix
+    return class_suffix_from_base(base)
+
+
+def has_scoped_example_docstring(node: ast.ClassDef) -> bool:
+    docstring = ast.get_docstring(node)
+    if docstring is None or "Example:" not in docstring:
+        return False
+    scope, _separator, example = docstring.partition("Example:")
+    if any(line.strip() in {"...", "pass"} for line in example.splitlines()):
+        return False
+    example_lines = [line.strip() for line in example.splitlines() if line.strip()]
+    return scope.strip() != "" and example_lines != []
+
+
+def declares_external_effect(node: ast.ClassDef) -> bool:
+    docstring = ast.get_docstring(node)
+    return docstring is not None and any(
+        marker in docstring for marker in GATEWAY_EFFECT_DECLARATION_MARKERS
+    )
+
+
+def uses_diwire_container(tree: ast.Module) -> bool:
+    diwire_aliases: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name == "diwire":
+                    diwire_aliases.add(alias.asname or alias.name)
+        elif (
+            isinstance(node, ast.ImportFrom)
+            and node.module == "diwire"
+            and any(alias.name == "Container" for alias in node.names)
+        ):
+            return True
+    return any(
+        isinstance(node, ast.Attribute)
+        and isinstance(node.value, ast.Name)
+        and node.value.id in diwire_aliases
+        and node.attr == "Container"
+        for node in ast.walk(tree)
+    )
+
+
+def field_aliases_for_self_fields(
+    class_node: ast.ClassDef,
+    aliases: dict[str, str],
+) -> dict[str, str]:
+    fields: dict[str, str] = {}
+    for child in class_node.body:
+        if not isinstance(child, ast.AnnAssign) or not isinstance(child.target, ast.Name):
+            continue
+        fields[child.target.id] = annotation_name(child.annotation, aliases)
+    return fields
+
+
+def context_self_fields(
+    function: ast.AsyncFunctionDef | ast.FunctionDef,
+    field_names: set[str],
+) -> set[str]:
+    opened_fields: set[str] = set()
+    for node in ast.walk(function):
+        if not isinstance(node, (ast.AsyncWith, ast.With)):
+            continue
+        for item in node.items:
+            root_name = self_attribute_root_name(item.context_expr)
+            if root_name in field_names:
+                opened_fields.add(root_name)
+    return opened_fields
+
+
+def context_self_field_count(
+    function: ast.AsyncFunctionDef | ast.FunctionDef,
+    field_names: set[str],
+) -> int:
+    count = 0
+    for node in ast.walk(function):
+        if not isinstance(node, (ast.AsyncWith, ast.With)):
+            continue
+        for item in node.items:
+            if self_attribute_root_name(item.context_expr) in field_names:
+                count += 1
+    return count
+
+
+def uow_manager_context_fields(
+    function: ast.AsyncFunctionDef | ast.FunctionDef,
+    manager_fields: set[str],
+) -> set[str]:
+    return context_self_fields(function, manager_fields)
+
+
+def uow_manager_context_count(
+    function: ast.AsyncFunctionDef | ast.FunctionDef,
+    manager_fields: set[str],
+) -> int:
+    return context_self_field_count(function, manager_fields)
+
+
+def injected_type_name(annotation: ast.expr | None, aliases: dict[str, str]) -> str:
+    if annotation is None:
+        return ""
+    if isinstance(annotation, ast.Subscript) and annotation_name(
+        annotation.value, aliases
+    ).endswith("Injected"):
+        return annotation_name(annotation.slice, aliases)
+    return ""
+
+
+def root_name(expression: ast.expr) -> str | None:
+    if isinstance(expression, ast.Name):
+        return expression.id
+    if isinstance(expression, ast.Attribute):
+        return root_name(expression.value)
+    if isinstance(expression, ast.Call):
+        return root_name(expression.func)
+    if isinstance(expression, ast.Subscript):
+        return root_name(expression.value)
+    return None
+
+
+def call_is_rooted_in_names(call: ast.Call, names: set[str]) -> bool:
+    return root_name(call.func) in names
+
+
+def expression_is_rooted_in_names(expression: ast.expr | None, names: set[str]) -> bool:
+    return expression is not None and root_name(expression) in names
+
+
+def self_attribute_root_name(expression: ast.expr | None) -> str | None:
+    if isinstance(expression, ast.Call):
+        return self_attribute_root_name(expression.func)
+    if isinstance(expression, ast.Attribute):
+        parent = expression.value
+        if isinstance(parent, ast.Name) and parent.id == "self":
+            return expression.attr
+        return self_attribute_root_name(parent)
+    return None
+
+
+def expression_is_rooted_in_self_attributes(
+    expression: ast.expr | None,
+    attribute_names: set[str],
+) -> bool:
+    return self_attribute_root_name(expression) in attribute_names
+
+
+def call_is_rooted_in_self_attributes(call: ast.Call, attribute_names: set[str]) -> bool:
+    return expression_is_rooted_in_self_attributes(call.func, attribute_names)
+
+
+def call_from_expression(expression: ast.expr | None) -> ast.Call | None:
+    if isinstance(expression, ast.Call):
+        return expression
+    if isinstance(expression, ast.Await) and isinstance(expression.value, ast.Call):
+        return expression.value
+    return None
+
+
+def active_uow_names(function: ast.AsyncFunctionDef | ast.FunctionDef) -> set[str]:
+    names: set[str] = set()
+    for node in ast.walk(function):
+        if not isinstance(node, (ast.AsyncWith, ast.With)):
+            continue
+        for item in node.items:
+            if item.optional_vars is None:
+                continue
+            if isinstance(item.optional_vars, ast.Name):
+                names.add(item.optional_vars.id)
+    return names
+
+
+def active_uow_names_from_manager_fields(
+    function: ast.AsyncFunctionDef | ast.FunctionDef,
+    manager_fields: set[str],
+) -> set[str]:
+    names: set[str] = set()
+    for node in ast.walk(function):
+        if not isinstance(node, (ast.AsyncWith, ast.With)):
+            continue
+        for item in node.items:
+            if self_attribute_root_name(item.context_expr) not in manager_fields:
+                continue
+            if isinstance(item.optional_vars, ast.Name):
+                names.add(item.optional_vars.id)
+    return names
+
+
+def unit_of_work_argument_names(
+    function: ast.AsyncFunctionDef | ast.FunctionDef,
+    aliases: dict[str, str],
+) -> set[str]:
+    names: set[str] = set()
+    for argument in [*function.args.args, *function.args.kwonlyargs]:
+        if "UnitOfWork" in annotation_name(argument.annotation, aliases):
+            names.add(argument.arg)
+    return names
+
+
+def active_repository_names(
+    function: ast.AsyncFunctionDef | ast.FunctionDef,
+    *,
+    root_names: set[str] | None = None,
+    self_attribute_names: set[str] | None = None,
+) -> set[str]:
+    roots = root_names or active_uow_names(function)
+    self_attributes = self_attribute_names or set()
+    names: set[str] = set()
+    for node in ast.walk(function):
+        if not isinstance(node, ast.Assign):
+            continue
+        value_root = root_name(node.value)
+        value_self_root = self_attribute_root_name(node.value)
+        if value_root not in roots and value_self_root not in self_attributes:
+            continue
+        if isinstance(node.value, ast.Attribute) and not node.value.attr.endswith("repository"):
+            continue
+        for target in node.targets:
+            if isinstance(target, ast.Name):
+                names.add(target.id)
+    return names
+
+
+def attribute_chain(expression: ast.expr | None) -> tuple[str, ...]:
+    if isinstance(expression, ast.Name):
+        return (expression.id,)
+    if isinstance(expression, ast.Attribute):
+        parent_chain = attribute_chain(expression.value)
+        if not parent_chain:
+            return ()
+        return (*parent_chain, expression.attr)
+    if isinstance(expression, ast.Call):
+        return attribute_chain(expression.func)
+    if isinstance(expression, ast.Subscript):
+        return attribute_chain(expression.value)
+    return ()
+
+
+def repository_result_variable_names(
+    function: ast.AsyncFunctionDef | ast.FunctionDef,
+    *,
+    self_attribute_names: set[str],
+) -> set[str]:
+    names: set[str] = set()
+    repository_roots = active_uow_names(function) | active_repository_names(
+        function,
+        self_attribute_names=self_attribute_names,
+    )
+    for node in ast.walk(function):
+        if not isinstance(node, ast.Assign):
+            continue
+        call = call_from_expression(node.value)
+        if call is None:
+            continue
+        if call_is_rooted_in_names(call, repository_roots) or call_is_rooted_in_self_attributes(
+            call, self_attribute_names
+        ):
+            for target in node.targets:
+                if isinstance(target, ast.Name):
+                    names.add(target.id)
+    return names
+
+
+def repository_mutator_method_names(context: ArchitectureContext) -> set[str]:
+    names: set[str] = set()
+    for path in (context.src_root / "core").glob("*/repositories/**/*.py"):
+        if path.name == "__init__.py" or path not in context.ast_project.files:
+            continue
+        tree = context.tree(path)
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef)):
+                method_name = node.name
+                if not is_read_repository_method_name(method_name):
+                    names.add(method_name)
+    return names
+
+
+def is_read_repository_method_name(method_name: str) -> bool:
+    return method_name in READ_REPOSITORY_METHOD_NAMES or method_name.startswith(
+        READ_REPOSITORY_METHOD_PREFIXES
+    )
+
+
+def is_schema_bootstrap_call(call: ast.Call) -> bool:
+    return isinstance(call.func, ast.Attribute) and call.func.attr in SCHEMA_BOOTSTRAP_METHOD_NAMES
+
+
+def class_direct_base_names(node: ast.ClassDef, aliases: dict[str, str]) -> set[str]:
+    return {base_name(base, aliases) for base in node.bases}
+
+
+def class_base_name_index(context: ArchitectureContext) -> dict[str, set[str]]:
+    index: dict[str, set[str]] = {}
+    for path in context.source_paths():
+        tree = context.tree(path)
+        aliases = context.aliases(path)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef):
+                index[node.name] = class_direct_base_names(node, aliases)
+    return index
+
+
+def foundation_base_names_for_class(
+    class_name: str,
+    class_base_name_index: dict[str, set[str]],
+    *,
+    visited: set[str] | None = None,
+) -> set[str]:
+    visited = visited or set()
+    if class_name in visited:
+        return set()
+    visited.add(class_name)
+    base_names = class_base_name_index.get(class_name, set())
+    foundation_base_names = {
+        found_base for found_base in base_names if class_suffix_from_base(found_base) is not None
+    }
+    for found_base in base_names:
+        foundation_base_names.update(
+            foundation_base_names_for_class(
+                found_base,
+                class_base_name_index,
+                visited=visited,
+            ),
+        )
+    return foundation_base_names
+
+
+def class_has_foundation_base(
+    class_name: str,
+    base: str,
+    class_base_name_index: dict[str, set[str]],
+    *,
+    visited: set[str] | None = None,
+) -> bool:
+    visited = visited or set()
+    if class_name in visited:
+        return False
+    visited.add(class_name)
+    base_names = class_base_name_index.get(class_name, set())
+    return base in base_names or any(
+        class_has_foundation_base(
+            found_base,
+            base,
+            class_base_name_index,
+            visited=visited,
+        )
+        for found_base in base_names
+    )
+
+
+def nearest_foundation_base_names_for_class(
+    class_name: str,
+    class_base_name_index: dict[str, set[str]],
+    *,
+    visited: set[str] | None = None,
+) -> set[str]:
+    visited = visited or set()
+    if class_name in visited:
+        return set()
+    visited.add(class_name)
+    base_names = class_base_name_index.get(class_name, set())
+    direct_foundation_bases = {
+        found_base for found_base in base_names if class_suffix_from_base(found_base) is not None
+    }
+    if direct_foundation_bases:
+        return direct_foundation_bases
+    nearest: set[str] = set()
+    for found_base in base_names:
+        nearest.update(
+            nearest_foundation_base_names_for_class(
+                found_base,
+                class_base_name_index,
+                visited=visited,
+            ),
+        )
+    return nearest
+
+
+def execute_methods_with_classes(
+    tree: ast.Module,
+) -> list[tuple[ast.ClassDef, ast.AsyncFunctionDef | ast.FunctionDef]]:
+    pairs: list[tuple[ast.ClassDef, ast.AsyncFunctionDef | ast.FunctionDef]] = []
+    for class_node in [node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)]:
+        for child in class_node.body:
+            if (
+                isinstance(child, (ast.AsyncFunctionDef, ast.FunctionDef))
+                and child.name == "execute"
+            ):
+                pairs.append((class_node, child))
+    return pairs
+
+
+def class_injected_repository_field_names(
+    class_node: ast.ClassDef,
+    aliases: dict[str, str],
+    class_base_name_index: dict[str, set[str]],
+) -> set[str]:
+    fields: set[str] = set()
+    for child in class_node.body:
+        if not isinstance(child, ast.AnnAssign) or not isinstance(child.target, ast.Name):
+            continue
+        injected_name = injected_type_name(child.annotation, aliases)
+        if injected_name.endswith("Repository") or class_has_foundation_base(
+            injected_name,
+            "BaseRepository",
+            class_base_name_index,
+        ):
+            fields.add(child.target.id)
+    return fields
+
+
+def class_injected_unit_of_work_manager_field_names(
+    class_node: ast.ClassDef,
+    aliases: dict[str, str],
+) -> set[str]:
+    fields: set[str] = set()
+    for child in class_node.body:
+        if not isinstance(child, ast.AnnAssign) or not isinstance(child.target, ast.Name):
+            continue
+        if injected_type_name(child.annotation, aliases).endswith("UnitOfWorkManager"):
+            fields.add(child.target.id)
+    return fields
+
+
+def class_unit_of_work_field_names(
+    class_node: ast.ClassDef,
+    aliases: dict[str, str],
+) -> set[str]:
+    fields: set[str] = set()
+    for child in class_node.body:
+        if not isinstance(child, ast.AnnAssign) or not isinstance(child.target, ast.Name):
+            continue
+        annotation = annotation_name(child.annotation, aliases)
+        if "UnitOfWork" in annotation:
+            fields.add(child.target.id)
+    return fields
+
+
+def class_dependency_annotations(
+    class_node: ast.ClassDef,
+    aliases: dict[str, str],
+) -> set[str]:
+    annotations: set[str] = set()
+    for child in class_node.body:
+        if isinstance(child, ast.AnnAssign):
+            annotations.add(annotation_name(child.annotation, aliases))
+    return annotations
+
+
+def class_has_any_foundation_base(
+    class_name: str,
+    bases: set[str],
+    class_base_name_index: dict[str, set[str]],
+) -> bool:
+    return any(class_has_foundation_base(class_name, base, class_base_name_index) for base in bases)
+
+
+def forbidden_dependency_fragments(dependency_name: str, fragments: tuple[str, ...]) -> set[str]:
+    return {fragment for fragment in fragments if fragment in dependency_name}
+
+
+def calls_forbidden_method(
+    call: ast.Call,
+    method_names: set[str],
+    prefixes: tuple[str, ...],
+) -> bool:
+    return isinstance(call.func, ast.Attribute) and (
+        call.func.attr in method_names or call.func.attr.startswith(prefixes)
+    )
+
+
+def module_has_forbidden_parts(
+    module: str,
+    *,
+    roots: set[str],
+    parts: set[str],
+) -> bool:
+    parts_from_module = module_parts(module)
+    return bool(parts_from_module) and (
+        parts_from_module[0] in roots or any(part in parts for part in parts_from_module)
+    )
+
+
+def _path_has_parts(path: Path, expected: tuple[str, ...]) -> bool:
+    parts = path.parts
+    if len(parts) < len(expected):
+        return False
+    return all(
+        expected_part == "*" or parts[index] == expected_part
+        for index, expected_part in enumerate(expected)
+    )

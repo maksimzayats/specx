@@ -1,0 +1,4 @@
+interface:
+  display_name: "Specx Scope Architecture"
+  short_description: "Keep core scope boundaries clean"
+  default_prompt: "Use $specx-component-architecture to shape clean core scope boundaries."

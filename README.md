@@ -1,55 +1,246 @@
-# Modern Python Template
+# Specx
 
-**A FastAPI service template with clean boundaries, async persistence, and strict guardrails.**
+**Agent skills for building Python services with explicit architectural boundaries.**
 
-Modern Python Template gives you a production-shaped starting point for API
-services without carrying old-framework baggage. It combines FastAPI, async
-SQLAlchemy, Alembic, dependency injection, authentication flows, Redis-backed
-rate limiting, and strict checks in a layout that keeps application decisions
-separate from adapters.
+Specx is a skill catalog for generating and evolving backend services that keep
+application code readable under agent-driven development. It gives AI coding
+agents a shared vocabulary for packaged foundation bases, scoped core packages,
+delivery adapters, unit-of-work lifecycles, dependency injection, migrations,
+and architecture tests.
 
-[Documentation](https://template.zayats.dev) ·
+[Install](#install) ·
+[Skills](#skills) ·
+[Generated Architecture](#generated-architecture) ·
 [Contribute](CONTRIBUTING.md)
 
-## Key Benefits
+## Key Features
 
-- **Clean boundaries from the first commit.** Use cases, services, DTOs,
-  repository contracts, delivery adapters, and SQLAlchemy adapters live in
-  focused modules with architecture tests that keep those lines visible.
-- **Real API behavior included.** The template ships with user registration,
-  JWT issue/refresh/revoke flows, current-user and staff lookup endpoints,
-  health checks, and rate limiting as working examples.
-- **Async persistence without hidden transactions.** Database work goes through
-  repositories inside unit-of-work scopes, with Alembic migrations and
-  PostgreSQL-ready local infrastructure.
-- **Strict quality checks as guardrails.** Ruff, WPS/flake8, mypy, strict
-  pytest, architecture tests, meaningful docstring checks, and 100% coverage
-  keep the template clear for people and future agents.
+- **Skill-based service scaffolding.** Specx replaces a one-off code template
+  with composable skills for project structure, foundation usage, tooling,
+  DI, use cases, services, delivery controllers, infrastructure adapters,
+  settings, migrations, and tests.
+- **Explicit class boundaries.** Generated services use class-based use cases,
+  services, controllers, repositories, gateways, capabilities, DTOs, entities,
+  units of work, and factories with packaged scoped foundation bases.
+- **Clear transaction ownership.** Use cases open `UnitOfWorkManager` scopes
+  and do not inject repositories, SQLAlchemy sessions, engines, session
+  factories, or concrete infrastructure adapters directly. Read/effect services
+  may use an active UoW passed by the use case, but they do not own transaction
+  lifecycle.
+- **Guardrails for agent work.** The `specx` Python package ships rule-based
+  architecture tests that reject layer leaks, entity returns from use cases,
+  schema bootstrap calls, bare classes, wrong suffixes, and hidden transaction
+  ownership.
+- **Standard runtime logging.** Generated API services configure Python stdlib
+  logging once through top-level infrastructure and keep logger creation local
+  to classes that actually emit log records.
+- **Explicit FastAPI lifespans.** Generated FastAPI apps inject a
+  `FastAPILifecycle` into the app factory, pass it to `FastAPI(lifespan=...)`,
+  and close app-owned resources plus the DI container during shutdown.
+- **Explicit foundation boundaries.** Generated services import stateless base
+  classes from `specx.core.foundation`, `specx.delivery.foundation`, and
+  `specx.infrastructure.foundation` instead of vendoring a foundation tree.
+  They add local `foundation/` modules only for real project-local categories
+  or stateful framework bases such as a SQLAlchemy declarative base.
+- **Container-centric tests.** Generated tests use native pytest `container`
+  fixtures and direct `container.resolve(Target)` calls. Overrides are
+  registered before resolution, one-off class-based doubles live in the
+  `test_*.py` module that uses them, reused unit-test doubles live in mirrored
+  `fake_<source_module>.py` files under unit `capabilities`, `gateways`, or
+  `repositories` test packages, and generated tests mirror source modules with
+  flat paths such as
+  `tests/unit/core/tasks/services/test_title_service.py`.
+- **Alembic-first persistence.** SQLAlchemy projects use real Alembic
+  migrations and drift checks instead of `metadata.create_all()` bootstraps.
+
+## Install
+
+Install every Specx skill for your target agent. For the `codex` target:
+
+```sh
+npx skills add maksimzayats/specx --skill '*' --agent codex -y
+```
+
+List skills from a local checkout:
+
+```sh
+npx skills add . --list --full-depth
+```
+
+Validate the catalog:
+
+```sh
+make check
+```
+
+Use the architecture package from generated projects:
+
+```python
+from pathlib import Path
+
+from specx.testing.architecture import SpecxArchitectureConfig, assert_specx_architecture
+
+
+def test_specx_architecture() -> None:
+    assert_specx_architecture(
+        SpecxArchitectureConfig(
+            project_root=Path(__file__).resolve().parents[3],
+            package_name="order_service",
+        )
+    )
+```
 
 ## What You Get
 
-- A FastAPI-only service foundation with full `/api/v1/...` routes.
-- SQLAlchemy async repositories and explicit unit-of-work transactions.
-- Dependency injection through `diwire` without framework leakage into core
-  code.
-- Docker Compose services for PostgreSQL, PgBouncer, and Redis.
-- Documentation that explains the boundaries, workflows, and operating model.
-- Agent rules that preserve scoped files, repository usage, and test DI
-  discipline.
+- A reusable agent skill catalog under `skills/`.
+- A typed Python guardrail package under `src/specx/`.
+- A generated reference service under `samples/url-shortener-service/`.
+- Rule-based architecture guardrails exposed through
+  `specx.testing.architecture`.
+- A compatibility renderer that writes the tiny generated-project pytest
+  wrapper with the correct package name.
+- Root `AGENTS.md` guidance for agents working on this catalog.
+- Generated-project `AGENTS.md` guidance that projects should carry with them.
 
-## Why Modern Python Template
+## Skills
 
-Modern Python services are easiest to evolve when the default path is already
-boring in the right places: clear modules, explicit transactions, small
-controllers, tested adapters, and checks that catch drift before it spreads.
-This template keeps those decisions ready to copy so a new service can start
-with useful structure instead of cleanup work.
+- `specx-project-structure` creates the initial `core`, `delivery`,
+  `infrastructure`, `ioc`, optional local `foundation`, optional `shared`,
+  migrations, tests, and generated-project agent instructions.
+- `specx-foundation` teaches packaged stateless base usage and project-local
+  extensions for real missing base categories or stateful framework bases.
+- `specx-project-tooling` adds `uv`, Ruff, mypy, pytest, Makefile targets, and
+  local validation commands.
+- `specx-component-architecture` decides where code belongs across scopes,
+  boundaries, capabilities, gateways, DTOs, schemas, adapters, and shared code.
+- `specx-diwire-composition` wires `diwire.Container`, `Injected[...]`, private
+  registrations, app factories, and test overrides.
+- `specx-add-core-use-case` adds command/query-driven use cases that return
+  DTOs and own UoW scopes when persistence is needed.
+- `specx-add-core-service` adds focused reusable core behavior without hiding
+  transaction lifecycle.
+- `specx-add-infrastructure-adapter` adds repositories, gateways, UoW
+  implementations, SQLAlchemy, Redis, HTTP, SDK, logging configurators, and
+  other technical adapters.
+- `specx-sqlalchemy-migrations` adds async Alembic configuration, revisions,
+  migration commands, and drift tests.
+- `specx-add-delivery-controller` adds top-level FastAPI controllers, schemas,
+  route registration, delivery lifecycles, and delivery-only helpers.
+- `specx-settings` adds `pydantic-settings` configuration without direct
+  environment reads in core code.
+- `specx-tests` adds unit, integration, end-to-end, DI, migration, and
+  architecture tests backed by the `specx` package.
+
+## Generated Architecture
+
+Specx projects import stateless foundation bases from scoped Specx packages and
+organize application code around scoped core packages:
+
+```text
+src/<package>/
+  foundation/  # only when project-local/stateful bases are needed
+  core/
+    <scope>/
+      capabilities/
+      dtos/
+      entities/
+      exceptions/
+      gateways/
+      repositories/
+      services/
+      use_cases/
+      infrastructure/
+  delivery/
+    fastapi/
+      __main__.py
+      factory.py
+      lifecycle.py
+      controllers/
+      schemas/
+      services/
+  infrastructure/
+    logging/
+  ioc/
+  shared/
+migrations/
+```
+
+`core/<scope>/delivery/` is intentionally not part of the structure. Delivery
+lives at the top level, while core packages stay framework-free.
+
+Do not create an empty local `foundation/` package. `specx.core.foundation`,
+`specx.delivery.foundation`, and `specx.infrastructure.foundation` are the
+default scoped foundation boundaries. Create
+`src/<package>/foundation/` only for project-local base categories or stateful
+framework bases that must not be shared globally, such as the project
+SQLAlchemy declarative base. Local foundation module filenames are not
+`base_`-prefixed, but class names stay prefixed, for example `clock.py` defines
+`BaseClock`.
+
+## Core Rules
+
+- Every project class inherits an explicit packaged or project-local foundation
+  base.
+- Use cases accept exactly one same-file `Command` or `Query` and return DTOs,
+  not entities.
+- Commands represent state-changing operations. Queries are read-only, even
+  when the input is empty.
+- Commands, queries, DTOs, entities, and other core data classes should use
+  `@dataclass(frozen=True, kw_only=True, slots=True)` unless the user asks for
+  another model type. Keep Pydantic for delivery schemas and settings.
+- Core services inherit `BasePureService`, `BaseReadService`, or
+  `BaseEffectService`; do not add a generic `BaseService`.
+- Small injectable collaborators inherit `BaseCapability`, live under
+  `core/<scope>/capabilities/`, and do not pretend to be services,
+  repositories, gateways, helpers, or managers.
+- Gateway ports inherit `BaseGateway`, live under `core/<scope>/gateways/`,
+  declare external effects, use business language, and do not return entities.
+- Persistence use cases inject a `UnitOfWorkManager` and open an active
+  `UnitOfWork` inside `execute(...)`. They do not inject repositories,
+  SQLAlchemy sessions/engines/session factories, or concrete infrastructure
+  adapters directly.
+- Services may receive an active UoW as a method argument, but they do not open
+  UoW scopes, commit, or roll back.
+- SQLAlchemy schema is managed by Alembic migrations, not application schema
+  bootstrap calls.
+- Runtime logging is configured once in top-level infrastructure. Do not inject
+  `logging.Logger` or register loggers in `diwire.Container`; classes that
+  actually log create private stdlib class loggers.
+- FastAPI lifespan lives in `delivery/fastapi/lifecycle.py`, inherits
+  `BaseLifecycle[FastAPI]`, closes app-owned infrastructure resources, then
+  calls `container.aclose()` on shutdown. It must not run migrations or schema
+  creation.
+- `diwire.Container` belongs in `ioc`, top-level delivery
+  factory/entrypoint/lifecycle code, and tests only. `Injected[Container]` is
+  allowed only in `FastAPILifecycle`.
+
+## Reference Service
+
+The sample service under `samples/url-shortener-service/` is a working generated
+project used to validate the skills. It includes:
+
+- FastAPI delivery with `url_shortener_service.delivery.fastapi.__main__:app`.
+- FastAPI lifespan cleanup for SQLAlchemy and DI container resources.
+- URL and operational probe use cases with command/query inputs and DTO
+  outputs.
+- Split pure/read/effect services.
+- SQLAlchemy repositories and UoW manager.
+- Stdlib logging configurator and meaningful class-local log records.
+- Alembic migrations and drift checks.
+- Architecture tests that call the rule-based `specx` guardrail package.
+
+Run it from the sample directory:
+
+```sh
+cd samples/url-shortener-service
+make check
+```
 
 ## Contributing
 
-Developer setup, commands, project layout, architecture rules, and validation
-workflow live in [CONTRIBUTING.md](CONTRIBUTING.md).
+Developer setup, architecture notes, sample regeneration expectations, and
+validation workflow live in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-Modern Python Template is released under the [MIT License](LICENSE.md).
+Specx is released under the [MIT License](LICENSE.md).
