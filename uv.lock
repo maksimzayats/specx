@@ -66,6 +66,15 @@ wheels = [
 ]
 
 [[package]]
+name = "diwire"
+version = "1.4.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/4b/98/bc64311734fc602d0e36db7f36c11fd6d5345ec4ccd968735eb6a8e2cbdb/diwire-1.4.2.tar.gz", hash = "sha256:093306d1db39286ea23685f42c6248c9aae15de16af1f69589c7f00629603217", size = 487826, upload-time = "2026-06-12T06:31:38.876Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/87/be/a2512adf805b81227be2e8411449238949cac95ab3fb51a490c37d9327ce/diwire-1.4.2-py3-none-any.whl", hash = "sha256:d517ce75054254c475f247777e4dbb0701d71a9dc0035d1d27b96322c271f239", size = 100460, upload-time = "2026-06-12T06:31:39.801Z" },
+]
+
+[[package]]
 name = "greenlet"
 version = "3.5.3"
 source = { registry = "https://pypi.org/simple" }
@@ -572,6 +581,7 @@ name = "specx"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "diwire" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "sqlalchemy" },
@@ -589,6 +599,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "diwire", specifier = ">=1.4.2" },
     { name = "pydantic", specifier = ">=2.13.0" },
     { name = "pydantic-settings", specifier = ">=2.14.0" },
     { name = "sqlalchemy", specifier = ">=2.0.0" },

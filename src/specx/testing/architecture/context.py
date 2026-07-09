@@ -432,6 +432,22 @@ def active_uow_names(function: ast.AsyncFunctionDef | ast.FunctionDef) -> set[st
     return names
 
 
+def active_uow_names_from_manager_fields(
+    function: ast.AsyncFunctionDef | ast.FunctionDef,
+    manager_fields: set[str],
+) -> set[str]:
+    names: set[str] = set()
+    for node in ast.walk(function):
+        if not isinstance(node, (ast.AsyncWith, ast.With)):
+            continue
+        for item in node.items:
+            if self_attribute_root_name(item.context_expr) not in manager_fields:
+                continue
+            if isinstance(item.optional_vars, ast.Name):
+                names.add(item.optional_vars.id)
+    return names
+
+
 def unit_of_work_argument_names(
     function: ast.AsyncFunctionDef | ast.FunctionDef,
     aliases: dict[str, str],
@@ -465,6 +481,21 @@ def active_repository_names(
             if isinstance(target, ast.Name):
                 names.add(target.id)
     return names
+
+
+def attribute_chain(expression: ast.expr | None) -> tuple[str, ...]:
+    if isinstance(expression, ast.Name):
+        return (expression.id,)
+    if isinstance(expression, ast.Attribute):
+        parent_chain = attribute_chain(expression.value)
+        if not parent_chain:
+            return ()
+        return (*parent_chain, expression.attr)
+    if isinstance(expression, ast.Call):
+        return attribute_chain(expression.func)
+    if isinstance(expression, ast.Subscript):
+        return attribute_chain(expression.value)
+    return ()
 
 
 def repository_result_variable_names(

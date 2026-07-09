@@ -8,8 +8,14 @@ from specx.testing.architecture import (
     check_specx_architecture,
 )
 
+INTERNAL_COLLABORATOR_MOCK_MESSAGE = (
+    "mocks internal use case, service, or capability in integration tests; use the real app graph"
+)
 
-def test_tests_mirror_source_structure_rule_accepts_mirrored_tests(tmp_path: Path) -> None:
+
+def test_tests_mirror_source_structure_rule_accepts_flat_mirrored_tests(
+    tmp_path: Path,
+) -> None:
     _write(
         tmp_path / "src" / "demo_service" / "core" / "tasks" / "services" / "title_service.py",
         "class TitleService:\n"
@@ -70,6 +76,104 @@ def test_tests_mirror_source_structure_rule_accepts_mirrored_tests(tmp_path: Pat
     assert report.violations == ()
 
 
+def test_tests_mirror_source_structure_rule_accepts_nested_flat_core_tests(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path
+        / "src"
+        / "demo_service"
+        / "core"
+        / "tasks"
+        / "use_cases"
+        / "admin"
+        / "create_task.py",
+        "class CreateTaskUseCase:\n    pass\n",
+    )
+    _write(
+        tmp_path
+        / "tests"
+        / "unit"
+        / "core"
+        / "tasks"
+        / "use_cases"
+        / "admin"
+        / "test_create_task.py",
+        "def test_create_task() -> None:\n    assert True\n",
+    )
+
+    report = check_specx_architecture(
+        SpecxArchitectureConfig(
+            project_root=tmp_path,
+            package_name="demo_service",
+            disabled_rules=_disable_all_except(SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE),
+        )
+    )
+
+    assert report.violations == ()
+
+
+def test_tests_mirror_source_structure_rule_rejects_target_folder_test(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path / "src" / "demo_service" / "core" / "tasks" / "services" / "title_service.py",
+        "class TitleService:\n    pass\n",
+    )
+    _write(
+        tmp_path
+        / "tests"
+        / "unit"
+        / "core"
+        / "tasks"
+        / "services"
+        / "title_service"
+        / "test_title_service.py",
+        "def test_title_service() -> None:\n    assert True\n",
+    )
+
+    report = check_specx_architecture(
+        SpecxArchitectureConfig(
+            project_root=tmp_path,
+            package_name="demo_service",
+            disabled_rules=_disable_all_except(SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE),
+        )
+    )
+
+    assert [(violation.rule_id, violation.message) for violation in report.violations] == [
+        (
+            SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE,
+            "core behavior test must be flat; expected "
+            "tests/unit/core/tasks/services/test_title_service.py",
+        )
+    ]
+
+
+def test_tests_mirror_source_structure_rule_rejects_harness_file(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path / "tests" / "unit" / "core" / "tasks" / "services" / "harness.py",
+        "class TitleServiceHarness:\n    pass\n",
+    )
+
+    report = check_specx_architecture(
+        SpecxArchitectureConfig(
+            project_root=tmp_path,
+            package_name="demo_service",
+            disabled_rules=_disable_all_except(SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE),
+        )
+    )
+
+    assert [(violation.rule_id, violation.message) for violation in report.violations] == [
+        (
+            SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE,
+            "harness.py is not allowed; resolve targets directly from the container in flat "
+            "test modules",
+        )
+    ]
+
+
 def test_tests_mirror_source_structure_rule_rejects_orphan_test_path(
     tmp_path: Path,
 ) -> None:
@@ -95,6 +199,197 @@ def test_tests_mirror_source_structure_rule_rejects_orphan_test_path(
     ]
 
 
+def test_tests_mirror_source_structure_rule_rejects_generic_scenarios_file(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path / "tests" / "unit" / "core" / "tasks" / "_scenarios.py",
+        "VALUE = 1\n",
+    )
+
+    report = check_specx_architecture(
+        SpecxArchitectureConfig(
+            project_root=tmp_path,
+            package_name="demo_service",
+            disabled_rules=_disable_all_except(SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE),
+        )
+    )
+
+    assert [(violation.rule_id, violation.message) for violation in report.violations] == [
+        (
+            SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE,
+            "generic scenario files are not allowed; keep setup in the test module that uses it",
+        )
+    ]
+
+
+def test_tests_mirror_source_structure_rule_rejects_closure_style_use_fixture(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path / "tests" / "unit" / "core" / "tasks" / "services" / "conftest.py",
+        "import pytest\n\n"
+        "@pytest.fixture\n"
+        "def use_short_codes():\n"
+        "    def use_code(code: str) -> str:\n"
+        "        return code\n\n"
+        "    return use_code\n",
+    )
+
+    report = check_specx_architecture(
+        SpecxArchitectureConfig(
+            project_root=tmp_path,
+            package_name="demo_service",
+            disabled_rules=_disable_all_except(SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE),
+        )
+    )
+
+    violation_details = [
+        (violation.rule_id, violation.message, violation.symbol) for violation in report.violations
+    ]
+    assert violation_details == [
+        (
+            SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE,
+            "closure-style use_* fixture factories are not allowed; register overrides directly "
+            "before container.resolve(...)",
+            "use_short_codes",
+        )
+    ]
+
+
+def test_tests_mirror_source_structure_rule_rejects_fake_classes_in_support_fakes(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path / "tests" / "_support" / "fakes" / "core" / "urls.py",
+        "class InMemoryShortUrlRepository:\n    pass\n",
+    )
+
+    report = check_specx_architecture(
+        SpecxArchitectureConfig(
+            project_root=tmp_path,
+            package_name="demo_service",
+            disabled_rules=_disable_all_except(SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE),
+        )
+    )
+
+    assert [(violation.rule_id, violation.message) for violation in report.violations] == [
+        (
+            SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE,
+            "tests/_support/fakes is not allowed; keep doubles in the test module that uses them",
+        )
+    ]
+
+
+def test_tests_mirror_source_structure_rule_rejects_support_fakes_package(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path / "tests" / "_support" / "fakes" / "__init__.py",
+        "",
+    )
+
+    report = check_specx_architecture(
+        SpecxArchitectureConfig(
+            project_root=tmp_path,
+            package_name="demo_service",
+            disabled_rules=_disable_all_except(SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE),
+        )
+    )
+
+    assert [(violation.rule_id, violation.message) for violation in report.violations] == [
+        (
+            SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE,
+            "tests/_support/fakes is not allowed; keep doubles in the test module that uses them",
+        )
+    ]
+
+
+def test_tests_mirror_source_structure_rule_rejects_shared_fakes_file(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path / "tests" / "unit" / "core" / "tasks" / "_fakes.py",
+        "class InMemoryTaskRepository:\n    pass\n",
+    )
+
+    report = check_specx_architecture(
+        SpecxArchitectureConfig(
+            project_root=tmp_path,
+            package_name="demo_service",
+            disabled_rules=_disable_all_except(SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE),
+        )
+    )
+
+    assert [(violation.rule_id, violation.message) for violation in report.violations] == [
+        (
+            SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE,
+            "shared _fakes.py files are not allowed; keep doubles in the test module that uses "
+            "them",
+        )
+    ]
+
+
+def test_tests_mirror_source_structure_rule_rejects_double_classes_in_conftest(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path / "tests" / "unit" / "core" / "tasks" / "conftest.py",
+        "class InMemoryTaskRepository:\n    pass\n",
+    )
+
+    report = check_specx_architecture(
+        SpecxArchitectureConfig(
+            project_root=tmp_path,
+            package_name="demo_service",
+            disabled_rules=_disable_all_except(SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE),
+        )
+    )
+
+    violation_details = [
+        (violation.rule_id, violation.message, violation.symbol) for violation in report.violations
+    ]
+    assert violation_details == [
+        (
+            SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE,
+            "test double classes do not belong in conftest.py; define them in the test module "
+            "that uses them",
+            "InMemoryTaskRepository",
+        )
+    ]
+
+
+def test_tests_mirror_source_structure_rule_accepts_inline_test_doubles_and_mocks(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path / "src" / "demo_service" / "core" / "tasks" / "services" / "title_service.py",
+        "class TitleService:\n    pass\n",
+    )
+    _write(
+        tmp_path / "tests" / "unit" / "core" / "tasks" / "services" / "test_title_service.py",
+        "from unittest.mock import MagicMock\n\n"
+        "class InMemoryTaskRepository:\n"
+        "    pass\n\n"
+        "def test_title_service(container) -> None:\n"
+        "    repository = InMemoryTaskRepository()\n"
+        "    dependency = MagicMock()\n"
+        "    container.add_instance(repository, provides=InMemoryTaskRepository)\n"
+        "    container.add_instance(dependency, provides=object)\n"
+        "    assert repository is not None\n",
+    )
+
+    report = check_specx_architecture(
+        SpecxArchitectureConfig(
+            project_root=tmp_path,
+            package_name="demo_service",
+            disabled_rules=_disable_all_except(SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE),
+        )
+    )
+
+    assert report.violations == ()
+
+
 def test_tests_mirror_source_structure_rule_requires_core_behavior_tests(
     tmp_path: Path,
 ) -> None:
@@ -117,6 +412,39 @@ def test_tests_mirror_source_structure_rule_requires_core_behavior_tests(
         (
             SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE,
             "missing unit test tests/unit/core/tasks/services/test_title_service.py",
+        )
+    ]
+
+
+def test_tests_mirror_source_structure_rule_requires_integration_tests_for_uow_use_cases(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path / "src" / "demo_service" / "core" / "tasks" / "use_cases" / "create_task.py",
+        "from diwire import Injected\n"
+        "from specx.core.foundation.use_case import BaseUseCase\n\n"
+        "class TaskUnitOfWorkManager:\n"
+        "    pass\n\n"
+        "class CreateTaskUseCase(BaseUseCase):\n"
+        "    _unit_of_work_manager: Injected[TaskUnitOfWorkManager]\n",
+    )
+    _write(
+        tmp_path / "tests" / "unit" / "core" / "tasks" / "use_cases" / "test_create_task.py",
+        "def test_create_task() -> None:\n    assert True\n",
+    )
+
+    report = check_specx_architecture(
+        SpecxArchitectureConfig(
+            project_root=tmp_path,
+            package_name="demo_service",
+            disabled_rules=_disable_all_except(SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE),
+        )
+    )
+
+    assert [(violation.rule_id, violation.message) for violation in report.violations] == [
+        (
+            SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE,
+            "missing integration test tests/integration/core/tasks/use_cases/test_create_task.py",
         )
     ]
 
@@ -185,20 +513,15 @@ def test_test_fixtures_do_not_bundle_mocks_rule_accepts_single_mock_fixture(
     assert report.violations == ()
 
 
-def test_integration_tests_do_not_mock_internal_use_cases_or_services_rule_rejects_use_case_mock(
-    tmp_path: Path,
-) -> None:
+def test_integration_mock_rule_rejects_internal_use_case_mock(tmp_path: Path) -> None:
     _write(
-        tmp_path / "tests" / "integration" / "delivery" / "fastapi" / "conftest.py",
+        tmp_path / "tests" / "integration" / "delivery" / "fastapi" / "test_tasks.py",
         "from unittest.mock import AsyncMock, MagicMock\n"
-        "import pytest\n"
         "from demo_service.core.tasks.use_cases.create_task import CreateTaskUseCase\n\n"
-        "@pytest.fixture\n"
-        "def create_task_use_case_mock(container):\n"
+        "def test_tasks(container) -> None:\n"
         "    use_case = MagicMock(spec=CreateTaskUseCase)\n"
         "    use_case.execute = AsyncMock()\n"
-        "    container.add_instance(use_case, provides=CreateTaskUseCase)\n"
-        "    return use_case\n",
+        "    container.add_instance(use_case, provides=CreateTaskUseCase)\n",
     )
 
     report = check_specx_architecture(
@@ -206,7 +529,7 @@ def test_integration_tests_do_not_mock_internal_use_cases_or_services_rule_rejec
             project_root=tmp_path,
             package_name="demo_service",
             disabled_rules=_disable_all_except(
-                SpecxRuleId.INTEGRATION_TESTS_DO_NOT_MOCK_INTERNAL_USE_CASES_OR_SERVICES
+                SpecxRuleId.INTEGRATION_TESTS_DO_NOT_MOCK_INTERNAL_COLLABORATORS
             ),
         )
     )
@@ -216,23 +539,20 @@ def test_integration_tests_do_not_mock_internal_use_cases_or_services_rule_rejec
     ]
     assert violation_details == [
         (
-            SpecxRuleId.INTEGRATION_TESTS_DO_NOT_MOCK_INTERNAL_USE_CASES_OR_SERVICES,
-            "mocks internal use case/service in integration tests; use the real app graph",
-            "create_task_use_case_mock",
+            SpecxRuleId.INTEGRATION_TESTS_DO_NOT_MOCK_INTERNAL_COLLABORATORS,
+            INTERNAL_COLLABORATOR_MOCK_MESSAGE,
+            "test_tasks",
         )
     ]
 
 
-def test_integration_tests_do_not_mock_internal_use_cases_or_services_rule_accepts_external_mock(
-    tmp_path: Path,
-) -> None:
+def test_integration_mock_rule_rejects_internal_capability_mock(tmp_path: Path) -> None:
     _write(
-        tmp_path / "tests" / "integration" / "delivery" / "fastapi" / "conftest.py",
+        tmp_path / "tests" / "integration" / "delivery" / "fastapi" / "test_tasks.py",
         "from unittest.mock import MagicMock\n"
-        "import pytest\n\n"
-        "@pytest.fixture\n"
-        "def openai_client_mock():\n"
-        "    return MagicMock()\n",
+        "from demo_service.core.tasks.capabilities.slug_capability import SlugCapability\n\n"
+        "def test_tasks() -> None:\n"
+        "    MagicMock(spec=SlugCapability)\n",
     )
 
     report = check_specx_architecture(
@@ -240,7 +560,70 @@ def test_integration_tests_do_not_mock_internal_use_cases_or_services_rule_accep
             project_root=tmp_path,
             package_name="demo_service",
             disabled_rules=_disable_all_except(
-                SpecxRuleId.INTEGRATION_TESTS_DO_NOT_MOCK_INTERNAL_USE_CASES_OR_SERVICES
+                SpecxRuleId.INTEGRATION_TESTS_DO_NOT_MOCK_INTERNAL_COLLABORATORS
+            ),
+        )
+    )
+
+    violation_details = [
+        (violation.rule_id, violation.message, violation.symbol) for violation in report.violations
+    ]
+    assert violation_details == [
+        (
+            SpecxRuleId.INTEGRATION_TESTS_DO_NOT_MOCK_INTERNAL_COLLABORATORS,
+            INTERNAL_COLLABORATOR_MOCK_MESSAGE,
+            "test_tasks",
+        )
+    ]
+
+
+def test_integration_mock_rule_rejects_monkeypatch_string_target(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "tests" / "integration" / "delivery" / "fastapi" / "test_tasks.py",
+        "def test_tasks(monkeypatch) -> None:\n"
+        "    monkeypatch.setattr(\n"
+        "        'demo_service.core.tasks.services.title_service.TitleService.normalize',\n"
+        "        lambda self, title: title,\n"
+        "    )\n",
+    )
+
+    report = check_specx_architecture(
+        SpecxArchitectureConfig(
+            project_root=tmp_path,
+            package_name="demo_service",
+            disabled_rules=_disable_all_except(
+                SpecxRuleId.INTEGRATION_TESTS_DO_NOT_MOCK_INTERNAL_COLLABORATORS
+            ),
+        )
+    )
+
+    violation_details = [
+        (violation.rule_id, violation.message, violation.symbol) for violation in report.violations
+    ]
+    assert violation_details == [
+        (
+            SpecxRuleId.INTEGRATION_TESTS_DO_NOT_MOCK_INTERNAL_COLLABORATORS,
+            INTERNAL_COLLABORATOR_MOCK_MESSAGE,
+            "test_tasks",
+        )
+    ]
+
+
+def test_integration_mock_rule_accepts_external_vendor_mock(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "tests" / "integration" / "delivery" / "fastapi" / "test_tasks.py",
+        "from unittest.mock import MagicMock\n"
+        "from vendor.core.email import EmailClient\n\n"
+        "def test_tasks() -> None:\n"
+        "    MagicMock(spec=EmailClient)\n",
+    )
+
+    report = check_specx_architecture(
+        SpecxArchitectureConfig(
+            project_root=tmp_path,
+            package_name="demo_service",
+            disabled_rules=_disable_all_except(
+                SpecxRuleId.INTEGRATION_TESTS_DO_NOT_MOCK_INTERNAL_COLLABORATORS
             ),
         )
     )
@@ -248,64 +631,10 @@ def test_integration_tests_do_not_mock_internal_use_cases_or_services_rule_accep
     assert report.violations == ()
 
 
-def test_init_files_are_empty_rule_rejects_missing_test_package_init(
-    tmp_path: Path,
-) -> None:
-    _write(tmp_path / "src" / "demo_service" / "__init__.py", "")
-    _write(tmp_path / "tests" / "__init__.py", "")
-    _write(tmp_path / "tests" / "unit" / "__init__.py", "")
-    _write(
-        tmp_path / "tests" / "unit" / "core" / "test_title.py",
-        "def test_title() -> None:\n    assert True\n",
-    )
-
-    report = check_specx_architecture(
-        SpecxArchitectureConfig(
-            project_root=tmp_path,
-            package_name="demo_service",
-            disabled_rules=_disable_all_except(SpecxRuleId.INIT_FILES_ARE_EMPTY),
-        )
-    )
-
-    assert [(violation.rule_id, violation.message) for violation in report.violations] == [
-        (
-            SpecxRuleId.INIT_FILES_ARE_EMPTY,
-            "__init__.py is missing",
-        )
-    ]
-
-
-def test_init_files_are_empty_rule_rejects_non_empty_test_package_init(
-    tmp_path: Path,
-) -> None:
-    _write(tmp_path / "src" / "demo_service" / "__init__.py", "")
-    _write(tmp_path / "tests" / "__init__.py", "")
-    _write(tmp_path / "tests" / "unit" / "__init__.py", "VALUE = 1\n")
-    _write(
-        tmp_path / "tests" / "unit" / "test_title.py",
-        "def test_title() -> None:\n    assert True\n",
-    )
-
-    report = check_specx_architecture(
-        SpecxArchitectureConfig(
-            project_root=tmp_path,
-            package_name="demo_service",
-            disabled_rules=_disable_all_except(SpecxRuleId.INIT_FILES_ARE_EMPTY),
-        )
-    )
-
-    assert [(violation.rule_id, violation.message) for violation in report.violations] == [
-        (
-            SpecxRuleId.INIT_FILES_ARE_EMPTY,
-            "__init__.py is not empty",
-        )
-    ]
-
-
 def _disable_all_except(rule_id: SpecxRuleId) -> frozenset[SpecxRuleId]:
     return frozenset(candidate for candidate in SpecxRuleId if candidate != rule_id)
 
 
-def _write(path: Path, text: str) -> None:
+def _write(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text, encoding="utf-8")
+    path.write_text(content, encoding="utf-8")

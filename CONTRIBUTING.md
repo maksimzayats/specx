@@ -13,7 +13,7 @@ skills/                         # published Codex skills
   specx-*/references/*.md       # detailed generation guidance
 src/specx/                      # reusable architecture guardrail package
 tests/                          # package and sample integration tests
-samples/task-db-service/        # generated reference service
+samples/url-shortener-service/  # generated reference service
 scripts/validate_skills.py      # skill metadata validator
 AGENTS.md                       # instructions for agents editing this repo
 README.md                       # user-facing catalog overview
@@ -59,7 +59,7 @@ make list-skills
 
 ## Sample Commands
 
-Run these from `samples/task-db-service/`:
+Run these from `samples/url-shortener-service/`:
 
 ```sh
 uv sync --all-groups
@@ -93,8 +93,8 @@ When changing a rule:
 1. Update the skill that teaches the rule.
 2. Update cross-cutting references that repeat the rule.
 3. Update `AGENTS.md` if agents need the rule before loading a skill.
-4. Update `samples/task-db-service/AGENTS.md` if generated projects should carry
-   the rule.
+4. Update `samples/url-shortener-service/AGENTS.md` if generated projects should
+   carry the rule.
 5. Update the sample implementation when the rule changes generated code.
 6. Run the relevant sample checks and root `make check`.
 
@@ -102,10 +102,11 @@ When changing a rule:
 
 Generated services should preserve these boundaries:
 
-- `specx.foundation` defines the default reusable base classes for generated
-  services.
+- Scoped Specx foundation packages define the default reusable base classes for
+  generated services: `specx.core.foundation`, `specx.delivery.foundation`,
+  and `specx.infrastructure.foundation`.
 - `foundation/`, when present in a generated service, contains only
-  project-local base classes missing from `specx.foundation`.
+  project-local base classes missing from the scoped foundation packages.
 - `core/<scope>/` contains framework-free application behavior.
 - `delivery/` contains framework adapters, controllers, schemas, and
   delivery-only helpers.
@@ -194,7 +195,7 @@ def test_specx_architecture() -> None:
     assert_specx_architecture(
         SpecxArchitectureConfig(
             project_root=Path(__file__).resolve().parents[3],
-            package_name="task_db_service",
+            package_name="url_shortener_service",
             disabled_rules=disabled_rules,
         )
     )
@@ -204,8 +205,8 @@ The compatibility renderer writes that wrapper for existing workflows:
 
 ```sh
 python3 skills/specx-tests/references/render_architecture_guardrails.py \
-  --package task_db_service \
-  --output samples/task-db-service/tests/guardrails/architecture/test_boundaries.py
+  --package url_shortener_service \
+  --output samples/url-shortener-service/tests/guardrails/architecture/test_boundaries.py
 ```
 
 When changing guardrail behavior, update the package rule, its focused tests,

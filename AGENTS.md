@@ -4,7 +4,7 @@
 
 This repo is the Specx skill catalog and Python guardrail package. It publishes
 reusable Codex skills and a typed `specx` package for creating Python backend
-services with packaged `specx.foundation` bases, rule-based architecture tests,
+services with packaged scoped foundation bases, rule-based architecture tests,
 and clean `core` / `delivery` / `infrastructure` / `ioc` boundaries.
 
 ## Repo Map
@@ -13,12 +13,14 @@ and clean `core` / `delivery` / `infrastructure` / `ioc` boundaries.
 - `skills/<skill-name>/references/*.md` contains detailed implementation
   patterns and examples.
 - `skills/<skill-name>/agents/openai.yaml` contains OpenAI skill UI metadata.
-- `src/specx/foundation/` contains reusable service foundation bases.
+- `src/specx/core/foundation/` contains reusable core foundation bases.
+- `src/specx/delivery/foundation/` contains delivery foundation bases.
+- `src/specx/infrastructure/foundation/` contains infrastructure foundation bases.
 - `src/specx/testing/` contains the public rule-based architecture test API.
 - `src/specx/_internal/` contains package internals that are not public API.
 - `tests/` validates the `specx` package and sample-service integration.
 - `scripts/validate_skills.py` validates the skill catalog.
-- `samples/task-db-service/` is a generated reference service used to validate
+- `samples/url-shortener-service/` is a generated reference service used to validate
   the skills. It may be untracked while iterating.
 
 ## Root Commands
@@ -51,8 +53,8 @@ and clean `core` / `delivery` / `infrastructure` / `ioc` boundaries.
 
 ## Specx Service Rules To Preserve
 
-- Every project class inherits an explicit packaged `specx.foundation` base or
-  a justified project-local foundation extension.
+- Every project class inherits an explicit packaged scoped foundation base or a
+  justified project-local foundation extension.
 - Use cases accept exactly one same-file `Command` or `Query` and return DTOs.
 - Commands, queries, DTOs, entities, and other core data classes use
   `@dataclass(frozen=True, kw_only=True, slots=True)` unless the user asks for
@@ -70,23 +72,38 @@ and clean `core` / `delivery` / `infrastructure` / `ioc` boundaries.
 - Core services inherit `BasePureService`, `BaseReadService`, or
   `BaseEffectService`, keep the `Service` suffix, and do not open unit-of-work
   scopes.
-- Do not copy packaged foundation bases into generated projects. Add
-  `src/<package>/foundation/` only when a real class category is missing from
-  `specx.foundation`.
+- Do not copy packaged foundation bases into generated projects or create an
+  empty local `foundation/` package. Use `specx.core.foundation`,
+  `specx.delivery.foundation`, and `specx.infrastructure.foundation` as the
+  scoped default boundaries. Add
+  `src/<package>/foundation/` only for a real project-local base category or a
+  stateful framework base that must not be shared globally, such as the project
+  SQLAlchemy declarative base.
 - Do not add `base_` prefixes to project-local foundation module filenames;
   class names stay prefixed, for example `clock.py` defines `BaseClock`.
-- Persistence use cases inject a `UnitOfWorkManager`, not an active UoW or
-  provider.
+- Persistence use cases inject a `UnitOfWorkManager`, not repositories, active
+  UoWs, providers, SQLAlchemy sessions/engines/session factories, or concrete
+  infrastructure adapters.
 - Delivery schemas live under the delivery layer, usually
   `delivery/<framework>/schemas/`; use-case DTOs live in `core/<scope>/dtos/`.
 - SQLAlchemy projects use Alembic migrations, not `metadata.create_all`.
 - `diwire.Container` belongs in `ioc`, top-level delivery `__main__.py`/factory
   modules, and tests only.
+- Core service/use-case/capability tests mirror source module paths with flat
+  `test_<module>.py` files. Do not create per-target test folders.
+- Unit tests receive the native pytest `container` fixture, register local
+  doubles or inline mocks before resolution, and resolve project classes with
+  `container.resolve(Target)`.
+- Class-based test doubles live in the `test_*.py` module that uses them.
+  Inline `MagicMock` or `AsyncMock` in the test function for one-off behavior.
+- Do not create `harness.py`, target factories, target harnesses,
+  `tests/_support/fakes`, `tests/**/_fakes.py`, generic `_scenarios.py`, or
+  double classes in `conftest.py`.
 
 ## Working Rules For Agents
 
 - For catalog changes, run root `make check`.
-- For sample service changes, follow `samples/task-db-service/AGENTS.md` and run
+- For sample service changes, follow `samples/url-shortener-service/AGENTS.md` and run
   checks inside that directory.
 - Do not treat sample Makefile commands as root catalog commands.
 - Do not add empty future-facing folders or placeholder skills.

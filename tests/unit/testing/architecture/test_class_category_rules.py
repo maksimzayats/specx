@@ -12,7 +12,7 @@ from specx.testing.architecture import (
 def test_suffix_rule_accepts_base_str_enum_category(tmp_path: Path) -> None:
     _write(
         tmp_path / "src" / "demo_service" / "infrastructure" / "environment_enum.py",
-        "from specx.foundation.enums import BaseStrEnum\n\n"
+        "from specx.core.foundation.enums import BaseStrEnum\n\n"
         "class EnvironmentEnum(BaseStrEnum):\n"
         "    LOCAL = 'local'\n",
     )

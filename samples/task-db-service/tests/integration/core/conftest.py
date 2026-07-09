@@ -1,5 +1,0 @@
-from tests._support import integration as integration_fixtures
-
-migrated_database_url = integration_fixtures.migrated_database_url
-transactional_container = integration_fixtures.transactional_container
-transactional_session_factory = integration_fixtures.transactional_session_factory

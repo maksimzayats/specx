@@ -11,7 +11,7 @@ from specx.testing.architecture import (
 )
 
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
-SAMPLE_ROOT = PROJECT_ROOT / "samples" / "task-db-service"
+SAMPLE_ROOT = PROJECT_ROOT / "samples" / "url-shortener-service"
 
 
 @pytest.mark.parametrize("rule_id", tuple(SpecxRuleId), ids=str)
@@ -21,7 +21,7 @@ def test_each_builtin_rule_accepts_sample_service(rule_id: SpecxRuleId) -> None:
     assert_specx_architecture(
         SpecxArchitectureConfig(
             project_root=SAMPLE_ROOT,
-            package_name="task_db_service",
+            package_name="url_shortener_service",
             disabled_rules=disabled_rules,
         )
     )
@@ -31,6 +31,6 @@ def test_strict_architecture_accepts_sample_service() -> None:
     assert_specx_architecture(
         SpecxArchitectureConfig(
             project_root=SAMPLE_ROOT,
-            package_name="task_db_service",
+            package_name="url_shortener_service",
         )
     )

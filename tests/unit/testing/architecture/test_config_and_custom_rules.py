@@ -93,7 +93,7 @@ def test_extra_rules_are_executed_and_can_be_disabled(tmp_path: Path) -> None:
 def _write_minimal_project(project_root: Path) -> None:
     _write(
         project_root / "src" / "demo_service" / "core" / "tasks" / "services" / "title_service.py",
-        "from specx.foundation.pure_service import BasePureService\n\n"
+        "from specx.core.foundation.pure_service import BasePureService\n\n"
         "class TitleService(BasePureService):\n"
         "    def normalize(self, *, title: str) -> str:\n"
         "        return title.strip()\n",

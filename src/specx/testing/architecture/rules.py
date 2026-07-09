@@ -19,7 +19,9 @@ from specx.testing.architecture.context import (
     ArchitectureContext,
     active_repository_names,
     active_uow_names,
+    active_uow_names_from_manager_fields,
     annotation_name,
+    attribute_chain,
     base_name,
     call_from_expression,
     call_is_rooted_in_names,
@@ -63,6 +65,21 @@ ArchitectureRuleBase = BaseRule[
     ArchitectureContext,
     SpecxArchitectureViolation,
 ]
+
+USE_CASE_FORBIDDEN_INFRASTRUCTURE_DEPENDENCY_NAMES = frozenset(
+    {
+        "AsyncConnection",
+        "AsyncEngine",
+        "AsyncSession",
+        "Connection",
+        "Engine",
+        "Session",
+        "SQLAlchemySessionFactory",
+        "async_sessionmaker",
+        "sessionmaker",
+    }
+)
+CORE_BEHAVIOR_TEST_PACKAGE_NAMES = frozenset({"capabilities", "services", "use_cases"})
 
 
 def _violation(
@@ -172,6 +189,31 @@ class CoreDoesNotContainDeliveryPackagesRule(ArchitectureRuleBase):
             _violation(self.id, path=path, message="core scope contains delivery package")
             for path in (context.src_root / "core").glob("*/delivery")
         )
+
+
+class FoundationImportsUseScopedPackagesRule(ArchitectureRuleBase):
+    """Reject imports from the removed alpha-stage `specx.foundation` namespace.
+
+    Specx foundation bases are scoped by architecture layer. Generated services
+    should import from `specx.core.foundation`, `specx.delivery.foundation`, or
+    `specx.infrastructure.foundation`.
+    """
+
+    id: SpecxRuleId = SpecxRuleId.FOUNDATION_IMPORTS_USE_SCOPED_PACKAGES
+
+    def check(self, context: ArchitectureContext) -> tuple[SpecxArchitectureViolation, ...]:
+        violations: list[SpecxArchitectureViolation] = []
+        for root in (context.src_root, context.project_root / "tests"):
+            for path in root.rglob("*.py"):
+                if path.name == "__init__.py" or path not in context.ast_project.files:
+                    continue
+                tree = context.tree(path)
+                for module in _explicit_import_modules(tree):
+                    if module == "specx.foundation" or module.startswith("specx.foundation."):
+                        violations.append(
+                            _violation(self.id, path=path, message=f"imports {module}")
+                        )
+        return tuple(violations)
 
 
 class UseCasesDoNotImportOrReturnEntitiesRule(ArchitectureRuleBase):
@@ -1225,11 +1267,14 @@ class OnlyIOCDeliveryAppAndTestsImportContainerRule(ArchitectureRuleBase):
         return tuple(violations)
 
 
-class PublicRoutesUseFullAPIV1PathsRule(ArchitectureRuleBase):
-    """Require public route registrations to use full `/api/v1/...` paths.
+ALLOWED_UNVERSIONED_OPERATIONAL_ROUTE_PATHS = frozenset({"/healthz", "/readyz"})
 
-    Full route paths make public API shape visible at each registration site and
-    avoid hidden router-prefix composition.
+
+class PublicRoutesUseFullAPIV1PathsRule(ArchitectureRuleBase):
+    """Require public business route registrations to use full `/api/v1/...` paths.
+
+    Full route paths make public API shape visible at each registration site.
+    Operational probe routes are allowed as explicit unversioned exceptions.
     """
 
     id: SpecxRuleId = SpecxRuleId.PUBLIC_ROUTES_USE_FULL_API_V1_PATHS
@@ -1255,7 +1300,14 @@ class PublicRoutesUseFullAPIV1PathsRule(ArchitectureRuleBase):
                     )
                     continue
                 route_path = path_keyword.value.value
-                if not isinstance(route_path, str) or not route_path.startswith("/api/v1/"):
+                if not isinstance(route_path, str):
+                    violations.append(
+                        _violation(self.id, path=path, message=f"uses {route_path!r}")
+                    )
+                    continue
+                if route_path in ALLOWED_UNVERSIONED_OPERATIONAL_ROUTE_PATHS:
+                    continue
+                if not route_path.startswith("/api/v1/"):
                     violations.append(
                         _violation(self.id, path=path, message=f"uses {route_path!r}")
                     )
@@ -1316,6 +1368,9 @@ class RootAgentsMDDocumentsProjectCommandsAndBoundariesRule(ArchitectureRuleBase
             "BaseEffectService",
             "Use cases return DTOs, not entities",
             "Query use cases must not call repository mutators",
+            "Use cases that touch persistence inject `UnitOfWorkManager`",
+            "must not inject repositories, active UoWs, providers",
+            "SQLAlchemy sessions/engines/session factories",
         }
         if _project_uses_alembic(context):
             required_fragments.update(
@@ -1358,6 +1413,7 @@ class TestsMirrorSourceStructureRule(ArchitectureRuleBase):
     def check(self, context: ArchitectureContext) -> tuple[SpecxArchitectureViolation, ...]:
         violations: list[SpecxArchitectureViolation] = []
         violations.extend(self._unmapped_test_violations(context))
+        violations.extend(self._test_support_structure_violations(context))
         violations.extend(self._missing_required_test_violations(context))
         return tuple(violations)
 
@@ -1373,22 +1429,167 @@ class TestsMirrorSourceStructureRule(ArchitectureRuleBase):
             for path in _mirrored_test_paths(context, test_root=test_root):
                 if _is_non_source_integration_test(path, test_root=test_root):
                     continue
-                source_path = _source_path_for_test_path(
+                relative = path.relative_to(test_root)
+                if _is_core_behavior_test_path(relative):
+                    if _is_core_behavior_target_test_path(relative):
+                        expected_path = test_root / relative.parent.parent / relative.name
+                        violations.append(
+                            _violation(
+                                self.id,
+                                path=path,
+                                message=(
+                                    "core behavior test must be flat; expected "
+                                    f"{expected_path.relative_to(context.project_root)}"
+                                ),
+                            )
+                        )
+                        continue
+                    source_paths = _source_paths_for_test_path(
+                        path,
+                        test_root=test_root,
+                        src_root=context.src_root,
+                    )
+                    if not any(
+                        source_path in context.ast_project.files for source_path in source_paths
+                    ):
+                        violations.append(
+                            _violation(
+                                self.id,
+                                path=path,
+                                message=(
+                                    "test does not mirror a source module; expected "
+                                    f"{source_paths[0].relative_to(context.project_root)}"
+                                ),
+                            )
+                        )
+                    continue
+                source_paths = _source_paths_for_test_path(
                     path,
                     test_root=test_root,
                     src_root=context.src_root,
                 )
-                if source_path not in context.ast_project.files:
+                if not any(
+                    source_path in context.ast_project.files for source_path in source_paths
+                ):
                     violations.append(
                         _violation(
                             self.id,
                             path=path,
                             message=(
                                 "test does not mirror a source module; expected "
-                                f"{source_path.relative_to(context.project_root)}"
+                                f"{source_paths[0].relative_to(context.project_root)}"
                             ),
                         )
                     )
+        return tuple(violations)
+
+    def _test_support_structure_violations(
+        self,
+        context: ArchitectureContext,
+    ) -> tuple[SpecxArchitectureViolation, ...]:
+        violations: list[SpecxArchitectureViolation] = []
+        test_root = context.project_root / "tests"
+        support_root = test_root / "_support"
+        support_fakes_root = support_root / "fakes"
+        if _support_fakes_package_exists(support_fakes_root):
+            violations.append(
+                _violation(
+                    self.id,
+                    path=support_fakes_root,
+                    message=(
+                        "tests/_support/fakes is not allowed; keep doubles in the test module "
+                        "that uses them"
+                    ),
+                )
+            )
+        for path in sorted(context.ast_project.files):
+            if not path.is_relative_to(test_root) or path.name == "__init__.py":
+                continue
+            tree = context.tree(path)
+            aliases = context.aliases(path)
+            if path.name == "harness.py":
+                violations.append(
+                    _violation(
+                        self.id,
+                        path=path,
+                        message=(
+                            "harness.py is not allowed; resolve targets directly from the "
+                            "container in flat test modules"
+                        ),
+                    )
+                )
+            if path.name == "_fakes.py":
+                violations.append(
+                    _violation(
+                        self.id,
+                        path=path,
+                        message=(
+                            "shared _fakes.py files are not allowed; keep doubles in the "
+                            "test module that uses them"
+                        ),
+                    )
+                )
+            if path.name == "conftest.py":
+                for class_node in [
+                    node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)
+                ]:
+                    if not _is_test_double_class_name(class_node.name):
+                        continue
+                    violations.append(
+                        _violation(
+                            self.id,
+                            path=path,
+                            symbol=class_node.name,
+                            message=(
+                                "test double classes do not belong in conftest.py; define "
+                                "them in the test module that uses them"
+                            ),
+                        )
+                    )
+            if path.name == "_scenarios.py":
+                violations.append(
+                    _violation(
+                        self.id,
+                        path=path,
+                        message=(
+                            "generic scenario files are not allowed; keep setup in the "
+                            "test module that uses it"
+                        ),
+                    )
+                )
+            for node in ast.walk(tree):
+                if not isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef)):
+                    continue
+                if not _is_pytest_fixture(node, aliases):
+                    continue
+                if _fixture_returns_use_closure(node):
+                    violations.append(
+                        _violation(
+                            self.id,
+                            path=path,
+                            symbol=node.name,
+                            message=(
+                                "closure-style use_* fixture factories are not allowed; "
+                                "register overrides directly before container.resolve(...)"
+                            ),
+                        )
+                    )
+            if not path.is_relative_to(support_root):
+                continue
+            for class_node in [node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)]:
+                if not _is_target_specific_test_factory_or_harness(class_node.name):
+                    continue
+                violations.append(
+                    _violation(
+                        self.id,
+                        path=path,
+                        symbol=class_node.name,
+                        message=(
+                            "target-specific test factories and harnesses are not allowed; "
+                            "resolve targets directly from the container"
+                        ),
+                    )
+                )
         return tuple(violations)
 
     def _missing_required_test_violations(
@@ -1397,22 +1598,56 @@ class TestsMirrorSourceStructureRule(ArchitectureRuleBase):
     ) -> tuple[SpecxArchitectureViolation, ...]:
         violations: list[SpecxArchitectureViolation] = []
         for source_path in _required_unit_test_source_paths(context):
-            expected_path = _expected_test_path_for_source_path(
+            flat_path = _flat_test_path_for_source_path(
                 source_path,
                 test_root=context.project_root / "tests" / "unit",
                 src_root=context.src_root,
             )
-            if expected_path not in context.ast_project.files:
-                violations.append(
-                    _violation(
-                        self.id,
-                        path=source_path,
-                        message=(
-                            f"missing unit test {expected_path.relative_to(context.project_root)}"
-                        ),
-                    )
+            if flat_path in context.ast_project.files or _target_folder_test_exists(
+                flat_path,
+                context=context,
+            ):
+                continue
+            violations.append(
+                _violation(
+                    self.id,
+                    path=source_path,
+                    message=f"missing unit test {flat_path.relative_to(context.project_root)}",
                 )
+            )
+        for source_path in _required_integration_test_source_paths(context):
+            expected_path = _flat_test_path_for_source_path(
+                source_path,
+                test_root=context.project_root / "tests" / "integration",
+                src_root=context.src_root,
+            )
+            if expected_path in context.ast_project.files or _target_folder_test_exists(
+                expected_path,
+                context=context,
+            ):
+                continue
+            violations.append(
+                _violation(
+                    self.id,
+                    path=source_path,
+                    message=(
+                        "missing integration test "
+                        f"{expected_path.relative_to(context.project_root)}"
+                    ),
+                )
+            )
         return tuple(violations)
+
+
+def _target_folder_test_exists(
+    flat_path: Path,
+    *,
+    context: ArchitectureContext,
+) -> bool:
+    target_name = flat_path.stem.removeprefix("test_")
+    target_folder_path = flat_path.parent / target_name / flat_path.name
+
+    return target_folder_path in context.ast_project.files
 
 
 class TestFixturesDoNotBundleMocksRule(ArchitectureRuleBase):
@@ -1450,15 +1685,15 @@ class TestFixturesDoNotBundleMocksRule(ArchitectureRuleBase):
         return tuple(violations)
 
 
-class IntegrationTestsDoNotMockInternalUseCasesOrServicesRule(ArchitectureRuleBase):
+class IntegrationTestsDoNotMockInternalCollaboratorsRule(ArchitectureRuleBase):
     """Require integration tests to exercise the real internal application graph.
 
-    Integration tests may stub external systems, but internal use cases and
-    services should be resolved through the real container so delivery, DI,
-    transaction, and persistence behavior are covered together.
+    Integration tests may stub external systems, but internal use cases,
+    services, and capabilities should be resolved through the real container so
+    delivery, DI, transaction, and persistence behavior are covered together.
     """
 
-    id: SpecxRuleId = SpecxRuleId.INTEGRATION_TESTS_DO_NOT_MOCK_INTERNAL_USE_CASES_OR_SERVICES
+    id: SpecxRuleId = SpecxRuleId.INTEGRATION_TESTS_DO_NOT_MOCK_INTERNAL_COLLABORATORS
 
     def check(self, context: ArchitectureContext) -> tuple[SpecxArchitectureViolation, ...]:
         violations: list[SpecxArchitectureViolation] = []
@@ -1468,18 +1703,26 @@ class IntegrationTestsDoNotMockInternalUseCasesOrServicesRule(ArchitectureRuleBa
                 continue
             tree = context.tree(path)
             aliases = context.aliases(path)
+            imports = context.imports(path)
+            factory_return_annotations = _local_function_return_annotations(tree, aliases)
             for node in ast.walk(tree):
                 if not isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef)):
                     continue
-                if _function_mocks_internal_app_collaborator(node, aliases):
+                if _function_mocks_internal_app_collaborator(
+                    node,
+                    aliases,
+                    imports,
+                    context.config.package_name,
+                    factory_return_annotations,
+                ):
                     violations.append(
                         _violation(
                             self.id,
                             path=path,
                             symbol=node.name,
                             message=(
-                                "mocks internal use case/service in integration tests; "
-                                "use the real app graph"
+                                "mocks internal use case, service, or capability in "
+                                "integration tests; use the real app graph"
                             ),
                         )
                     )
@@ -1626,6 +1869,78 @@ class UseCasesInjectUnitOfWorkManagersRule(ArchitectureRuleBase):
         return tuple(violations)
 
 
+class UseCasesDoNotInjectRepositoriesOrInfrastructureRule(ArchitectureRuleBase):
+    """Require persistence access to flow through use-case-owned UoW scopes.
+
+    Use cases should inject services and UoW managers, not repositories,
+    SQLAlchemy resources, or concrete infrastructure adapters that bypass
+    transaction ownership.
+    """
+
+    id: SpecxRuleId = SpecxRuleId.USE_CASES_DO_NOT_INJECT_REPOSITORIES_OR_INFRASTRUCTURE
+
+    def check(self, context: ArchitectureContext) -> tuple[SpecxArchitectureViolation, ...]:
+        violations: list[SpecxArchitectureViolation] = []
+        base_index = class_base_name_index(context)
+        for path in (context.src_root / "core").glob("*/use_cases/**/*.py"):
+            if path.name == "__init__.py" or path not in context.ast_project.files:
+                continue
+
+            tree = context.tree(path)
+            aliases = context.aliases(path)
+            for module in sorted(context.imports(path)):
+                if _use_case_imports_persistence_infrastructure(module):
+                    violations.append(_violation(self.id, path=path, message=f"imports {module}"))
+
+            for class_node in [node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)]:
+                if not _is_use_case_class(class_node, aliases, base_index):
+                    continue
+
+                messages: list[str] = []
+                forbidden_fields = _forbidden_use_case_persistence_dependency_fields(
+                    class_node,
+                    aliases,
+                    base_index,
+                )
+                if forbidden_fields:
+                    messages.append(f"injects {forbidden_fields}")
+
+                manager_fields = class_injected_unit_of_work_manager_field_names(
+                    class_node,
+                    aliases,
+                )
+                repository_fields = class_injected_repository_field_names(
+                    class_node,
+                    aliases,
+                    base_index,
+                )
+                for child in class_node.body:
+                    if (
+                        isinstance(child, (ast.AsyncFunctionDef, ast.FunctionDef))
+                        and child.name == "execute"
+                    ):
+                        bad_calls = _repository_calls_outside_manager_owned_uow(
+                            child,
+                            manager_fields=manager_fields,
+                            repository_fields=repository_fields,
+                        )
+                        if bad_calls:
+                            messages.append(
+                                f"calls repositories outside manager-owned UoW {sorted(bad_calls)}",
+                            )
+
+                if messages:
+                    violations.append(
+                        _violation(
+                            self.id,
+                            path=path,
+                            message="; ".join(messages),
+                            symbol=class_node.name,
+                        )
+                    )
+        return tuple(violations)
+
+
 class IOCContainerDoesNotRegisterActiveUnitOfWorkRule(ArchitectureRuleBase):
     """Reject active unit-of-work registrations in the IOC container.
 
@@ -1707,6 +2022,139 @@ def _python_package_directories(root: Path) -> tuple[Path, ...]:
     )
 
 
+def _is_use_case_class(
+    class_node: ast.ClassDef,
+    aliases: dict[str, str],
+    class_base_name_index: dict[str, set[str]],
+) -> bool:
+    base_names = class_direct_base_names(class_node, aliases)
+    return "BaseUseCase" in base_names or class_has_foundation_base(
+        class_node.name,
+        "BaseUseCase",
+        class_base_name_index,
+    )
+
+
+def _use_case_imports_persistence_infrastructure(module: str) -> bool:
+    parts = module_parts(module)
+    return "infrastructure" in parts or bool(parts and parts[0] == "sqlalchemy")
+
+
+def _forbidden_use_case_persistence_dependency_fields(
+    class_node: ast.ClassDef,
+    aliases: dict[str, str],
+    class_base_name_index: dict[str, set[str]],
+) -> list[str]:
+    fields: list[str] = []
+    for child in class_node.body:
+        if not isinstance(child, ast.AnnAssign) or not isinstance(child.target, ast.Name):
+            continue
+
+        injected_name = injected_type_name(child.annotation, aliases)
+        if not injected_name:
+            continue
+
+        if _is_forbidden_use_case_persistence_dependency(
+            injected_name,
+            class_base_name_index,
+        ):
+            annotation = annotation_name(child.annotation, aliases)
+            fields.append(f"{child.target.id}:{annotation}")
+    return sorted(fields)
+
+
+def _is_forbidden_use_case_persistence_dependency(
+    dependency_name: str,
+    class_base_name_index: dict[str, set[str]],
+) -> bool:
+    if dependency_name.endswith("Repository") or class_has_foundation_base(
+        dependency_name,
+        "BaseRepository",
+        class_base_name_index,
+    ):
+        return True
+
+    return any(
+        forbidden_name in dependency_name
+        for forbidden_name in USE_CASE_FORBIDDEN_INFRASTRUCTURE_DEPENDENCY_NAMES
+    )
+
+
+def _repository_calls_outside_manager_owned_uow(
+    function: ast.AsyncFunctionDef | ast.FunctionDef,
+    *,
+    manager_fields: set[str],
+    repository_fields: set[str],
+) -> set[str]:
+    manager_owned_uow_names = active_uow_names_from_manager_fields(function, manager_fields)
+    uow_like_names = {
+        name for name in active_uow_names(function) if _name_looks_like_unit_of_work(name)
+    }
+    repository_alias_names = _repository_alias_names_from_uow_names(
+        function,
+        manager_owned_uow_names | uow_like_names,
+    )
+    bad_calls: set[str] = set()
+    for call in (node for node in ast.walk(function) if isinstance(node, ast.Call)):
+        chain = attribute_chain(call.func)
+        if not chain:
+            continue
+        if chain[0] in manager_owned_uow_names:
+            continue
+        if chain[0] in uow_like_names and len(chain) >= 3:
+            bad_calls.add(".".join(chain))
+            continue
+        if _call_chain_uses_direct_repository(
+            chain,
+            repository_fields=repository_fields,
+            repository_alias_names=repository_alias_names,
+        ):
+            bad_calls.add(".".join(chain))
+    return bad_calls
+
+
+def _repository_alias_names_from_uow_names(
+    function: ast.AsyncFunctionDef | ast.FunctionDef,
+    uow_names: set[str],
+) -> set[str]:
+    aliases: set[str] = set()
+    for node in ast.walk(function):
+        if not isinstance(node, ast.Assign):
+            continue
+        value_chain = attribute_chain(node.value)
+        if len(value_chain) < 2 or value_chain[0] not in uow_names:
+            continue
+        for target in node.targets:
+            if isinstance(target, ast.Name):
+                aliases.add(target.id)
+    return aliases
+
+
+def _call_chain_uses_direct_repository(
+    chain: tuple[str, ...],
+    *,
+    repository_fields: set[str],
+    repository_alias_names: set[str],
+) -> bool:
+    if len(chain) < 2:
+        return False
+    if chain[0] in repository_alias_names:
+        return True
+    if chain[0] == "self" and len(chain) >= 3 and chain[1] in repository_fields:
+        return True
+    return any(_name_looks_like_repository(segment) for segment in chain[:-1])
+
+
+def _name_looks_like_repository(name: str) -> bool:
+    normalized = name.strip("_").lower()
+    return normalized == "repository" or normalized.endswith("_repository")
+
+
+def _name_looks_like_unit_of_work(name: str) -> bool:
+    normalized = name.strip("_").lower()
+    return normalized in {"unit_of_work", "uow"} or normalized.endswith("_unit_of_work")
+
+
 def _project_uses_alembic(context: ArchitectureContext) -> bool:
     return (context.project_root / "alembic.ini").exists() or (
         context.project_root / "migrations"
@@ -1727,18 +2175,31 @@ def _mirrored_test_paths(
     )
 
 
-def _source_path_for_test_path(
+def _source_paths_for_test_path(
     path: Path,
     *,
     test_root: Path,
     src_root: Path,
-) -> Path:
+) -> tuple[Path, ...]:
     relative = path.relative_to(test_root)
     source_file_name = f"{relative.name.removeprefix('test_')}"
-    return src_root / relative.parent / source_file_name
+    direct_mirror_path = src_root / relative.parent / source_file_name
+
+    return (direct_mirror_path,)
 
 
-def _expected_test_path_for_source_path(
+def _is_core_behavior_test_path(relative: Path) -> bool:
+    parts = relative.parts
+    return len(parts) >= 4 and parts[0] == "core" and parts[2] in CORE_BEHAVIOR_TEST_PACKAGE_NAMES
+
+
+def _is_core_behavior_target_test_path(relative: Path) -> bool:
+    source_file_name = relative.name.removeprefix("test_")
+    source_stem = Path(source_file_name).stem
+    return len(relative.parts) >= 5 and relative.parent.name == source_stem
+
+
+def _flat_test_path_for_source_path(
     path: Path,
     *,
     test_root: Path,
@@ -1746,6 +2207,36 @@ def _expected_test_path_for_source_path(
 ) -> Path:
     relative = path.relative_to(src_root)
     return test_root / relative.parent / f"test_{relative.name}"
+
+
+def _is_target_specific_test_factory_or_harness(class_name: str) -> bool:
+    return class_name.endswith(
+        (
+            "CapabilityFactory",
+            "CapabilityHarness",
+            "ControllerFactory",
+            "ControllerHarness",
+            "ServiceFactory",
+            "ServiceHarness",
+            "UseCaseFactory",
+            "UseCaseHarness",
+        )
+    )
+
+
+def _is_test_double_class_name(class_name: str) -> bool:
+    normalized = class_name.lower()
+    return (
+        normalized.startswith(("fake", "stub", "spy", "inmemory"))
+        or normalized.endswith(("fake", "stub", "spy", "double", "helper"))
+        or "fake" in normalized
+        or "double" in normalized
+        or "unavailable" in normalized
+    )
+
+
+def _support_fakes_package_exists(path: Path) -> bool:
+    return path.exists()
 
 
 def _is_non_source_integration_test(path: Path, *, test_root: Path) -> bool:
@@ -1766,6 +2257,35 @@ def _required_unit_test_source_paths(context: ArchitectureContext) -> tuple[Path
     )
 
 
+def _required_integration_test_source_paths(context: ArchitectureContext) -> tuple[Path, ...]:
+    base_index = class_base_name_index(context)
+    core_root = context.src_root / "core"
+    return tuple(
+        path
+        for path in sorted(context.ast_project.files)
+        if path.name != "__init__.py"
+        and path.is_relative_to(core_root)
+        and len((relative := path.relative_to(core_root)).parts) >= 3
+        and relative.parts[1] == "use_cases"
+        and _module_has_persistence_use_case(context, path, base_index)
+    )
+
+
+def _module_has_persistence_use_case(
+    context: ArchitectureContext,
+    path: Path,
+    base_index: dict[str, set[str]],
+) -> bool:
+    tree = context.tree(path)
+    aliases = context.aliases(path)
+    return any(
+        _is_use_case_class(class_node, aliases, base_index)
+        and bool(class_injected_unit_of_work_manager_field_names(class_node, aliases))
+        for class_node in ast.walk(tree)
+        if isinstance(class_node, ast.ClassDef)
+    )
+
+
 def _is_pytest_fixture(
     node: ast.AsyncFunctionDef | ast.FunctionDef,
     aliases: dict[str, str],
@@ -1777,17 +2297,60 @@ def _is_pytest_fixture(
     return False
 
 
+def _fixture_returns_use_closure(node: ast.AsyncFunctionDef | ast.FunctionDef) -> bool:
+    inner_use_functions = {
+        child.name
+        for child in node.body
+        if isinstance(child, (ast.AsyncFunctionDef, ast.FunctionDef))
+        and child.name.startswith("use_")
+    }
+    if not inner_use_functions:
+        return False
+    return any(
+        isinstance(child, ast.Return)
+        and isinstance(child.value, ast.Name)
+        and child.value.id in inner_use_functions
+        for child in node.body
+    )
+
+
 def _function_mocks_internal_app_collaborator(
     node: ast.AsyncFunctionDef | ast.FunctionDef,
     aliases: dict[str, str],
+    imports: frozenset[str],
+    package_name: str,
+    factory_return_annotations: dict[str, str],
 ) -> bool:
-    if node.name.endswith("_use_case_mock") or node.name.endswith("_service_mock"):
-        return True
     for child in ast.walk(node):
         if isinstance(child, ast.Call):
-            if _mock_call_uses_internal_app_collaborator_spec(child, aliases):
+            if _mock_call_uses_internal_app_collaborator_spec(
+                child,
+                aliases,
+                imports,
+                package_name,
+            ):
                 return True
-            if _container_add_instance_provides_internal_app_collaborator(child, aliases):
+            if _registration_call_targets_internal_app_collaborator(
+                child,
+                aliases,
+                imports,
+                package_name,
+                factory_return_annotations,
+            ):
+                return True
+            if _patch_call_targets_internal_app_collaborator(
+                child,
+                aliases,
+                imports,
+                package_name,
+            ):
+                return True
+            if _monkeypatch_call_targets_internal_app_collaborator(
+                child,
+                aliases,
+                imports,
+                package_name,
+            ):
                 return True
     return False
 
@@ -1795,34 +2358,205 @@ def _function_mocks_internal_app_collaborator(
 def _mock_call_uses_internal_app_collaborator_spec(
     node: ast.Call,
     aliases: dict[str, str],
+    imports: frozenset[str],
+    package_name: str,
 ) -> bool:
     if not _is_mock_factory_call(node, aliases):
         return False
     spec_name = _mock_call_spec_name(node, aliases)
-    return _is_internal_app_collaborator_name(spec_name)
+    return _is_internal_app_collaborator_name(
+        spec_name,
+        aliases=aliases,
+        imports=imports,
+        package_name=package_name,
+    )
 
 
 def _mock_call_spec_name(node: ast.Call, aliases: dict[str, str]) -> str:
     for keyword in node.keywords:
         if keyword.arg in {"spec", "spec_set"}:
-            return annotation_name(keyword.value, aliases)
+            return _qualified_expression_name(keyword.value, aliases)
     if node.args:
-        return annotation_name(node.args[0], aliases)
+        return _qualified_expression_name(node.args[0], aliases)
     return ""
 
 
-def _container_add_instance_provides_internal_app_collaborator(
+def _registration_call_targets_internal_app_collaborator(
     node: ast.Call,
     aliases: dict[str, str],
+    imports: frozenset[str],
+    package_name: str,
+    factory_return_annotations: dict[str, str],
 ) -> bool:
-    if not isinstance(node.func, ast.Attribute) or node.func.attr != "add_instance":
+    if not isinstance(node.func, ast.Attribute):
+        return False
+    if node.func.attr not in {"add", "add_factory", "add_instance", "override"}:
         return False
     provides = next((keyword.value for keyword in node.keywords if keyword.arg == "provides"), None)
-    return _is_internal_app_collaborator_name(annotation_name(provides, aliases))
+    if _is_internal_app_collaborator_name(
+        _qualified_expression_name(provides, aliases),
+        aliases=aliases,
+        imports=imports,
+        package_name=package_name,
+    ):
+        return True
+    if node.func.attr in {"add", "add_factory"} and node.args:
+        registered_name = _qualified_expression_name(node.args[0], aliases)
+        if _is_internal_app_collaborator_name(
+            registered_name,
+            aliases=aliases,
+            imports=imports,
+            package_name=package_name,
+        ):
+            return True
+        if isinstance(node.args[0], ast.Name) and _is_internal_app_collaborator_name(
+            factory_return_annotations.get(node.args[0].id, ""),
+            aliases=aliases,
+            imports=imports,
+            package_name=package_name,
+        ):
+            return True
+    if node.func.attr in {"add_instance", "override"} and node.args:
+        instance = node.args[0]
+        if isinstance(instance, ast.Call):
+            return _is_internal_app_collaborator_name(
+                _qualified_expression_name(instance.func, aliases),
+                aliases=aliases,
+                imports=imports,
+                package_name=package_name,
+            )
+    return False
 
 
-def _is_internal_app_collaborator_name(name: str) -> bool:
-    return name.endswith(("UseCase", "Service"))
+def _patch_call_targets_internal_app_collaborator(
+    node: ast.Call,
+    aliases: dict[str, str],
+    imports: frozenset[str],
+    package_name: str,
+) -> bool:
+    call_chain = tuple(aliases.get(segment, segment) for segment in attribute_chain(node.func))
+    if not _is_patch_call_chain(call_chain):
+        return False
+    if _is_patch_object_call_chain(call_chain):
+        if not node.args:
+            return False
+        return _is_internal_app_collaborator_name(
+            _qualified_expression_name(node.args[0], aliases),
+            aliases=aliases,
+            imports=imports,
+            package_name=package_name,
+        )
+    if not node.args or not isinstance(node.args[0], ast.Constant):
+        return False
+    return _string_target_names_internal_app_collaborator(
+        node.args[0].value,
+        package_name=package_name,
+    )
+
+
+def _monkeypatch_call_targets_internal_app_collaborator(
+    node: ast.Call,
+    aliases: dict[str, str],
+    imports: frozenset[str],
+    package_name: str,
+) -> bool:
+    call_chain = tuple(aliases.get(segment, segment) for segment in attribute_chain(node.func))
+    if call_chain[-1:] != ("setattr",) or not node.args:
+        return False
+    target = node.args[0]
+    if isinstance(target, ast.Constant) and _string_target_names_internal_app_collaborator(
+        target.value,
+        package_name=package_name,
+    ):
+        return True
+    return _is_internal_app_collaborator_name(
+        _qualified_expression_name(target, aliases),
+        aliases=aliases,
+        imports=imports,
+        package_name=package_name,
+    )
+
+
+def _string_target_names_internal_app_collaborator(
+    value: object,
+    *,
+    package_name: str,
+) -> bool:
+    return (
+        isinstance(value, str)
+        and value.startswith(f"{package_name}.core.")
+        and any(_name_looks_like_internal_app_collaborator(segment) for segment in value.split("."))
+    )
+
+
+def _is_internal_app_collaborator_name(
+    name: str,
+    *,
+    aliases: dict[str, str],
+    imports: frozenset[str],
+    package_name: str,
+) -> bool:
+    if not _name_looks_like_internal_app_collaborator(name.rsplit(".", maxsplit=1)[-1]):
+        return False
+    name_chain = tuple(aliases.get(segment, segment) for segment in name.split("."))
+    if len(name_chain) >= 2:
+        root = name_chain[0]
+        suffix = ".".join(name_chain[1:])
+        qualified_name = ".".join(name_chain)
+        if qualified_name.startswith(f"{package_name}.core."):
+            return True
+        return any(
+            imported.startswith(f"{package_name}.core.")
+            and imported.endswith((f".{root}", f".{suffix}"))
+            for imported in imports
+        )
+    return any(
+        imported.startswith(f"{package_name}.core.") and imported.endswith(f".{name}")
+        for imported in imports
+    )
+
+
+def _name_looks_like_internal_app_collaborator(name: str) -> bool:
+    return name.endswith(("Capability", "Service", "UseCase"))
+
+
+def _is_patch_call_chain(call_chain: tuple[str, ...]) -> bool:
+    return call_chain[-1:] == ("patch",) or _is_patch_object_call_chain(call_chain)
+
+
+def _is_patch_object_call_chain(call_chain: tuple[str, ...]) -> bool:
+    return call_chain[-2:] == ("patch", "object")
+
+
+def _local_function_return_annotations(
+    tree: ast.Module,
+    aliases: dict[str, str],
+) -> dict[str, str]:
+    return {
+        node.name: annotation_name(node.returns, aliases)
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef)) and node.returns is not None
+    }
+
+
+def _qualified_expression_name(
+    expression: ast.expr | None,
+    aliases: dict[str, str],
+) -> str:
+    chain = attribute_chain(expression)
+    if chain:
+        return ".".join(aliases.get(segment, segment) for segment in chain)
+    return annotation_name(expression, aliases)
+
+
+def _explicit_import_modules(tree: ast.Module) -> tuple[str, ...]:
+    modules: list[str] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            modules.extend(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module is not None:
+            modules.append(node.module)
+    return tuple(modules)
 
 
 def _fixture_bundles_mocks(
@@ -1831,6 +2565,10 @@ def _fixture_bundles_mocks(
 ) -> bool:
     mock_names = _fixture_mock_assignment_names(node, aliases)
     if _fixture_returns_mock_dict(node, aliases):
+        return True
+    if _returns_literal_with_multiple_mock_calls(node, aliases):
+        return True
+    if node.name.endswith("_mocks") and _function_mock_call_count(node, aliases) > 1:
         return True
     if len(mock_names) <= 1:
         return False
@@ -1891,6 +2629,38 @@ def _returns_dict_of_names(
     return False
 
 
+def _returns_literal_with_multiple_mock_calls(
+    node: ast.AsyncFunctionDef | ast.FunctionDef,
+    aliases: dict[str, str],
+) -> bool:
+    for child in ast.walk(node):
+        if not isinstance(child, ast.Return):
+            continue
+        values = _literal_values(child.value)
+        if sum(1 for value in values if _is_mock_factory_call(value, aliases)) > 1:
+            return True
+    return False
+
+
+def _literal_values(expression: ast.expr | None) -> tuple[ast.expr | None, ...]:
+    if isinstance(expression, ast.Dict):
+        return tuple(expression.values)
+    if isinstance(expression, (ast.List, ast.Set, ast.Tuple)):
+        return tuple(expression.elts)
+    return ()
+
+
+def _function_mock_call_count(
+    node: ast.AsyncFunctionDef | ast.FunctionDef,
+    aliases: dict[str, str],
+) -> int:
+    return sum(
+        1
+        for child in ast.walk(node)
+        if isinstance(child, ast.Call) and _is_mock_factory_call(child, aliases)
+    )
+
+
 def _container_add_instance_call_count(node: ast.AsyncFunctionDef | ast.FunctionDef) -> int:
     return sum(
         1
@@ -1906,6 +2676,7 @@ BUILT_IN_RULES: tuple[type[ArchitectureRuleBase], ...] = (
     ScopeInfrastructureDoesNotImportDeliveryRule,
     DeliveryControllersDoNotImportInfrastructureRule,
     CoreDoesNotContainDeliveryPackagesRule,
+    FoundationImportsUseScopedPackagesRule,
     UseCasesDoNotImportOrReturnEntitiesRule,
     UseCasesReturnDTOsRule,
     ResultDTOClassesLiveUnderScopeDTOsPackageRule,
@@ -1932,10 +2703,11 @@ BUILT_IN_RULES: tuple[type[ArchitectureRuleBase], ...] = (
     RootAgentsMDDocumentsProjectCommandsAndBoundariesRule,
     TestsMirrorSourceStructureRule,
     TestFixturesDoNotBundleMocksRule,
-    IntegrationTestsDoNotMockInternalUseCasesOrServicesRule,
+    IntegrationTestsDoNotMockInternalCollaboratorsRule,
     ServicesDoNotOpenUnitOfWorkScopesRule,
     UseCasesOpenAtMostOneUnitOfWorkScopeRule,
     UseCasesInjectUnitOfWorkManagersRule,
+    UseCasesDoNotInjectRepositoriesOrInfrastructureRule,
     IOCContainerDoesNotRegisterActiveUnitOfWorkRule,
     InitFilesAreEmptyRule,
 )

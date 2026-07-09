@@ -7,6 +7,7 @@ requires-python = ">=3.11"
 license = "MIT"
 license-files = ["LICENSE.md"]
 dependencies = [
+    "diwire>=1.4.2",
     "pydantic>=2.13.0",
     "pydantic-settings>=2.14.0",
     "sqlalchemy>=2.0.0",

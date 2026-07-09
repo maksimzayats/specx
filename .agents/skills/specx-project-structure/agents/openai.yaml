@@ -1,0 +1,4 @@
+interface:
+  display_name: "Specx Project Structure"
+  short_description: "Create clean Python project layout"
+  default_prompt: "Use $specx-project-structure to create a new clean Python service layout."

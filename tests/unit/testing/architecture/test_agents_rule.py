@@ -63,7 +63,11 @@ def _write_minimal_project_guidance(project_root: Path) -> None:
         "- BaseReadService\n"
         "- BaseEffectService\n"
         "- Use cases return DTOs, not entities\n"
-        "- Query use cases must not call repository mutators\n",
+        "- Query use cases must not call repository mutators\n"
+        "- Use cases that touch persistence inject `UnitOfWorkManager`, open at most one\n"
+        "  UoW scope, and must not inject repositories, active UoWs, providers,\n"
+        "  SQLAlchemy sessions/engines/session factories, or concrete infrastructure\n"
+        "  adapters directly.\n",
     )
     _write(project_root / "Makefile", "check:\n\nlint:\n\ntest:\n")
 

@@ -16,6 +16,7 @@ class SpecxRuleId(StrEnum):
         "delivery.controllers-do-not-import-infrastructure"
     )
     CORE_DOES_NOT_CONTAIN_DELIVERY_PACKAGES = "core.no-scope-delivery-packages"
+    FOUNDATION_IMPORTS_USE_SCOPED_PACKAGES = "foundation.imports-use-scoped-packages"
     USE_CASES_DO_NOT_IMPORT_OR_RETURN_ENTITIES = "use-cases.no-entity-imports-or-returns"
     USE_CASES_RETURN_DTOS = "use-cases.return-dtos"
     RESULT_DTO_CLASSES_LIVE_UNDER_SCOPE_DTOS_PACKAGE = "dtos.result-dtos-live-under-dtos"
@@ -58,11 +59,14 @@ class SpecxRuleId(StrEnum):
     )
     TESTS_MIRROR_SOURCE_STRUCTURE = "tests.mirror-source-structure"
     TEST_FIXTURES_DO_NOT_BUNDLE_MOCKS = "tests.fixtures-do-not-bundle-mocks"
-    INTEGRATION_TESTS_DO_NOT_MOCK_INTERNAL_USE_CASES_OR_SERVICES = (
-        "tests.integration-does-not-mock-internal-use-cases-or-services"
+    INTEGRATION_TESTS_DO_NOT_MOCK_INTERNAL_COLLABORATORS = (
+        "tests.integration-does-not-mock-internal-collaborators"
     )
     SERVICES_DO_NOT_OPEN_UNIT_OF_WORK_SCOPES = "uow.services-do-not-open-scopes"
     USE_CASES_OPEN_AT_MOST_ONE_UNIT_OF_WORK_SCOPE = "uow.use-cases-open-at-most-one-scope"
     USE_CASES_INJECT_UNIT_OF_WORK_MANAGERS = "uow.use-cases-inject-managers"
+    USE_CASES_DO_NOT_INJECT_REPOSITORIES_OR_INFRASTRUCTURE = (
+        "uow.use-cases-no-direct-repositories-or-infrastructure"
+    )
     IOC_CONTAINER_DOES_NOT_REGISTER_ACTIVE_UNIT_OF_WORK = "uow.ioc-does-not-register-active-uow"
     INIT_FILES_ARE_EMPTY = "packages.init-files-are-empty"
