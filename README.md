@@ -1,12 +1,12 @@
 # Specx
 
-**Codex skills for building Python services with explicit architectural boundaries.**
+**Agent skills for building Python services with explicit architectural boundaries.**
 
 Specx is a skill catalog for generating and evolving backend services that keep
-application code readable under agent-driven development. It gives Codex a
-shared vocabulary for packaged foundation bases, scoped core packages, delivery
-adapters, unit-of-work lifecycles, dependency injection, migrations, and
-architecture tests.
+application code readable under agent-driven development. It gives AI coding
+agents a shared vocabulary for packaged foundation bases, scoped core packages,
+delivery adapters, unit-of-work lifecycles, dependency injection, migrations,
+and architecture tests.
 
 [Install](#install) ·
 [Skills](#skills) ·
@@ -38,15 +38,18 @@ architecture tests.
   or stateful framework bases such as a SQLAlchemy declarative base.
 - **Container-centric tests.** Generated tests use native pytest `container`
   fixtures and direct `container.resolve(Target)` calls. Overrides are
-  registered before resolution, class-based doubles live in the `test_*.py`
-  module that uses them, and generated tests mirror source modules with flat
-  paths such as `tests/unit/core/tasks/services/test_title_service.py`.
+  registered before resolution, one-off class-based doubles live in the
+  `test_*.py` module that uses them, reused unit-test doubles live in mirrored
+  `fake_<source_module>.py` files under unit `capabilities`, `gateways`, or
+  `repositories` test packages, and generated tests mirror source modules with
+  flat paths such as
+  `tests/unit/core/tasks/services/test_title_service.py`.
 - **Alembic-first persistence.** SQLAlchemy projects use real Alembic
   migrations and drift checks instead of `metadata.create_all()` bootstraps.
 
 ## Install
 
-Install every Specx skill for Codex:
+Install every Specx skill for your target agent. For the `codex` target:
 
 ```sh
 npx skills add maksimzayats/specx --skill '*' --agent codex -y
@@ -83,7 +86,7 @@ def test_specx_architecture() -> None:
 
 ## What You Get
 
-- A reusable Codex skill catalog under `skills/`.
+- A reusable agent skill catalog under `skills/`.
 - A typed Python guardrail package under `src/specx/`.
 - A generated reference service under `samples/url-shortener-service/`.
 - Rule-based architecture guardrails exposed through

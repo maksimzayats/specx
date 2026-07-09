@@ -139,3 +139,6 @@ staticfiles/
 .DS_Store
 
 .local/
+
+# Local Codex skill install state
+skills-lock.json

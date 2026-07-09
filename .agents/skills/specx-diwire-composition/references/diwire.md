@@ -142,8 +142,12 @@ async def test_create_order_propagates_pricing_error(container: Container) -> No
         await use_case.execute(command=CreateOrderCommand(sku="SKU-1"))
 ```
 
-Class-based doubles live in the `test_*.py` module that uses them. Do not put
-test doubles in `conftest.py`, `_support`, or shared `_fakes.py` files.
+One-off class-based doubles live in the `test_*.py` module that uses them.
+When a double is reused by multiple unit test modules, put it in a mirrored
+`tests/unit/core/<scope>/{capabilities,gateways,repositories}/fake_<source_module>.py`
+module. Do not put test doubles in `conftest.py`, `_support`, shared
+`_fakes.py` files, or fake modules outside those mirrored unit
+port/capability packages.
 
 ## Test Overrides
 

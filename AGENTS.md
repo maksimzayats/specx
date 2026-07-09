@@ -3,7 +3,7 @@
 ## Repository Purpose
 
 This repo is the Specx skill catalog and Python guardrail package. It publishes
-reusable Codex skills and a typed `specx` package for creating Python backend
+reusable agent skills and a typed `specx` package for creating Python backend
 services with packaged scoped foundation bases, rule-based architecture tests,
 and clean `core` / `delivery` / `infrastructure` / `ioc` boundaries.
 
@@ -94,11 +94,15 @@ and clean `core` / `delivery` / `infrastructure` / `ioc` boundaries.
 - Unit tests receive the native pytest `container` fixture, register local
   doubles or inline mocks before resolution, and resolve project classes with
   `container.resolve(Target)`.
-- Class-based test doubles live in the `test_*.py` module that uses them.
-  Inline `MagicMock` or `AsyncMock` in the test function for one-off behavior.
+- One-off class-based test doubles live in the `test_*.py` module that uses
+  them. Reused unit-test doubles live in mirrored
+  `tests/unit/core/<scope>/{capabilities,gateways,repositories}/fake_<source_module>.py`
+  modules.
+- Inline `MagicMock` or `AsyncMock` in the test function for one-off behavior.
 - Do not create `harness.py`, target factories, target harnesses,
-  `tests/_support/fakes`, `tests/**/_fakes.py`, generic `_scenarios.py`, or
-  double classes in `conftest.py`.
+  `tests/_support/fakes`, `tests/**/_fakes.py`, fake modules outside those
+  mirrored unit port/capability packages, generic `_scenarios.py`, or double
+  classes in `conftest.py`.
 
 ## Working Rules For Agents
 

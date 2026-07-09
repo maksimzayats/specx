@@ -113,7 +113,7 @@ native pytest `container` fixture:
 tests/unit/core/orders/services/test_order_pricing_service.py
 ```
 
-Class-based doubles live in the same test module that uses them:
+One-off class-based doubles live in the same test module that uses them:
 
 ```python
 from dataclasses import dataclass
@@ -144,9 +144,13 @@ def test_order_pricer_adds_tax(container: Container) -> None:
 ```
 
 Use inline `MagicMock` or `AsyncMock` in the test body when only one behavior
-needs to change for that scenario. Do not create per-target folders,
-`harness.py`, target factories, target harnesses, shared `_fakes.py` files, or
-double classes in `conftest.py`.
+needs to change for that scenario. Reused unit-test doubles may live in
+mirrored
+`tests/unit/core/<scope>/{capabilities,gateways,repositories}/fake_<source_module>.py`
+modules. Do not create per-target folders, `harness.py`, target factories,
+target harnesses, `tests/_support/fakes`, shared `_fakes.py` files, fake
+modules outside those mirrored unit port/capability packages, or double classes
+in `conftest.py`.
 
 ## Avoid
 

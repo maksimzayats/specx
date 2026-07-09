@@ -1,6 +1,6 @@
 # Contributing
 
-Specx is a Codex skill catalog plus a typed Python guardrail package. Changes
+Specx is an agent skill catalog plus a typed Python guardrail package. Changes
 usually touch the package, the skills, and the generated sample service so
 future agents learn the intended architecture and the sample proves it still
 works.
@@ -8,7 +8,7 @@ works.
 ## Repository Layout
 
 ```text
-skills/                         # published Codex skills
+skills/                         # published agent skills
   specx-*/SKILL.md              # trigger metadata and workflow
   specx-*/references/*.md       # detailed generation guidance
 src/specx/                      # reusable architecture guardrail package

@@ -153,7 +153,8 @@ class RegisterUserResultDTO(BaseDTO):
   from `execute(...)`; a read/effect service may own that explicit DTO
   construction when the use case delegates to it.
 - Any use case that injects a `UnitOfWorkManager` needs a core integration test
-  under `tests/integration/core/<scope>/use_cases/<module>/` against the real
+  in the flat mirrored file
+  `tests/integration/core/<scope>/use_cases/test_<module>.py` against the real
   transactional database graph. Delivery route tests do not replace this core
   persistence-facing proof.
 
@@ -304,11 +305,14 @@ async def test_register_user_rejects_duplicate_email(
     assert unit_of_work_manager.rolled_back_count == 1
 ```
 
-Class-based doubles live in the `test_*.py` file that uses them. Inline
-`MagicMock` or `AsyncMock` in the test body when only one collaborator behavior
-needs to change. Do not create per-target folders, `harness.py`, target
-factories, target harnesses, shared `_fakes.py` files, or double classes in
-`conftest.py`.
+One-off class-based doubles live in the `test_*.py` file that uses them.
+Reused unit-test doubles may live in mirrored
+`tests/unit/core/<scope>/{capabilities,gateways,repositories}/fake_<source_module>.py`
+modules. Inline `MagicMock` or `AsyncMock` in the test body when only one
+collaborator behavior needs to change. Do not create per-target folders,
+`harness.py`, target factories, target harnesses, `tests/_support/fakes`,
+shared `_fakes.py` files, fake modules outside those mirrored unit
+port/capability packages, or double classes in `conftest.py`.
 
 ## Avoid
 

@@ -1431,7 +1431,9 @@ class TestsMirrorSourceStructureRule(ArchitectureRuleBase):
                     continue
                 relative = path.relative_to(test_root)
                 if _is_core_behavior_test_path(relative):
-                    if _is_core_behavior_target_test_path(relative):
+                    if path.name.startswith("test_") and _is_core_behavior_target_test_path(
+                        relative
+                    ):
                         expected_path = test_root / relative.parent.parent / relative.name
                         violations.append(
                             _violation(
@@ -1497,8 +1499,9 @@ class TestsMirrorSourceStructureRule(ArchitectureRuleBase):
                     self.id,
                     path=support_fakes_root,
                     message=(
-                        "tests/_support/fakes is not allowed; keep doubles in the test module "
-                        "that uses them"
+                        "tests/_support/fakes is not allowed; keep one-off doubles in test "
+                        "modules and reused unit doubles in mirrored fake_<source_module>.py "
+                        "modules"
                     ),
                 )
             )
@@ -1524,8 +1527,23 @@ class TestsMirrorSourceStructureRule(ArchitectureRuleBase):
                         self.id,
                         path=path,
                         message=(
-                            "shared _fakes.py files are not allowed; keep doubles in the "
-                            "test module that uses them"
+                            "shared _fakes.py files are not allowed; use mirrored "
+                            "fake_<source_module>.py modules for reused unit doubles"
+                        ),
+                    )
+                )
+            if _is_fake_module_path(path) and not _is_allowed_mirrored_fake_module_path(
+                path,
+                test_root=test_root,
+            ):
+                violations.append(
+                    _violation(
+                        self.id,
+                        path=path,
+                        message=(
+                            "fake_*.py modules are allowed only under tests/unit/core "
+                            "capabilities, gateways, or repositories packages and must mirror "
+                            "a source module"
                         ),
                     )
                 )
@@ -2170,7 +2188,7 @@ def _mirrored_test_paths(
         path
         for path in sorted(context.ast_project.files)
         if path.is_relative_to(test_root)
-        and path.name.startswith("test_")
+        and (path.name.startswith("test_") or path.name.startswith("fake_"))
         and path.name.endswith(".py")
     )
 
@@ -2182,10 +2200,24 @@ def _source_paths_for_test_path(
     src_root: Path,
 ) -> tuple[Path, ...]:
     relative = path.relative_to(test_root)
-    source_file_name = f"{relative.name.removeprefix('test_')}"
+    source_file_name = relative.name.removeprefix("test_").removeprefix("fake_")
     direct_mirror_path = src_root / relative.parent / source_file_name
 
     return (direct_mirror_path,)
+
+
+def _is_fake_module_path(path: Path) -> bool:
+    return path.name.startswith("fake_") and path.name.endswith(".py")
+
+
+def _is_allowed_mirrored_fake_module_path(path: Path, *, test_root: Path) -> bool:
+    allowed_fake_package_names = {"capabilities", "gateways", "repositories"}
+    unit_core_root = test_root / "unit" / "core"
+    if not path.is_relative_to(unit_core_root):
+        return False
+    relative = path.relative_to(unit_core_root)
+
+    return len(relative.parts) >= 3 and relative.parts[1] in allowed_fake_package_names
 
 
 def _is_core_behavior_test_path(relative: Path) -> bool:
@@ -2227,7 +2259,20 @@ def _is_target_specific_test_factory_or_harness(class_name: str) -> bool:
 def _is_test_double_class_name(class_name: str) -> bool:
     normalized = class_name.lower()
     return (
-        normalized.startswith(("fake", "stub", "spy", "inmemory"))
+        normalized.startswith(
+            (
+                "fake",
+                "stub",
+                "spy",
+                "inmemory",
+                "sequenced",
+                "fixed",
+                "tracking",
+                "recording",
+                "failing",
+                "broken",
+            )
+        )
         or normalized.endswith(("fake", "stub", "spy", "double", "helper"))
         or "fake" in normalized
         or "double" in normalized

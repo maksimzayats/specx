@@ -276,7 +276,8 @@ def test_tests_mirror_source_structure_rule_rejects_fake_classes_in_support_fake
     assert [(violation.rule_id, violation.message) for violation in report.violations] == [
         (
             SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE,
-            "tests/_support/fakes is not allowed; keep doubles in the test module that uses them",
+            "tests/_support/fakes is not allowed; keep one-off doubles in test modules and "
+            "reused unit doubles in mirrored fake_<source_module>.py modules",
         )
     ]
 
@@ -300,7 +301,8 @@ def test_tests_mirror_source_structure_rule_rejects_support_fakes_package(
     assert [(violation.rule_id, violation.message) for violation in report.violations] == [
         (
             SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE,
-            "tests/_support/fakes is not allowed; keep doubles in the test module that uses them",
+            "tests/_support/fakes is not allowed; keep one-off doubles in test modules and "
+            "reused unit doubles in mirrored fake_<source_module>.py modules",
         )
     ]
 
@@ -324,8 +326,164 @@ def test_tests_mirror_source_structure_rule_rejects_shared_fakes_file(
     assert [(violation.rule_id, violation.message) for violation in report.violations] == [
         (
             SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE,
-            "shared _fakes.py files are not allowed; keep doubles in the test module that uses "
-            "them",
+            "shared _fakes.py files are not allowed; use mirrored fake_<source_module>.py "
+            "modules for reused unit doubles",
+        )
+    ]
+
+
+def test_tests_mirror_source_structure_rule_accepts_mirrored_fake_modules(
+    tmp_path: Path,
+) -> None:
+    fake_modules = (
+        ("capabilities", "short_code_capability", "ShortCodeCapability"),
+        ("gateways", "readiness_check_gateway", "ReadinessCheckGateway"),
+        ("repositories", "task_repository", "TaskRepository"),
+    )
+    for package_name, module_name, source_class_name in fake_modules:
+        _write(
+            tmp_path
+            / "src"
+            / "demo_service"
+            / "core"
+            / "tasks"
+            / package_name
+            / f"{module_name}.py",
+            f"class {source_class_name}:\n    pass\n",
+        )
+        _write(
+            tmp_path
+            / "tests"
+            / "unit"
+            / "core"
+            / "tasks"
+            / package_name
+            / f"fake_{module_name}.py",
+            "class ReusedDouble:\n    pass\n",
+        )
+    _write(
+        tmp_path
+        / "tests"
+        / "unit"
+        / "core"
+        / "tasks"
+        / "capabilities"
+        / "test_short_code_capability.py",
+        "def test_short_code_capability() -> None:\n    assert True\n",
+    )
+
+    report = check_specx_architecture(
+        SpecxArchitectureConfig(
+            project_root=tmp_path,
+            package_name="demo_service",
+            disabled_rules=_disable_all_except(SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE),
+        )
+    )
+
+    assert report.violations == ()
+
+
+def test_tests_mirror_source_structure_rule_rejects_fake_modules_outside_unit_core(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path
+        / "src"
+        / "demo_service"
+        / "core"
+        / "tasks"
+        / "repositories"
+        / "task_repository.py",
+        "class TaskRepository:\n    pass\n",
+    )
+    _write(
+        tmp_path
+        / "tests"
+        / "integration"
+        / "core"
+        / "tasks"
+        / "repositories"
+        / "fake_task_repository.py",
+        "class InMemoryTaskRepository:\n    pass\n",
+    )
+
+    report = check_specx_architecture(
+        SpecxArchitectureConfig(
+            project_root=tmp_path,
+            package_name="demo_service",
+            disabled_rules=_disable_all_except(SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE),
+        )
+    )
+
+    assert [(violation.rule_id, violation.message) for violation in report.violations] == [
+        (
+            SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE,
+            "fake_*.py modules are allowed only under tests/unit/core capabilities, gateways, "
+            "or repositories packages and must mirror a source module",
+        )
+    ]
+
+
+def test_tests_mirror_source_structure_rule_rejects_fake_service_modules(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path / "src" / "demo_service" / "core" / "tasks" / "services" / "title_service.py",
+        "class TitleService:\n    pass\n",
+    )
+    _write(
+        tmp_path / "tests" / "unit" / "core" / "tasks" / "services" / "fake_title_service.py",
+        "class FakeTitleService:\n    pass\n",
+    )
+    _write(
+        tmp_path / "tests" / "unit" / "core" / "tasks" / "services" / "test_title_service.py",
+        "def test_title_service() -> None:\n    assert True\n",
+    )
+
+    report = check_specx_architecture(
+        SpecxArchitectureConfig(
+            project_root=tmp_path,
+            package_name="demo_service",
+            disabled_rules=_disable_all_except(SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE),
+        )
+    )
+
+    assert [(violation.rule_id, violation.message) for violation in report.violations] == [
+        (
+            SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE,
+            "fake_*.py modules are allowed only under tests/unit/core capabilities, gateways, "
+            "or repositories packages and must mirror a source module",
+        )
+    ]
+
+
+def test_tests_mirror_source_structure_rule_rejects_fake_modules_without_source(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path
+        / "tests"
+        / "unit"
+        / "core"
+        / "tasks"
+        / "repositories"
+        / "fake_missing_repository.py",
+        "class InMemoryMissingRepository:\n    pass\n",
+    )
+
+    report = check_specx_architecture(
+        SpecxArchitectureConfig(
+            project_root=tmp_path,
+            package_name="demo_service",
+            disabled_rules=_disable_all_except(SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE),
+        )
+    )
+
+    assert [(violation.rule_id, violation.message) for violation in report.violations] == [
+        (
+            SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE,
+            "test does not mirror a source module; expected "
+            "src/demo_service/core/tasks/repositories/missing_repository.py",
         )
     ]
 
@@ -356,6 +514,58 @@ def test_tests_mirror_source_structure_rule_rejects_double_classes_in_conftest(
             "that uses them",
             "InMemoryTaskRepository",
         )
+    ]
+
+
+def test_tests_mirror_source_structure_rule_rejects_behavior_named_doubles_in_conftest(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path / "tests" / "unit" / "core" / "tasks" / "conftest.py",
+        "\n".join(
+            (
+                "class SequencedShortCodeCapability:",
+                "    pass",
+                "",
+                "class FixedTaxRateCapability:",
+                "    pass",
+                "",
+                "class TrackingTaskUnitOfWorkManager:",
+                "    pass",
+            )
+        ),
+    )
+
+    report = check_specx_architecture(
+        SpecxArchitectureConfig(
+            project_root=tmp_path,
+            package_name="demo_service",
+            disabled_rules=_disable_all_except(SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE),
+        )
+    )
+
+    violation_details = [
+        (violation.rule_id, violation.message, violation.symbol) for violation in report.violations
+    ]
+    assert violation_details == [
+        (
+            SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE,
+            "test double classes do not belong in conftest.py; define them in the test module "
+            "that uses them",
+            "SequencedShortCodeCapability",
+        ),
+        (
+            SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE,
+            "test double classes do not belong in conftest.py; define them in the test module "
+            "that uses them",
+            "FixedTaxRateCapability",
+        ),
+        (
+            SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE,
+            "test double classes do not belong in conftest.py; define them in the test module "
+            "that uses them",
+            "TrackingTaskUnitOfWorkManager",
+        ),
     ]
 
 

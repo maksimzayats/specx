@@ -65,10 +65,12 @@ needs a real project-local base category or a stateful framework base that must
 not be shared globally, such as a SQLAlchemy declarative base.
 
 Add `tests/_support/` only when tests need generic clients, DB helpers, or
-shared integration resources. Project-specific test doubles stay in the
-`test_*.py` file that uses them. Add `tests/integration/core/...` for use cases
-that inject a UoW manager so persistence-facing behavior is proven against the
-real transactional database.
+shared integration resources. One-off project-specific test doubles stay in the
+`test_*.py` file that uses them. Reused unit-test doubles live in mirrored
+`tests/unit/core/<scope>/{capabilities,gateways,repositories}/fake_<source_module>.py`
+modules. Add `tests/integration/core/...` for use cases that inject a UoW
+manager so persistence-facing behavior is proven against the real
+transactional database.
 
 Every created test directory gets an empty `__init__.py`; do not add test
 package re-exports or setup behavior there.
@@ -179,7 +181,10 @@ Recommended content:
   and capabilities.
 - Unit tests register local test doubles or inline mocks before resolving the
   target with `container.resolve(Target)`.
-- Class-based doubles live in the `test_*.py` module that uses them.
+- One-off class-based doubles live in the `test_*.py` module that uses them.
+- Reused unit-test doubles live in mirrored
+  `tests/unit/core/<scope>/{capabilities,gateways,repositories}/fake_<source_module>.py`
+  modules.
 - Integration tests use the real internal app graph and override only external
   systems or the transactional test session factory.
 - Core use-case integration tests live under `tests/integration/core/...` and
@@ -193,7 +198,8 @@ Recommended content:
   absence of legacy `/api/v1/health`. They assert `Cache-Control: no-store`,
   `503` on readiness failure, and that probe routes stay out of OpenAPI.
 - Do not create per-target test folders, `harness.py`, target factories,
-  target harnesses, `tests/_support/fakes`, `tests/**/_fakes.py`, generic
+  target harnesses, `tests/_support/fakes`, `tests/**/_fakes.py`, fake modules
+  outside those mirrored unit port/capability packages, generic
   `_scenarios.py`, or double classes in `conftest.py`.
 - Do not hand-build application graphs in tests.
 - Before adding a test, sanity-check that it would fail for a plausible bug and

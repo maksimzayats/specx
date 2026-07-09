@@ -39,11 +39,15 @@ overrides need `diwire`. Read `references/diwire.md` before writing DI code.
 - Use `container.resolve(...)` for normal synchronous graph construction, even
   for targets with async methods; use `await container.aresolve(...)` only when
   DI construction itself has async providers.
-- Class-based test doubles live in the `test_*.py` module that uses them.
-  Inline `MagicMock` or `AsyncMock` in the test function when only one behavior
+- One-off class-based test doubles live in the `test_*.py` module that uses
+  them. Reused unit-test doubles may live in mirrored
+  `tests/unit/core/<scope>/{capabilities,gateways,repositories}/fake_<source_module>.py`
+  modules.
+- Inline `MagicMock` or `AsyncMock` in the test function when only one behavior
   needs to change.
 - Do not create DI-backed test factories, target harnesses, `harness.py`,
-  `tests/_support/fakes`, or `tests/**/_fakes.py`.
+  `tests/_support/fakes`, `tests/**/_fakes.py`, or fake modules outside
+  those mirrored unit port/capability packages.
 - Keep tests on native pytest fixtures. Do not enable
   `diwire.integrations.pytest_plugin`, and do not use `Injected[...]`
   parameters in test functions.

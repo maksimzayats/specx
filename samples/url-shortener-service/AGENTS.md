@@ -132,10 +132,14 @@
   `container.resolve(Target)`.
 - Delivery tests use generic container-backed helpers such as
   `open_test_async_client(container)` so overrides happen before app creation.
-- Class-based test doubles live in the `test_*.py` module that uses them.
-  Inline `MagicMock` or `AsyncMock` in the test function for one-off behavior.
+- One-off class-based test doubles live in the `test_*.py` module that uses
+  them. Reused unit-test doubles live in mirrored
+  `tests/unit/core/<scope>/{capabilities,gateways,repositories}/fake_<source_module>.py`
+  modules.
+- Inline `MagicMock` or `AsyncMock` in the test function for one-off behavior.
 - Do not create per-target test folders, `harness.py`, target factories,
-  target harnesses, `tests/_support/fakes`, `tests/**/_fakes.py`, generic
+  target harnesses, `tests/_support/fakes`, `tests/**/_fakes.py`, fake modules
+  outside those mirrored unit port/capability packages, generic
   `_scenarios.py`, or double classes in `conftest.py`.
 - Before adding a test, sanity-check that it would fail for a plausible bug and
   that its assertion protects behavior, a boundary, or a contract.

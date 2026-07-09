@@ -40,9 +40,14 @@ Read `references/testing.md` before creating test files.
 - If a complete replacement is needed by every test in one module, a
   module-local `container` fixture may register it before returning the
   container.
-- Keep class-based test doubles in the `test_*.py` module that uses them. Do
-  not create `tests/_support/fakes`, `tests/**/_fakes.py`, generic
-  `_scenarios.py`, or double classes in `conftest.py`.
+- Keep one-off class-based test doubles in the `test_*.py` module that uses
+  them. When the same double is reused by multiple unit modules, put it in a
+  mirrored
+  `tests/unit/core/<scope>/{capabilities,gateways,repositories}/fake_<source_module>.py`
+  file.
+- Do not create `tests/_support/fakes`, `tests/**/_fakes.py`, generic
+  `_scenarios.py`, fake modules outside those mirrored unit port/capability
+  packages, or double classes in `conftest.py`.
 - Use `MagicMock` or `AsyncMock` inline in the test function when only one
   behavior needs to be changed for that scenario.
 - Unit tests replace external IO, time, randomness, network, Redis, database,

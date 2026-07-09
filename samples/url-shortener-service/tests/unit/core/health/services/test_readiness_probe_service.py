@@ -3,6 +3,9 @@ from dataclasses import dataclass
 import pytest
 from diwire import Container
 
+from tests.unit.core.health.gateways.fake_readiness_check_gateway import (
+    FakeReadinessCheckGateway,
+)
 from url_shortener_service.core.health.dtos.health_probe_dto import (
     HealthCheckDTO,
     HealthCheckNameEnum,
@@ -15,20 +18,6 @@ from url_shortener_service.core.health.gateways.readiness_check_gateway import (
 from url_shortener_service.core.health.services.readiness_probe_service import (
     ReadinessProbeService,
 )
-
-
-@dataclass(kw_only=True, slots=True)
-class FakeReadinessCheckGateway(ReadinessCheckGateway):
-    """Readiness gateway double for readiness service tests.
-
-    Example:
-        gateway = FakeReadinessCheckGateway(checks=())
-    """
-
-    checks: tuple[HealthCheckDTO, ...]
-
-    async def check(self) -> tuple[HealthCheckDTO, ...]:
-        return self.checks
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)

@@ -55,11 +55,15 @@ details, read `references/blueprint.md`.
 - Unit tests receive a fresh native pytest `container` fixture, register
   overrides before resolution, and resolve project classes with
   `container.resolve(Target)`.
-- Keep class-based test doubles in the `test_*.py` module that uses them.
-  Inline `MagicMock` or `AsyncMock` in the test function for one-off behavior.
+- Keep one-off class-based test doubles in the `test_*.py` module that uses
+  them. Put reused unit-test doubles in mirrored
+  `tests/unit/core/<scope>/{capabilities,gateways,repositories}/fake_<source_module>.py`
+  modules.
+- Inline `MagicMock` or `AsyncMock` in the test function for one-off behavior.
 - Do not create target test folders, `harness.py`, target factories, target
-  harnesses, `tests/_support/fakes`, `tests/**/_fakes.py`, generic
-  `_scenarios.py`, or double classes in `conftest.py`.
+  harnesses, `tests/_support/fakes`, `tests/**/_fakes.py`, fake modules outside
+  those mirrored unit port/capability packages, generic `_scenarios.py`, or
+  double classes in `conftest.py`.
 - Before adding a test, sanity-check that it would fail for a plausible bug and
   that its assertion protects behavior, a boundary, or a contract.
 - Do not add tests only to have mirrored files, and do not prove upstream

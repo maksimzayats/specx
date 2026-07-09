@@ -32,12 +32,14 @@ tests/
     migrations/test_alembic.py
 ```
 
-Create only folders that contain real tests. Private support code lives under
-`tests/_support` and must stay generic: clients, DB helpers, and shared
-integration resources. Do not create `tests/_support/fakes`,
-`tests/**/_fakes.py`, per-target folders, `harness.py`, or `_scenarios.py`.
-Class-based doubles belong in the `test_*.py` module that uses them. Every
-directory under `tests/` has an empty `__init__.py`.
+Create only folders that contain real tests or mirrored fake modules. Private
+support code lives under `tests/_support` and must stay generic: clients, DB
+helpers, and shared integration resources. Do not create
+`tests/_support/fakes`, `tests/**/_fakes.py`, per-target folders, `harness.py`,
+or `_scenarios.py`. One-off class-based doubles belong in the `test_*.py`
+module that uses them. Reused class-based doubles may live in mirrored
+`tests/unit/core/<scope>/{capabilities,gateways,repositories}/fake_<source_module>.py`
+modules. Every directory under `tests/` has an empty `__init__.py`.
 
 The required mirrored scope is currently only core services, use cases, and
 capabilities. Do not create repository, UoW, model, session, or adapter tests
@@ -114,6 +116,45 @@ async def test_execute_rolls_back_when_creation_fails(container: Container) -> N
         await use_case.execute(command=CreateShortUrlCommand(target_url="https://example.com"))
 
     assert unit_of_work_manager.rolled_back_count == 1
+```
+
+Use mirrored fake modules only for class doubles reused by multiple unit test
+modules. They are allowed only under mirrored unit `capabilities`, `gateways`,
+or `repositories` test packages. The fake path mirrors the production module it
+replaces:
+
+```text
+src/order_service/core/orders/repositories/order_repository.py
+tests/unit/core/orders/repositories/fake_order_repository.py
+```
+
+The fake module contains only class doubles and small state methods needed by
+tests. It does not define fixtures, scenarios, or target factories:
+
+```python
+@dataclass(kw_only=True, slots=True)
+class InMemoryOrderRepository(OrderRepository):
+    """In-memory order repository double for order unit tests.
+
+    Example:
+        repository = InMemoryOrderRepository()
+    """
+
+    _orders: dict[str, OrderEntity] = field(default_factory=dict, init=False)
+
+    async def get(self, *, order_id: str) -> OrderEntity | None:
+        return self._orders.get(order_id)
+```
+
+Import the fake explicitly in the test that needs it, instantiate it as test
+state, register it with the container when it replaces an injected port, then
+resolve the real target:
+
+```python
+def test_lookup_uses_repository(container: Container) -> None:
+    repository = InMemoryOrderRepository()
+    container.add_instance(repository, provides=OrderRepository)
+    service = container.resolve(OrderLookupService)
 ```
 
 If every test in a module needs the same complete replacement, use a
@@ -249,6 +290,9 @@ only for deliberate legacy migrations.
 - No `harness.py`, test factories, or target harnesses.
 - No `tests/_support/fakes` package.
 - No shared `tests/**/_fakes.py` files.
+- No `fake_*.py` modules outside mirrored unit `capabilities`, `gateways`, or
+  `repositories` test packages.
+- No fake modules that do not mirror a real source module.
 - No test double classes in `conftest.py`.
 - No filler tests.
 - No repository/UoW/model/session tests just to mirror source files.
