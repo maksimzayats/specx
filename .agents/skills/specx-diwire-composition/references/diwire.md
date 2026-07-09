@@ -83,19 +83,29 @@ resolve them in tests only after registering an active test session.
 
 ## FastAPI Composition
 
-Resolve the outer app factory only. Resolve first, then call:
+Configure runtime logging before composing the app, then resolve the outer app
+factory. Resolve first, then call:
 
 ```python
 from order_service.delivery.fastapi.factory import FastAPIFactory
+from order_service.infrastructure.logging.configurator import LoggingConfigurator
 from order_service.ioc.container import get_container
 
 container = get_container()
+logging_configurator = container.resolve(LoggingConfigurator)
+logging_configurator.configure()
+
 app_factory = container.resolve(FastAPIFactory)
 app = app_factory()
 ```
 
 The factory receives controllers through `Injected[...]`. Controllers receive
 use cases through `Injected[...]`.
+
+Do not inject `logging.Logger`, register `logging.Logger`, or build logger
+providers in the container. Runtime logging setup is a configurator concern.
+Classes that emit logs should call `logging.getLogger(...)` locally in
+`__post_init__`.
 
 ## Pytest Containers
 
@@ -176,6 +186,8 @@ controllers, or `FastAPIFactory`.
 ## Do Not
 
 - Do not pass `Container` into a use case, service, controller, or adapter.
+- Do not inject `logging.Logger` or register it as a dependency. Use local
+  stdlib class loggers for classes that actually log.
 - Do not resolve dependencies from inside core.
 - Do not instantiate project use cases, services, controllers, repositories, or
   UoW managers by hand in tests; resolve project classes from `container`.

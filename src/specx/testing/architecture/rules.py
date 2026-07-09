@@ -1267,6 +1267,65 @@ class OnlyIOCDeliveryAppAndTestsImportContainerRule(ArchitectureRuleBase):
         return tuple(violations)
 
 
+class LoggingDoesNotInjectLoggersRule(ArchitectureRuleBase):
+    """Keep logger naming local to the class that emits log records.
+
+    Runtime logging is configured once through infrastructure. Classes that log
+    should create their own named stdlib logger instead of injecting or
+    registering `logging.Logger` through DI.
+    """
+
+    id: SpecxRuleId = SpecxRuleId.LOGGING_DOES_NOT_INJECT_LOGGERS
+
+    def check(self, context: ArchitectureContext) -> tuple[SpecxArchitectureViolation, ...]:
+        violations: list[SpecxArchitectureViolation] = []
+        for path in sorted(context.ast_project.files):
+            if path.name == "__init__.py":
+                continue
+
+            tree = context.tree(path)
+            aliases = context.aliases(path)
+            imports = context.imports(path)
+            for class_node in [node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)]:
+                for child in class_node.body:
+                    if not isinstance(child, ast.AnnAssign) or not isinstance(
+                        child.target,
+                        ast.Name,
+                    ):
+                        continue
+                    if _is_injected_logger_annotation(child.annotation, aliases, imports):
+                        annotation = annotation_name(child.annotation, aliases)
+                        violations.append(
+                            _violation(
+                                self.id,
+                                path=path,
+                                message=(f"injects logger field {child.target.id}:{annotation}"),
+                                symbol=class_node.name,
+                            )
+                        )
+
+            for node in [child for child in ast.walk(tree) if isinstance(child, ast.Call)]:
+                if not _is_container_registration_call(node):
+                    continue
+                provides = next(
+                    (keyword.value for keyword in node.keywords if keyword.arg == "provides"),
+                    None,
+                )
+                if provides is not None and _is_logging_logger_expression(
+                    provides,
+                    aliases,
+                    imports,
+                ):
+                    violations.append(
+                        _violation(
+                            self.id,
+                            path=path,
+                            message="registers logging.Logger in the DI container",
+                        )
+                    )
+        return tuple(violations)
+
+
 ALLOWED_UNVERSIONED_OPERATIONAL_ROUTE_PATHS = frozenset({"/healthz", "/readyz"})
 
 
@@ -1371,6 +1430,8 @@ class RootAgentsMDDocumentsProjectCommandsAndBoundariesRule(ArchitectureRuleBase
             "Use cases that touch persistence inject `UnitOfWorkManager`",
             "must not inject repositories, active UoWs, providers",
             "SQLAlchemy sessions/engines/session factories",
+            "LoggingConfigurator",
+            "Do not inject loggers",
         }
         if _project_uses_alembic(context):
             required_fragments.update(
@@ -2173,6 +2234,51 @@ def _name_looks_like_unit_of_work(name: str) -> bool:
     return normalized in {"unit_of_work", "uow"} or normalized.endswith("_unit_of_work")
 
 
+def _is_injected_logger_annotation(
+    annotation: ast.expr | None,
+    aliases: dict[str, str],
+    imports: frozenset[str],
+) -> bool:
+    if annotation is None:
+        return False
+    if not isinstance(annotation, ast.Subscript):
+        return False
+    if not annotation_name(annotation.value, aliases).endswith("Injected"):
+        return False
+
+    return _is_logging_logger_expression(annotation.slice, aliases, imports)
+
+
+def _is_logging_logger_expression(
+    expression: ast.expr,
+    aliases: dict[str, str],
+    imports: frozenset[str],
+) -> bool:
+    if isinstance(expression, ast.Attribute) and expression.attr == "Logger":
+        chain = attribute_chain(expression)
+        if len(chain) >= 2:
+            root_alias = aliases.get(chain[0], chain[0])
+            return root_alias == "logging"
+
+    if isinstance(expression, ast.Name):
+        return aliases.get(expression.id, expression.id) == "Logger" and "logging.Logger" in imports
+
+    return False
+
+
+def _is_container_registration_call(node: ast.Call) -> bool:
+    return isinstance(node.func, ast.Attribute) and node.func.attr in {
+        "add",
+        "add_context_manager",
+        "add_context_manager_class",
+        "add_factory",
+        "add_factory_class",
+        "add_generator",
+        "add_generator_class",
+        "add_instance",
+    }
+
+
 def _project_uses_alembic(context: ArchitectureContext) -> bool:
     return (context.project_root / "alembic.ini").exists() or (
         context.project_root / "migrations"
@@ -2743,6 +2849,7 @@ BUILT_IN_RULES: tuple[type[ArchitectureRuleBase], ...] = (
     ClassesUseSuffixFromMostSpecificFoundationCategoryRule,
     NonFoundationClassesDoNotUseRawCommonBasesRule,
     OnlyIOCDeliveryAppAndTestsImportContainerRule,
+    LoggingDoesNotInjectLoggersRule,
     PublicRoutesUseFullAPIV1PathsRule,
     NoSchemaBootstrapCallsInSourceOrTestsRule,
     RootAgentsMDDocumentsProjectCommandsAndBoundariesRule,

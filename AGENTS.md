@@ -87,6 +87,12 @@ and clean `core` / `delivery` / `infrastructure` / `ioc` boundaries.
 - Delivery schemas live under the delivery layer, usually
   `delivery/<framework>/schemas/`; use-case DTOs live in `core/<scope>/dtos/`.
 - SQLAlchemy projects use Alembic migrations, not `metadata.create_all`.
+- Runtime logging is configured once in top-level
+  `infrastructure/logging/LoggingConfigurator` with Python stdlib logging.
+- Do not inject loggers or register `logging.Logger` in the DI container.
+  Classes that actually log create a private class logger in `__post_init__`
+  using the full module plus class name, and must not log secrets, tokens, full
+  external URLs, credentials, request bodies, or infrastructure topology.
 - `diwire.Container` belongs in `ioc`, top-level delivery `__main__.py`/factory
   modules, and tests only.
 - Core service/use-case/capability tests mirror source module paths with flat

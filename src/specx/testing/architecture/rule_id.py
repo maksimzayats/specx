@@ -52,6 +52,7 @@ class SpecxRuleId(StrEnum):
     )
     NON_FOUNDATION_CLASSES_DO_NOT_USE_RAW_COMMON_BASES = "classes.no-raw-common-bases"
     ONLY_IOC_DELIVERY_APP_AND_TESTS_IMPORT_CONTAINER = "diwire.container-import-boundary"
+    LOGGING_DOES_NOT_INJECT_LOGGERS = "logging.no-injected-loggers"
     PUBLIC_ROUTES_USE_FULL_API_V1_PATHS = "delivery.routes-use-full-api-v1-paths"
     NO_SCHEMA_BOOTSTRAP_CALLS_IN_SOURCE_OR_TESTS = "sqlalchemy.no-schema-bootstrap-calls"
     ROOT_AGENTS_MD_DOCUMENTS_PROJECT_COMMANDS_AND_BOUNDARIES = (

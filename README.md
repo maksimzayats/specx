@@ -31,6 +31,9 @@ and architecture tests.
   architecture tests that reject layer leaks, entity returns from use cases,
   schema bootstrap calls, bare classes, wrong suffixes, and hidden transaction
   ownership.
+- **Standard runtime logging.** Generated API services configure Python stdlib
+  logging once through top-level infrastructure and keep logger creation local
+  to classes that actually emit log records.
 - **Explicit foundation boundaries.** Generated services import stateless base
   classes from `specx.core.foundation`, `specx.delivery.foundation`, and
   `specx.infrastructure.foundation` instead of vendoring a foundation tree.
@@ -114,7 +117,8 @@ def test_specx_architecture() -> None:
 - `specx-add-core-service` adds focused reusable core behavior without hiding
   transaction lifecycle.
 - `specx-add-infrastructure-adapter` adds repositories, gateways, UoW
-  implementations, SQLAlchemy, Redis, HTTP, SDK, and other technical adapters.
+  implementations, SQLAlchemy, Redis, HTTP, SDK, logging configurators, and
+  other technical adapters.
 - `specx-sqlalchemy-migrations` adds async Alembic configuration, revisions,
   migration commands, and drift tests.
 - `specx-add-delivery-controller` adds top-level FastAPI controllers, schemas,
@@ -151,6 +155,7 @@ src/<package>/
       schemas/
       services/
   infrastructure/
+    logging/
   ioc/
   shared/
 migrations/
@@ -194,6 +199,9 @@ SQLAlchemy declarative base. Local foundation module filenames are not
   UoW scopes, commit, or roll back.
 - SQLAlchemy schema is managed by Alembic migrations, not application schema
   bootstrap calls.
+- Runtime logging is configured once in top-level infrastructure. Do not inject
+  `logging.Logger` or register loggers in `diwire.Container`; classes that
+  actually log create private stdlib class loggers.
 - `diwire.Container` belongs in `ioc`, top-level delivery factory/entrypoint
   code, and tests only.
 
@@ -207,6 +215,7 @@ project used to validate the skills. It includes:
   outputs.
 - Split pure/read/effect services.
 - SQLAlchemy repositories and UoW manager.
+- Stdlib logging configurator and meaningful class-local log records.
 - Alembic migrations and drift checks.
 - Architecture tests that call the rule-based `specx` guardrail package.
 

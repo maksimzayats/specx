@@ -45,6 +45,13 @@ The required mirrored scope is currently only core services, use cases, and
 capabilities. Do not create repository, UoW, model, session, or adapter tests
 only to mirror source files.
 
+Top-level logging infrastructure is a narrow exception when it has real
+configuration behavior: unit-test `LoggingConfigurator` by overriding
+`LoggingSettings`, monkeypatching `logging.config.dictConfig`, and asserting
+the generated stdlib logging config. Use `caplog` only when a log record
+protects meaningful project behavior; do not add log assertions just because a
+logger field exists.
+
 ## Unit Tests
 
 Unit tests use a fresh test container. The default fixture is a bare container:

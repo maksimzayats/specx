@@ -111,7 +111,8 @@ Generated services should preserve these boundaries:
 - `delivery/` contains framework adapters, controllers, schemas, and
   delivery-only helpers.
 - `core/<scope>/infrastructure/` contains scope-owned technical adapters.
-- top-level `infrastructure/` contains app-wide technical resources.
+- top-level `infrastructure/` contains app-wide technical resources, including
+  process-wide logging configuration.
 - `ioc/` owns `diwire.Container` composition.
 - `shared/` is optional and only for stable cross-scope primitives.
 
@@ -160,6 +161,10 @@ Do not add a generic `BaseService`.
 
 Use repositories for owned persistence. Repositories may return entities inside
 core boundaries.
+
+Use top-level logging configurators for runtime logging setup. Do not inject
+`logging.Logger` or register loggers in the container; classes that actually
+log create private stdlib class loggers.
 
 Use gateways for outbound business capabilities provided by external systems:
 OpenAI, payments, email, queues, external HTTP APIs, and similar dependencies.

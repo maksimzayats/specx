@@ -30,7 +30,9 @@ src/order_service/
       controllers/probes.py
       schemas/probe_schema.py
   infrastructure/
-    settings.py
+    logging/
+      configurator.py
+      settings.py
   ioc/
     container.py
 tests/
@@ -98,6 +100,8 @@ Recommended content:
 - Core behavior lives in `src/order_service/core/<scope>/`.
 - Delivery lives in `src/order_service/delivery`.
 - Shared technical infrastructure lives in `src/order_service/infrastructure`.
+- Runtime logging is configured by
+  `src/order_service/infrastructure/logging/configurator.py`.
 - Scope-owned adapters live under `core/<scope>/infrastructure`.
 - DI composition lives in `src/order_service/ioc/container.py`.
 - Foundation bases come from `specx.core.foundation`,
@@ -137,6 +141,17 @@ Recommended content:
   `503` when persistence is unavailable.
 - Probe responses must be small, unauthenticated at the app layer, omit
   secrets/topology/stack traces, and send `Cache-Control: no-store`.
+- Runtime logging is configured once by `LoggingConfigurator` in top-level
+  `infrastructure/logging` using Python stdlib `logging.config.dictConfig`.
+- The FastAPI runtime entrypoint resolves `LoggingConfigurator` and calls
+  `configure()` before resolving `FastAPIFactory`.
+- Do not inject loggers, register `logging.Logger` in the DI container, or
+  pass loggers through constructors. Classes that actually log create a private
+  class logger in `__post_init__` with
+  `logging.getLogger(f"{self.__class__.__module__}.{self.__class__.__qualname__}")`.
+- Log important application events and failures, but never secrets, tokens,
+  full external URLs, credentials, request bodies, or detailed infrastructure
+  topology.
 - Use cases expose exactly one `execute(*, command=...)` or
   `execute(*, query=...)`.
 - Command/query classes live in the same use-case module and inherit
@@ -197,6 +212,10 @@ Recommended content:
 - Delivery probe tests cover `/healthz`, `/readyz`, readiness failure, and the
   absence of legacy `/api/v1/health`. They assert `Cache-Control: no-store`,
   `503` on readiness failure, and that probe routes stay out of OpenAPI.
+- Unit-test `LoggingConfigurator` by overriding `LoggingSettings`,
+  monkeypatching `logging.config.dictConfig`, and asserting the generated
+  readable stdlib config. Use `caplog` only when a log record is meaningful
+  project behavior.
 - Do not create per-target test folders, `harness.py`, target factories,
   target harnesses, `tests/_support/fakes`, `tests/**/_fakes.py`, fake modules
   outside those mirrored unit port/capability packages, generic
@@ -247,6 +266,13 @@ For a new API repo, create reusable `core/health` operational probe behavior so
 multiple delivery layers can expose the same liveness/readiness contract.
 Delivery still owns framework details such as route paths, status codes,
 headers, schemas, and OpenAPI exclusion.
+
+Create top-level `infrastructure/logging` as part of the first runnable slice.
+Use `LoggingSettings(BaseRuntimeSettings)` with a `LogLevelEnum(BaseStrEnum)`,
+and a `LoggingConfigurator(BaseConfigurator)` that calls
+`logging.config.dictConfig` with `disable_existing_loggers=False`, a readable
+console formatter, and root level/handler settings. Keep loggers local to
+classes that emit logs; do not make loggers DI dependencies.
 
 Use `$specx-add-core-use-case`, `$specx-add-core-service`,
 `$specx-add-delivery-controller`, `$specx-diwire-composition`, and

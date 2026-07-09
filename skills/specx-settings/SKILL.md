@@ -15,6 +15,9 @@ Use this skill whenever runtime configuration is needed. Read
   and includes a concrete `Example:`.
 - Place settings near the class that consumes them unless the setting is truly
   application-wide.
+- Logging settings are application-wide and live near
+  `infrastructure/logging/LoggingConfigurator`.
+- Use `BaseStrEnum` for finite configuration values such as logging levels.
 - Inject settings objects. Do not read `os.environ` inside use cases or
   services.
 - Use clear environment variable names and safe defaults only when safe.

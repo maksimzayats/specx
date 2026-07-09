@@ -7,6 +7,8 @@
 - Core behavior lives in `src/url_shortener_service/core/<scope>/`.
 - Delivery lives in `src/url_shortener_service/delivery/fastapi`.
 - Shared technical infrastructure lives in `src/url_shortener_service/infrastructure`.
+- Runtime logging is configured by
+  `src/url_shortener_service/infrastructure/logging/configurator.py`.
 - Scope-owned adapters live under `core/<scope>/infrastructure`.
 - DI composition lives in `src/url_shortener_service/ioc/container.py`.
 - Alembic migrations live in `migrations`.
@@ -50,6 +52,16 @@
   gateway adapter and returns `503` when persistence is not available.
 - Probe responses must be small, unauthenticated at the app layer, omit
   secrets/topology/stack traces, and send `Cache-Control: no-store`.
+- Runtime logging is configured once by `LoggingConfigurator` in top-level
+  `infrastructure/logging` using Python stdlib logging.
+- The FastAPI runtime entrypoint resolves `LoggingConfigurator` and calls
+  `configure()` before resolving `FastAPIFactory`.
+- Do not inject loggers, register `logging.Logger` in the DI container, or pass
+  loggers through constructors. Classes that actually log create a private
+  class logger in `__post_init__` using the full module plus class name.
+- Log important application events and failures, but never secrets, tokens,
+  full external URLs, credentials, request bodies, or detailed infrastructure
+  topology.
 - Use cases subclass `BaseUseCase` and expose exactly one
   `execute(*, command=...)` or `execute(*, query=...)`.
 - Command/query classes live in the same use-case module and subclass
@@ -125,6 +137,10 @@
   reports the transactional database as ready.
 - Delivery probe tests cover `/healthz`, `/readyz`, readiness failure, and the
   absence of legacy `/api/v1/health`.
+- Unit tests cover `LoggingConfigurator` by overriding `LoggingSettings`,
+  monkeypatching `logging.config.dictConfig`, and asserting the generated
+  readable stdlib config. Use `caplog` only when a log record protects
+  meaningful project behavior.
 - Core service/use-case/capability tests mirror source module paths with flat
   `test_<module>.py` files.
 - Unit tests receive the native pytest `container` fixture, register local

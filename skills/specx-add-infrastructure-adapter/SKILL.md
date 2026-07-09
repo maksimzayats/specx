@@ -40,6 +40,11 @@ Use this skill whenever code talks to external systems. Read
 11. For SQLAlchemy adapters, add or update Alembic migrations with
    `$specx-sqlalchemy-migrations`.
 
+Logging is top-level runtime infrastructure, not a core-scope adapter. Put
+stdlib logging setup in `infrastructure/logging/LoggingConfigurator`, inherit
+`BaseConfigurator`, and do not create gateway ports or injected logger
+bindings for it.
+
 For `/readyz`, implement required dependency checks as `core/health` gateway
 adapters, for example
 `core/health/infrastructure/sqlalchemy/readiness_check_gateway.py`, and bind

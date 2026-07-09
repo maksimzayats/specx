@@ -61,6 +61,9 @@ rate limiting, request context, or controller-specific policies.
   libraries. It must not import delivery.
 - Top-level infrastructure contains app-wide technical resources such as
   SQLAlchemy session factories, runtime instrumentation, logging, and telemetry.
+- Top-level `infrastructure/logging` owns process-wide stdlib logging
+  configuration. It may define `LoggingSettings` and `LoggingConfigurator`; it
+  does not define business gateways or injected logger ports.
 - Delivery controllers, schemas, and delivery services may import core use
   cases, DTOs, and application exceptions plus framework APIs.
 - Delivery controllers should not import infrastructure directly.
@@ -349,6 +352,29 @@ Use top-level `infrastructure/` for app-wide technical resources:
 - logging and telemetry configurators;
 - external SDK/client factories shared across scopes.
 
+Runtime logging should be configured once through a top-level
+`LoggingConfigurator` that inherits `BaseConfigurator` and calls
+`logging.config.dictConfig`. Use `disable_existing_loggers=False` so server,
+SQLAlchemy, Alembic, and library loggers are not accidentally silenced. Do not
+inject `logging.Logger` or register loggers in `diwire.Container`.
+
+When a behavior class actually emits log records, add a private logger field
+and initialize it in `__post_init__`:
+
+```python
+_logger: logging.Logger = field(init=False, repr=False)
+
+def __post_init__(self) -> None:
+    self._logger = logging.getLogger(
+        f"{self.__class__.__module__}.{self.__class__.__qualname__}",
+    )
+```
+
+Do not add logger fields to DTOs, entities, commands, queries, or classes with
+no log statements. Log important application events and failures, and avoid
+secrets, tokens, request bodies, full external URLs, credentials, and detailed
+infrastructure topology.
+
 Use `shared/` for stable cross-scope application primitives:
 
 - clocks and id generators;
@@ -381,6 +407,8 @@ set is exposed through stable `SpecxRuleId` values and covers:
 - no `metadata.create_all` or `drop_all` calls in source or tests;
 - `diwire.Container` access limited to `ioc`, top-level delivery app entry
   points/factories, and tests;
+- no injected `logging.Logger` dependencies or logger registrations in the DI
+  container;
 - full `/api/v1/...` public business HTTP route paths, with only `/healthz`
   and `/readyz` allowed as unversioned operational probe routes;
 - gateway port and implementation placement, external-effect documentation, and

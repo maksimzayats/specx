@@ -17,6 +17,9 @@ overrides need `diwire`. Read `references/diwire.md` before writing DI code.
 - Only `ioc/`, top-level delivery `__main__.py`/factory modules, and tests
   create or use `diwire.Container`.
 - Do not inject `Container`.
+- Do not inject `logging.Logger` or register loggers in the container. Runtime
+  logging is configured once by a top-level infrastructure configurator; classes
+  that log create local stdlib loggers.
 - Do not call `container.resolve()` inside core use cases or services.
 - Let `diwire` auto-wire concrete project classes.
 - Register only abstractions, external adapter bindings, gateway

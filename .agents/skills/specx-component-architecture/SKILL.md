@@ -28,6 +28,8 @@ than one layer. Read `references/boundaries.md` for the full rules.
   and delivery-only services.
 - `infrastructure/`: app-wide technical resources such as SQLAlchemy session
   factories, logging, telemetry, and external client factories.
+- Runtime logging lives in top-level `infrastructure/logging`. Configure it
+  once with a `BaseConfigurator`; do not inject `logging.Logger`.
 - `shared/`: tiny stable cross-scope primitives. It is not a dumping ground.
 - `ioc/`: `diwire` container creation and explicit bindings.
 
@@ -86,6 +88,12 @@ than one layer. Read `references/boundaries.md` for the full rules.
   `Example:`.
 - Keep controller-only helpers such as auth and rate limiting in `delivery/`.
 - Keep SQL and external API calls in scope infrastructure adapters.
+- Classes that actually emit logs create a private stdlib logger in
+  `__post_init__` using the full module plus class name. Do not add logger
+  fields to DTOs, entities, commands, queries, or classes with no log records.
+- Logs should describe important application events and failures without
+  secrets, credentials, request bodies, full external URLs, or infrastructure
+  topology.
 - Do not create bare classes without explicit bases.
 
 ## Code Style

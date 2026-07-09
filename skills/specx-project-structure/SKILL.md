@@ -26,21 +26,23 @@ details, read `references/blueprint.md`.
 6. Add top-level `infrastructure/` for shared technical resources such as
    SQLAlchemy session factories, logging, telemetry, and external client
    factories.
-7. Add `ioc/` for `diwire.Container` creation and explicit bindings.
-8. Add `shared/` only for stable cross-scope application primitives such as
+7. Add `infrastructure/logging/` with a stdlib `LoggingConfigurator` and
+   `LoggingSettings` for every new API repo.
+8. Add `ioc/` for `diwire.Container` creation and explicit bindings.
+9. Add `shared/` only for stable cross-scope application primitives such as
    unit-of-work contracts, clocks, ids, or errors.
-9. Add `migrations/` with Alembic when SQLAlchemy models exist.
-10. Create a reusable `core/health` operational probe slice plus delivery
+10. Add `migrations/` with Alembic when SQLAlchemy models exist.
+11. Create a reusable `core/health` operational probe slice plus delivery
    `/healthz` and `/readyz` routes as the first runnable slice when the user
    asks for a new API repo from scratch.
-11. Create root `AGENTS.md` for every new repo. Include runnable project
+12. Create root `AGENTS.md` for every new repo. Include runnable project
    commands from `$specx-project-tooling` and Specx boundaries from
    `$specx-component-architecture`.
-12. Do not create an empty local `foundation/` package. Create
+13. Do not create an empty local `foundation/` package. Create
    `src/<package>/foundation/` only for a real project-local base category or a
    stateful framework base that must not be shared globally, such as a
    SQLAlchemy declarative base.
-13. Add tests only where there is real code to test. Do not create empty folders
+14. Add tests only where there is real code to test. Do not create empty folders
    just to satisfy the diagram.
 
 ## Hard Rules
@@ -86,6 +88,18 @@ details, read `references/blueprint.md`.
 - Probe responses stay tiny, use `200` for pass, `503` for not ready, include
   `Cache-Control: no-store`, and do not expose secrets, topology, or stack
   traces.
+- Runtime logging is configured once in top-level
+  `infrastructure/logging/LoggingConfigurator` with Python stdlib
+  `logging.config.dictConfig`.
+- Resolve `LoggingConfigurator` in the delivery runtime entrypoint and call
+  `configure()` before resolving the app factory.
+- Do not inject loggers or register `logging.Logger` in the DI container.
+  Classes that actually emit logs create a private class logger in
+  `__post_init__` with
+  `logging.getLogger(f"{self.__class__.__module__}.{self.__class__.__qualname__}")`.
+- Add logs only for important application events or failures. Do not log
+  secrets, tokens, full external URLs, credentials, request bodies, or detailed
+  infrastructure topology.
 - FastAPI route tests compare response status codes with `fastapi.status`
   constants, not raw integer literals.
 - Use native pytest fixtures for test DI. Do not enable

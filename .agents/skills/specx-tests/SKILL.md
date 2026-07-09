@@ -65,6 +65,9 @@ Read `references/testing.md` before creating test files.
 - Probe route tests assert `Cache-Control: no-store`, readiness failure returns
   `503`, probe routes are excluded from OpenAPI, and legacy `/api/v1/health` is
   absent when replacing old generated health endpoints.
+- Unit-test logging configurators by overriding logging settings,
+  monkeypatching `logging.config.dictConfig`, and asserting the generated
+  stdlib config. Use `caplog` only when a log record is meaningful behavior.
 - FastAPI route tests compare response status codes with `fastapi.status`
   constants, not raw integer literals.
 - Use `container.resolve(...)` for normal synchronous graph construction, even
