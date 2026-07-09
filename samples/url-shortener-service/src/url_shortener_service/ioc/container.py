@@ -19,7 +19,9 @@ def get_container() -> Container:
         missing_policy=MissingPolicy.REGISTER_RECURSIVE,
         dependency_registration_policy=DependencyRegistrationPolicy.REGISTER_RECURSIVE,
     )
+    container.add_instance(container, provides=Container)
     _register_dependencies(container)
+
     return container
 
 

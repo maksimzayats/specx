@@ -68,6 +68,9 @@ Read `references/testing.md` before creating test files.
 - Unit-test logging configurators by overriding logging settings,
   monkeypatching `logging.config.dictConfig`, and asserting the generated
   stdlib config. Use `caplog` only when a log record is meaningful behavior.
+- Unit-test FastAPI lifecycle managers by overriding closeable infrastructure
+  resources and asserting shutdown order. Route integration helpers must run
+  ASGI lifespan explicitly.
 - FastAPI route tests compare response status codes with `fastapi.status`
   constants, not raw integer literals.
 - Use `container.resolve(...)` for normal synchronous graph construction, even

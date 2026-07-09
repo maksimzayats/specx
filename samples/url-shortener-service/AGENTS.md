@@ -9,6 +9,8 @@
 - Shared technical infrastructure lives in `src/url_shortener_service/infrastructure`.
 - Runtime logging is configured by
   `src/url_shortener_service/infrastructure/logging/configurator.py`.
+- FastAPI lifespan cleanup is owned by
+  `src/url_shortener_service/delivery/fastapi/lifecycle.py`.
 - Scope-owned adapters live under `core/<scope>/infrastructure`.
 - DI composition lives in `src/url_shortener_service/ioc/container.py`.
 - Alembic migrations live in `migrations`.
@@ -56,6 +58,11 @@
   `infrastructure/logging` using Python stdlib logging.
 - The FastAPI runtime entrypoint resolves `LoggingConfigurator` and calls
   `configure()` before resolving `FastAPIFactory`.
+- `FastAPIFactory` injects `FastAPILifecycle` and passes it to
+  `FastAPI(lifespan=...)`.
+- `FastAPILifecycle` closes app-owned infrastructure resources such as the
+  SQLAlchemy session factory, then calls `container.aclose()` on shutdown. Do
+  not run migrations, schema creation, or business workflows in lifespan.
 - Do not inject loggers, register `logging.Logger` in the DI container, or pass
   loggers through constructors. Classes that actually log create a private
   class logger in `__post_init__` using the full module plus class name.
@@ -99,8 +106,9 @@
   UoW scope, and must not inject repositories, active UoWs, providers,
   SQLAlchemy sessions/engines/session factories, or concrete infrastructure
   adapters directly.
-- Only `ioc/container.py`, top-level delivery `__main__.py`/factory code, and
-  tests may use `diwire.Container`.
+- Only `ioc/container.py`, top-level delivery `__main__.py`/factory/lifecycle
+  code, and tests may use `diwire.Container`. `Injected[Container]` is allowed
+  only in `FastAPILifecycle` for shutdown cleanup.
 - Use `Injected[...]` for collaborators.
 - Source classes need explicit packaged or local bases,
   matching suffixes, and scoped docstrings with concrete `Example:` blocks.
@@ -141,6 +149,8 @@
   monkeypatching `logging.config.dictConfig`, and asserting the generated
   readable stdlib config. Use `caplog` only when a log record protects
   meaningful project behavior.
+- Unit tests cover `FastAPILifecycle` shutdown order with closeable resource
+  doubles. Delivery integration helpers run ASGI lifespan explicitly.
 - Core service/use-case/capability tests mirror source module paths with flat
   `test_<module>.py` files.
 - Unit tests receive the native pytest `container` fixture, register local

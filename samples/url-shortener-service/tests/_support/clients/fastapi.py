@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+from asgi_lifespan import LifespanManager
 from diwire import Container
 from httpx2 import ASGITransport, AsyncClient
 
@@ -15,5 +16,8 @@ async def open_test_async_client(container: Container) -> AsyncIterator[AsyncCli
     app = app_factory()
     transport = ASGITransport(app=app)
 
-    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+    async with (
+        LifespanManager(app),
+        AsyncClient(transport=transport, base_url="http://testserver") as client,
+    ):
         yield client

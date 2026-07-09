@@ -25,6 +25,7 @@ BASE_SUFFIXES = (
     "FastAPISchema",
     "RuntimeSettings",
     "SQLAlchemyModel",
+    "Lifecycle",
     "Configurator",
     "UnitOfWorkManager",
     "Capability",

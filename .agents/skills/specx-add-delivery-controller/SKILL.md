@@ -1,6 +1,6 @@
 ---
 name: specx-add-delivery-controller
-description: Add delivery controllers for Specx services, especially FastAPI HTTP routes. Use when creating top-level `delivery/` request/response schemas, one controller per scoped use-case set, route registration, HTTP error translation, delivery-only auth/rate-limit/request services, or integration tests that exercise the delivery edge.
+description: Add delivery controllers for Specx services, especially FastAPI HTTP routes. Use when creating top-level `delivery/` request/response schemas, one controller per scoped use-case set, route registration, FastAPI lifecycle managers, HTTP error translation, delivery-only auth/rate-limit/request services, or integration tests that exercise the delivery edge.
 ---
 
 # Specx Add Delivery Controller
@@ -17,7 +17,8 @@ before adding controller code.
 4. Put controller-only helpers such as auth dependencies, rate limiters, and
    request-context readers under `delivery/fastapi/services/`.
 5. Make controllers inherit `BaseController`, schemas inherit
-   `BaseFastAPISchema`, and delivery helpers inherit `BaseDeliveryService`.
+   `BaseFastAPISchema`, delivery helpers inherit `BaseDeliveryService`, and
+   FastAPI lifespan managers inherit `BaseLifecycle[FastAPI]`.
 6. Add docstrings with scope and a concrete `Example:` to controllers, schemas,
    and delivery services.
 7. Inject use cases or delivery services with `Injected[...]`. Operational
@@ -30,7 +31,9 @@ before adding controller code.
 12. Register full public business route paths such as `/api/v1/users`. Do not
    split API prefixes across routers and route fragments. Operational probes
    are the only unversioned exception: `/healthz` and `/readyz`.
-13. Add integration tests at the HTTP boundary.
+13. For FastAPI apps with long-lived resources, inject `FastAPILifecycle` into
+   the app factory and pass it to `FastAPI(lifespan=...)`.
+14. Add integration tests at the HTTP boundary.
 
 ## Code Style
 

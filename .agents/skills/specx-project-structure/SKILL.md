@@ -21,8 +21,8 @@ details, read `references/blueprint.md`.
    `gateways/`, `repositories/`, `services/`, and `use_cases/`. Put
    scope-owned technical adapters under `infrastructure/` only when real IO
    exists.
-5. Add top-level `delivery/` for runnable framework apps, controllers,
-   request/response schemas, and delivery-only services.
+5. Add top-level `delivery/` for runnable framework apps, lifecycles,
+   controllers, request/response schemas, and delivery-only services.
 6. Add top-level `infrastructure/` for shared technical resources such as
    SQLAlchemy session factories, logging, telemetry, and external client
    factories.
@@ -93,6 +93,12 @@ details, read `references/blueprint.md`.
   `logging.config.dictConfig`.
 - Resolve `LoggingConfigurator` in the delivery runtime entrypoint and call
   `configure()` before resolving the app factory.
+- FastAPI apps use `delivery/fastapi/lifecycle.py` with
+  `FastAPILifecycle(BaseLifecycle[FastAPI])`. The app factory injects the
+  lifecycle and passes it to `FastAPI(lifespan=...)`.
+- The FastAPI lifecycle closes app-owned infrastructure resources, then calls
+  `container.aclose()` on shutdown. Do not run migrations or schema creation in
+  lifespan.
 - Do not inject loggers or register `logging.Logger` in the DI container.
   Classes that actually emit logs create a private class logger in
   `__post_init__` with
@@ -153,8 +159,10 @@ details, read `references/blueprint.md`.
 - Infrastructure contains technical IO only. No business decisions there.
 - SQLAlchemy schema is managed with Alembic migrations, not application
   `metadata.create_all` calls.
-- `ioc/` and top-level delivery `__main__.py`/factory modules may import across
-  layers to compose the app.
+- `ioc/` and top-level delivery `__main__.py`/factory/lifecycle modules may
+  import across layers to compose the app.
+- Do not inject `diwire.Container` except in `FastAPILifecycle`, where it is
+  used only for shutdown cleanup.
 - Prefer one primary public class per file.
 - Prefer `@dataclass(frozen=True, kw_only=True, slots=True)` for commands,
   queries, DTOs, entities, and other core data classes unless the user asks for

@@ -25,7 +25,7 @@ than one layer. Read `references/boundaries.md` for the full rules.
   shared globally, such as a SQLAlchemy declarative base.
 - `delivery/`: runnable framework apps, controllers, schemas, auth
   dependencies, request parsing, response serialization, HTTP error translation,
-  and delivery-only services.
+  app lifecycle managers, and delivery-only services.
 - `infrastructure/`: app-wide technical resources such as SQLAlchemy session
   factories, logging, telemetry, and external client factories.
 - Runtime logging lives in top-level `infrastructure/logging`. Configure it
@@ -87,6 +87,9 @@ than one layer. Read `references/boundaries.md` for the full rules.
 - Give major classes a docstring that explains scope and includes a concrete
   `Example:`.
 - Keep controller-only helpers such as auth and rate limiting in `delivery/`.
+- Keep FastAPI lifespan ownership in `delivery/fastapi/lifecycle.py`. The
+  lifecycle releases app-owned resources and closes the DI container on
+  shutdown.
 - Keep SQL and external API calls in scope infrastructure adapters.
 - Classes that actually emit logs create a private stdlib logger in
   `__post_init__` using the full module plus class name. Do not add logger

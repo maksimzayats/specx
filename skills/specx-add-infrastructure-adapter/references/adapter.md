@@ -131,9 +131,10 @@ class HttpUserDirectoryRepository(UserDirectoryRepository):
 
 Settings can live near the adapter if only that adapter consumes them.
 
-If the app needs a long-lived shared client, create and dispose it in an
-delivery app lifespan or factory, add it to the container as an instance, and
-inject that instance into the adapter. Keep lifecycle ownership outside core.
+If the app needs a long-lived shared client, create it as top-level
+infrastructure, add it to the container as an instance or factory, inject it
+into the adapter, and dispose it from `delivery/fastapi/lifecycle.py`. Keep
+lifecycle ownership outside core.
 
 OpenAI-style gateway implementation:
 
@@ -280,6 +281,19 @@ Resolve and call the configurator in the runtime entrypoint before resolving
 the app factory. Do not define a core logging gateway, inject `logging.Logger`,
 or register loggers in the DI container. Classes that actually emit logs create
 local stdlib class loggers in `__post_init__`.
+
+## Closeable App Resources
+
+Long-lived app-owned resources such as SQLAlchemy engines, Redis pools, queue
+clients, and SDK clients should expose an explicit async `close()` method on
+their top-level infrastructure factory or client wrapper. `FastAPILifecycle`
+calls those close methods during shutdown and then calls `container.aclose()`.
+Do not close app-wide resources in controllers, core use cases, core services,
+or individual request handlers.
+
+For SQLAlchemy session factories, `close()` should await `AsyncEngine.dispose()`
+and be idempotent. Do not run Alembic migrations or `metadata.create_all()` from
+lifespan.
 
 ## Readiness Gateway Adapter
 

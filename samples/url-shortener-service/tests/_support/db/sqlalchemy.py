@@ -25,6 +25,9 @@ class BoundSQLAlchemySessionFactory(SQLAlchemySessionFactory):
     def __post_init__(self) -> None:
         pass
 
+    async def close(self) -> None:
+        pass
+
 
 @asynccontextmanager
 async def open_transactional_session_factory(

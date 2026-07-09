@@ -89,12 +89,16 @@ and clean `core` / `delivery` / `infrastructure` / `ioc` boundaries.
 - SQLAlchemy projects use Alembic migrations, not `metadata.create_all`.
 - Runtime logging is configured once in top-level
   `infrastructure/logging/LoggingConfigurator` with Python stdlib logging.
+- FastAPI app lifespan lives in `delivery/fastapi/lifecycle.py`, inherits
+  `BaseLifecycle[FastAPI]`, closes app-owned infrastructure resources, and then
+  calls `container.aclose()` on shutdown.
 - Do not inject loggers or register `logging.Logger` in the DI container.
   Classes that actually log create a private class logger in `__post_init__`
   using the full module plus class name, and must not log secrets, tokens, full
   external URLs, credentials, request bodies, or infrastructure topology.
-- `diwire.Container` belongs in `ioc`, top-level delivery `__main__.py`/factory
-  modules, and tests only.
+- `diwire.Container` belongs in `ioc`, top-level delivery
+  `__main__.py`/factory/lifecycle modules, and tests only. `Injected[Container]`
+  is allowed only in `FastAPILifecycle`.
 - Core service/use-case/capability tests mirror source module paths with flat
   `test_<module>.py` files. Do not create per-target test folders.
 - Unit tests receive the native pytest `container` fixture, register local

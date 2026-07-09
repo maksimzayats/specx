@@ -23,6 +23,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "asgi-lifespan==2.1.0",
     "httpx2>=0.28.0",
     "mypy>=2.1.0",
     "pytest>=9.1.0",
@@ -141,8 +142,9 @@ migration-check:
   and migration tests are required.
 - Add `redis` only when a Redis adapter exists.
 - Add `httpx` as runtime only when production code performs outbound HTTP.
-- Use `httpx2` in dev when route tests need in-process ASGI clients. Prefer
-  `AsyncClient` with `ASGITransport` for FastAPI integration tests.
+- Use `httpx2` and `asgi-lifespan` in dev when route tests need in-process
+  ASGI clients. Prefer `AsyncClient` with `ASGITransport` wrapped by
+  `LifespanManager` for FastAPI integration tests.
 - Add `specx` as a runtime dependency when generated projects import packaged
   foundation bases. The standard architecture wrapper in `tests/guardrails`
   uses the same package.

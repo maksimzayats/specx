@@ -7,7 +7,7 @@ foundation tree:
 - `specx.core.foundation` for core commands, queries, DTOs, entities, use
   cases, services, ports, UoWs, factories, enums, and exceptions.
 - `specx.delivery.foundation` for delivery controllers, delivery services, and
-  framework schema bases.
+  app lifecycles, and framework schema bases.
 - `specx.infrastructure.foundation` for runtime settings, configurators, and
   infrastructure-specific bases such as SQLAlchemy model bases.
 
@@ -66,6 +66,7 @@ Use these imports first:
 | `BaseApplicationValueError` | `specx.core.foundation.exceptions` | Invalid application values rejected before persistence. |
 | `BaseController` | `specx.delivery.foundation.controller` | Delivery controllers that register public routes. |
 | `BaseDeliveryService` | `specx.delivery.foundation.service` | Delivery-only helpers such as auth or rate limiting. |
+| `BaseLifecycle` | `specx.delivery.foundation.lifecycle` | Delivery app lifespan managers that release app-owned resources. |
 | `BaseFastAPISchema` | `specx.delivery.foundation.fastapi.schema` | FastAPI request and response schemas. |
 | `BaseSQLAlchemyModel` | `specx.infrastructure.foundation.sqlalchemy.model` | Infrastructure SQLAlchemy model bases. Generated services usually define a project-local SQLAlchemy base instead. |
 
@@ -86,6 +87,7 @@ Concrete class names use the suffix implied by their most-specific base:
 - `BaseUnitOfWork` -> `UnitOfWork`
 - `BaseUnitOfWorkManager` -> `UnitOfWorkManager`
 - `BaseController` -> `Controller`
+- `BaseLifecycle` -> `Lifecycle`
 - `BaseFactory` -> `Factory`
 - `BaseRuntimeSettings` -> `Settings`
 - `BaseApplicationError` -> `Error`

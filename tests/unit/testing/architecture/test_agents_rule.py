@@ -65,6 +65,7 @@ def _write_minimal_project_guidance(project_root: Path) -> None:
         "- Use cases return DTOs, not entities\n"
         "- Query use cases must not call repository mutators\n"
         "- Runtime logging is configured by `LoggingConfigurator`.\n"
+        "- FastAPI lifespan uses `FastAPILifecycle` and calls `container.aclose()`.\n"
         "- Do not inject loggers; classes that log create local stdlib loggers.\n"
         "- Use cases that touch persistence inject `UnitOfWorkManager`, open at most one\n"
         "  UoW scope, and must not inject repositories, active UoWs, providers,\n"

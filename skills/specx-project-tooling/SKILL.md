@@ -15,7 +15,8 @@ Use this skill to make the repository executable and checkable. Read
 2. Use `uv` metadata in `pyproject.toml`.
 3. Add runtime dependencies only for real runtime features. For a starter API,
    include `specx`, FastAPI, `diwire`, `pydantic-settings`, and Uvicorn.
-4. Add dev dependencies for pytest, Ruff, mypy, and HTTP testing.
+4. Add dev dependencies for pytest, Ruff, mypy, HTTP testing, and ASGI lifespan
+   testing when there is a FastAPI app.
 5. Enable the `diwire.integrations.mypy_plugin` plugin.
 6. Add simple Makefile targets: `check`, `format`, `lint`, `test`, and `dev`
    when there is a FastAPI delivery app.

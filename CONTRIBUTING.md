@@ -108,12 +108,14 @@ Generated services should preserve these boundaries:
 - `foundation/`, when present in a generated service, contains only
   project-local base classes missing from the scoped foundation packages.
 - `core/<scope>/` contains framework-free application behavior.
-- `delivery/` contains framework adapters, controllers, schemas, and
-  delivery-only helpers.
+- `delivery/` contains framework adapters, controllers, schemas, app lifecycle
+  managers, and delivery-only helpers.
 - `core/<scope>/infrastructure/` contains scope-owned technical adapters.
 - top-level `infrastructure/` contains app-wide technical resources, including
   process-wide logging configuration.
 - `ioc/` owns `diwire.Container` composition.
+- FastAPI lifecycle code closes app-owned infrastructure resources and is the
+  only generated class allowed to inject `diwire.Container`.
 - `shared/` is optional and only for stable cross-scope primitives.
 
 Project-local foundation module filenames are intentionally unprefixed:

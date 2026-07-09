@@ -28,6 +28,7 @@ delivery/
   fastapi/
     __main__.py
     factory.py
+    lifecycle.py
     controllers/
     schemas/
     services/
@@ -67,10 +68,14 @@ rate limiting, request context, or controller-specific policies.
 - Delivery controllers, schemas, and delivery services may import core use
   cases, DTOs, and application exceptions plus framework APIs.
 - Delivery controllers should not import infrastructure directly.
-- Delivery `__main__.py`/factory modules may import delivery controllers,
-  top-level infrastructure, `ioc`, and factories to compose the runtime. They
-  must not import scope infrastructure, ORM models, repositories, or schema DDL
-  helpers.
+- Delivery `__main__.py`, factory, and lifecycle modules may import delivery
+  controllers, top-level infrastructure, `ioc`, and factories to compose the
+  runtime. They must not import scope infrastructure, ORM models,
+  repositories, or schema DDL helpers.
+- FastAPI lifecycle code lives in `delivery/fastapi/lifecycle.py`, inherits
+  `BaseLifecycle[FastAPI]`, and is the only project class allowed to inject
+  `diwire.Container`. It releases app-owned resources and calls
+  `container.aclose()` on shutdown.
 - `ioc` may import any concrete class needed for composition.
 - `core/<scope>/delivery/` is not allowed.
 
@@ -95,6 +100,7 @@ scoped Specx foundation bases:
 - `BaseFactory`
 - `BaseConfigurator`
 - `BaseController`
+- `BaseLifecycle`
 - `BaseDeliveryService`
 - `BaseFastAPISchema`
 - `BaseRuntimeSettings`
@@ -180,6 +186,15 @@ Use a delivery service only for framework-facing behavior:
 - `FastAPIRateLimitingService`
 - `BearerTokenReadingService`
 - `RequestPrincipalResolvingService`
+
+Use a delivery lifecycle for framework-owned startup/shutdown behavior:
+
+- `FastAPILifecycle`
+
+A lifecycle receives long-lived app resources, exposes a framework lifespan
+context manager, and closes resources during shutdown. It does not contain
+business rules, route mapping, schema serialization, migrations, or request
+handling.
 
 Reusable operational health/readiness behavior may live under `core/health`
 when more than one delivery could use it. Keep the liveness/readiness DTOs,
@@ -406,7 +421,8 @@ set is exposed through stable `SpecxRuleId` values and covers:
   avoiding delivery imports;
 - no `metadata.create_all` or `drop_all` calls in source or tests;
 - `diwire.Container` access limited to `ioc`, top-level delivery app entry
-  points/factories, and tests;
+  points/factories/lifecycles, and tests, with `Injected[Container]` allowed
+  only in the FastAPI lifecycle;
 - no injected `logging.Logger` dependencies or logger registrations in the DI
   container;
 - full `/api/v1/...` public business HTTP route paths, with only `/healthz`

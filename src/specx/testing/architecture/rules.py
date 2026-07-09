@@ -154,10 +154,13 @@ class ScopeInfrastructureDoesNotImportDeliveryRule(ArchitectureRuleBase):
 
 
 class DeliveryControllersDoNotImportInfrastructureRule(ArchitectureRuleBase):
-    """Keep delivery controllers from reaching directly into infrastructure.
+    """Keep delivery modules from reaching into scope infrastructure.
 
     Controllers should translate framework input and call use cases; concrete
     infrastructure should be composed through IOC or delivery app factories.
+    FastAPI app composition modules may import top-level infrastructure
+    resources, but not scope repositories, ORM models, DDL helpers, or concrete
+    scope infrastructure adapters.
     """
 
     id: SpecxRuleId = SpecxRuleId.DELIVERY_CONTROLLERS_DO_NOT_IMPORT_INFRASTRUCTURE
@@ -167,8 +170,21 @@ class DeliveryControllersDoNotImportInfrastructureRule(ArchitectureRuleBase):
         for path in (context.src_root / "delivery").glob("**/controllers/**/*.py"):
             if path.name == "__init__.py" or path not in context.ast_project.files:
                 continue
-            for module in context.imports(path):
+            for module in _explicit_import_modules(context.tree(path)):
                 if "infrastructure" in module_parts(module):
+                    violations.append(
+                        _violation(self.id, path=path, message=f"imports {module}"),
+                    )
+        for relative in (
+            Path("delivery/fastapi/__main__.py"),
+            Path("delivery/fastapi/factory.py"),
+            Path("delivery/fastapi/lifecycle.py"),
+        ):
+            path = context.src_root / relative
+            if path not in context.ast_project.files:
+                continue
+            for module in _explicit_import_modules(context.tree(path)):
+                if _is_scope_technical_import(module):
                     violations.append(
                         _violation(self.id, path=path, message=f"imports {module}"),
                     )
@@ -1240,13 +1256,15 @@ class OnlyIOCDeliveryAppAndTestsImportContainerRule(ArchitectureRuleBase):
     """Restrict `diwire.Container` imports to composition and tests.
 
     Application classes should receive dependencies rather than importing the
-    container or resolving collaborators directly.
+    container or resolving collaborators directly. FastAPI lifecycle is the
+    narrow exception because it owns app shutdown and closes the container.
     """
 
     id: SpecxRuleId = SpecxRuleId.ONLY_IOC_DELIVERY_APP_AND_TESTS_IMPORT_CONTAINER
 
     def check(self, context: ArchitectureContext) -> tuple[SpecxArchitectureViolation, ...]:
         violations: list[SpecxArchitectureViolation] = []
+        base_index = class_base_name_index(context)
         for path in context.source_paths():
             if not uses_diwire_container(context.tree(path)):
                 continue
@@ -1255,6 +1273,7 @@ class OnlyIOCDeliveryAppAndTestsImportContainerRule(ArchitectureRuleBase):
                 relative == Path("ioc/container.py")
                 or relative == Path("delivery/fastapi/__main__.py")
                 or relative == Path("delivery/fastapi/factory.py")
+                or relative == Path("delivery/fastapi/lifecycle.py")
             )
             if not allowed:
                 violations.append(
@@ -1264,6 +1283,27 @@ class OnlyIOCDeliveryAppAndTestsImportContainerRule(ArchitectureRuleBase):
                         message="imports diwire.Container outside allowed composition modules",
                     )
                 )
+
+            aliases = context.aliases(path)
+            for class_node in [
+                node for node in ast.walk(context.tree(path)) if isinstance(node, ast.ClassDef)
+            ]:
+                if _class_injects_diwire_container(
+                    class_node,
+                    aliases,
+                ) and not _class_can_inject_container(
+                    relative,
+                    class_node,
+                    base_index,
+                ):
+                    violations.append(
+                        _violation(
+                            self.id,
+                            path=path,
+                            message="injects diwire.Container outside FastAPI lifecycle",
+                            symbol=class_node.name,
+                        )
+                    )
         return tuple(violations)
 
 
@@ -1431,6 +1471,8 @@ class RootAgentsMDDocumentsProjectCommandsAndBoundariesRule(ArchitectureRuleBase
             "must not inject repositories, active UoWs, providers",
             "SQLAlchemy sessions/engines/session factories",
             "LoggingConfigurator",
+            "FastAPILifecycle",
+            "container.aclose()",
             "Do not inject loggers",
         }
         if _project_uses_alembic(context):
@@ -2119,6 +2161,19 @@ def _use_case_imports_persistence_infrastructure(module: str) -> bool:
     return "infrastructure" in parts or bool(parts and parts[0] == "sqlalchemy")
 
 
+def _is_scope_technical_import(module: str) -> bool:
+    parts = module_parts(module)
+    if "core" not in parts:
+        return False
+
+    core_index = parts.index("core")
+    scope_relative_parts = parts[core_index + 2 :]
+    return any(
+        part in {"alembic", "infrastructure", "migrations", "models", "repositories"}
+        for part in scope_relative_parts
+    )
+
+
 def _forbidden_use_case_persistence_dependency_fields(
     class_node: ast.ClassDef,
     aliases: dict[str, str],
@@ -2247,6 +2302,72 @@ def _is_injected_logger_annotation(
         return False
 
     return _is_logging_logger_expression(annotation.slice, aliases, imports)
+
+
+def _is_injected_container_annotation(
+    annotation: ast.expr | None,
+    aliases: dict[str, str],
+) -> bool:
+    if annotation is None:
+        return False
+    if not isinstance(annotation, ast.Subscript):
+        return False
+    if not annotation_name(annotation.value, aliases).endswith("Injected"):
+        return False
+
+    return _is_diwire_container_expression(annotation.slice, aliases)
+
+
+def _class_injects_diwire_container(
+    class_node: ast.ClassDef,
+    aliases: dict[str, str],
+) -> bool:
+    for child in class_node.body:
+        if isinstance(child, ast.AnnAssign) and _is_injected_container_annotation(
+            child.annotation,
+            aliases,
+        ):
+            return True
+        if isinstance(child, ast.FunctionDef) and child.name == "__init__":
+            for argument in (
+                *child.args.posonlyargs,
+                *child.args.args,
+                *child.args.kwonlyargs,
+            ):
+                if argument.arg == "self":
+                    continue
+                if _is_injected_container_annotation(argument.annotation, aliases):
+                    return True
+
+    return False
+
+
+def _class_can_inject_container(
+    relative: Path,
+    class_node: ast.ClassDef,
+    class_base_name_index: dict[str, set[str]],
+) -> bool:
+    return (
+        relative == Path("delivery/fastapi/lifecycle.py")
+        and class_node.name == "FastAPILifecycle"
+        and class_has_foundation_base(class_node.name, "BaseLifecycle", class_base_name_index)
+    )
+
+
+def _is_diwire_container_expression(
+    expression: ast.expr,
+    aliases: dict[str, str],
+) -> bool:
+    if isinstance(expression, ast.Attribute) and expression.attr == "Container":
+        chain = attribute_chain(expression)
+        if len(chain) >= 2:
+            root_alias = aliases.get(chain[0], chain[0])
+            return root_alias == "diwire"
+
+    if isinstance(expression, ast.Name):
+        return aliases.get(expression.id, expression.id) == "Container"
+
+    return False
 
 
 def _is_logging_logger_expression(

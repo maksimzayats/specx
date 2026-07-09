@@ -6,6 +6,7 @@ from specx.core.foundation.factory import BaseFactory
 
 from url_shortener_service.delivery.fastapi.controllers.probes import ProbesController
 from url_shortener_service.delivery.fastapi.controllers.urls import UrlsController
+from url_shortener_service.delivery.fastapi.lifecycle import FastAPILifecycle
 
 
 @dataclass(kw_only=True, slots=True)
@@ -14,16 +15,22 @@ class FastAPIFactory(BaseFactory):
 
     Example:
         app = FastAPIFactory(
+            _lifecycle=lifecycle,
             _probes_controller=probes_controller,
             _urls_controller=urls_controller,
         )()
     """
 
+    _lifecycle: Injected[FastAPILifecycle]
     _probes_controller: Injected[ProbesController]
     _urls_controller: Injected[UrlsController]
 
     def __call__(self) -> FastAPI:
-        app = FastAPI(title="URL Shortener Service", redoc_url=None)
+        app = FastAPI(
+            title="URL Shortener Service",
+            redoc_url=None,
+            lifespan=self._lifecycle,
+        )
 
         probes_router = APIRouter(tags=["probes"])
         self._probes_controller.register(probes_router)

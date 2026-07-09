@@ -64,7 +64,9 @@ def get_container() -> Container:
         missing_policy=MissingPolicy.REGISTER_RECURSIVE,
         dependency_registration_policy=DependencyRegistrationPolicy.REGISTER_RECURSIVE,
     )
+    container.add_instance(container, provides=Container)
     _register_dependencies(container)
+
     return container
 
 
@@ -80,6 +82,9 @@ def _register_dependencies(container: Container) -> None:
 Do not register SQLAlchemy repositories that require an active session directly
 in the runtime container. Create those repositories inside the active UoW, or
 resolve them in tests only after registering an active test session.
+
+Register the container instance only for `FastAPILifecycle`. Do not inject it
+into controllers, use cases, services, adapters, or factories.
 
 ## FastAPI Composition
 
@@ -99,8 +104,11 @@ app_factory = container.resolve(FastAPIFactory)
 app = app_factory()
 ```
 
-The factory receives controllers through `Injected[...]`. Controllers receive
-use cases through `Injected[...]`.
+The factory receives `FastAPILifecycle` and controllers through
+`Injected[...]`. Controllers receive use cases through `Injected[...]`.
+`FastAPILifecycle` is the only generated class that may inject
+`diwire.Container`, and only to call `container.aclose()` on shutdown after
+closing app-owned resources.
 
 Do not inject `logging.Logger`, register `logging.Logger`, or build logger
 providers in the container. Runtime logging setup is a configurator concern.
@@ -169,15 +177,22 @@ For FastAPI route tests, keep app construction after any test-specific
 external-boundary override by using a generic helper:
 
 ```python
+from asgi_lifespan import LifespanManager
+
+
 @asynccontextmanager
 async def open_test_async_client(container: Container) -> AsyncIterator[AsyncClient]:
     app_factory = container.resolve(FastAPIFactory)
     app = app_factory()
     transport = ASGITransport(app=app)
 
-    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
-        yield client
+    async with LifespanManager(app):
+        async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+            yield client
 ```
+
+Use `asgi-lifespan` for the helper because HTTPX ASGI transports do not trigger
+application lifespan by themselves.
 
 For integration tests that replace persistence failure behavior, register the
 replacement session factory before resolving use cases, repositories, UoWs,
@@ -185,7 +200,9 @@ controllers, or `FastAPIFactory`.
 
 ## Do Not
 
-- Do not pass `Container` into a use case, service, controller, or adapter.
+- Do not pass `Container` into a use case, service, controller, adapter, or
+  factory. The only exception is `FastAPILifecycle`, which receives it for
+  shutdown cleanup.
 - Do not inject `logging.Logger` or register it as a dependency. Use local
   stdlib class loggers for classes that actually log.
 - Do not resolve dependencies from inside core.

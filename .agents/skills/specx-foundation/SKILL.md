@@ -26,14 +26,16 @@ category may need a project-local foundation base. Read
 7. Name each class with the suffix implied by its base ancestry, such as
    `TaskDTO`, `TaskEntity`, `TaskResponseSchema`, `CreateTaskUseCase`, or
    `TaskTitleNormalizerService`.
-8. Prefer `@dataclass(frozen=True, kw_only=True, slots=True)` for commands,
+8. Use `BaseLifecycle` for delivery app lifespan managers such as
+   `FastAPILifecycle`.
+9. Prefer `@dataclass(frozen=True, kw_only=True, slots=True)` for commands,
    queries, DTOs, entities, and other core data classes unless the user asks for
    another model type.
-9. Keep `BaseCommand` and `BaseQuery` as use-case input bases, independent from
+10. Keep `BaseCommand` and `BaseQuery` as use-case input bases, independent from
    `BaseDTO`. Commands and queries are not result DTOs.
-10. When an application value has a limited known set, model it with
+11. When an application value has a limited known set, model it with
    `BaseStrEnum` instead of plain `str` or `Literal[...]`.
-11. Keep business rules, delivery behavior, adapter code, and runtime wiring out
+12. Keep business rules, delivery behavior, adapter code, and runtime wiring out
    of project-local foundation modules.
 
 ## Code Style

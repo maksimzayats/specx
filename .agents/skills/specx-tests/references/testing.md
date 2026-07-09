@@ -52,6 +52,11 @@ the generated stdlib logging config. Use `caplog` only when a log record
 protects meaningful project behavior; do not add log assertions just because a
 logger field exists.
 
+FastAPI lifecycle code is another narrow delivery exception when it owns real
+resource cleanup. Unit-test `FastAPILifecycle` by overriding closeable
+infrastructure resources and asserting shutdown order. Do not test lifecycle
+only to prove FastAPI's own lifespan implementation.
+
 ## Unit Tests
 
 Unit tests use a fresh test container. The default fixture is a bare container:
@@ -211,15 +216,22 @@ FastAPI route tests use a generic support helper so app construction happens
 after any test-specific external-boundary override:
 
 ```python
+from asgi_lifespan import LifespanManager
+
+
 @asynccontextmanager
 async def open_test_async_client(container: Container) -> AsyncIterator[AsyncClient]:
     app_factory = container.resolve(FastAPIFactory)
     app = app_factory()
     transport = ASGITransport(app=app)
 
-    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
-        yield client
+    async with LifespanManager(app):
+        async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+            yield client
 ```
+
+Use `asgi-lifespan` in this helper because HTTPX ASGI transports do not trigger
+application lifespan by themselves.
 
 Route test bodies receive `container` and open the client:
 
@@ -315,7 +327,9 @@ only for deliberate legacy migrations.
 - No `container.resolve(FastAPIFactory)()` inline; resolve the factory first,
   then call it.
 - No framework request objects in unit tests.
-- No SQLAlchemy sessions, FastAPI apps, or real IO in unit tests.
+- No SQLAlchemy sessions, FastAPI apps, or real IO in unit tests, except a
+  minimal `FastAPI()` instance in lifecycle unit tests.
+- No route integration tests that bypass FastAPI lifespan.
 - No broad autouse fixtures that hide DB, settings, or container state.
 - No global shared containers across tests.
 - No placeholder tests for empty folders or future structure.

@@ -25,6 +25,7 @@ class SQLAlchemySessionFactory(BaseFactory):
     _settings: Injected[DatabaseSettings]
     _engine: AsyncEngine = field(init=False)
     _session_maker: async_sessionmaker[AsyncSession] = field(init=False)
+    _closed: bool = field(default=False, init=False)
 
     def __post_init__(self) -> None:
         self._engine = create_async_engine(self._settings.database_url)
@@ -39,3 +40,10 @@ class SQLAlchemySessionFactory(BaseFactory):
 
     def __call__(self) -> async_sessionmaker[AsyncSession]:
         return self._session_maker
+
+    async def close(self) -> None:
+        if self._closed:
+            return
+
+        await self._engine.dispose()
+        self._closed = True

@@ -24,6 +24,9 @@ class UnavailableSQLAlchemySessionFactory(SQLAlchemySessionFactory):
     def __call__(self) -> async_sessionmaker[AsyncSession]:
         raise RuntimeError("database unavailable")
 
+    async def close(self) -> None:
+        pass
+
 
 def use_unavailable_database(container: Container) -> None:
     container.add_instance(

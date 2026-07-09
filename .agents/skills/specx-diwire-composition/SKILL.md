@@ -1,6 +1,6 @@
 ---
 name: specx-diwire-composition
-description: Wire dependency injection for a Specx Python service with `diwire`. Use when adding `ioc/container.py`, explicit dependency registrations for capabilities, repositories, gateways, UoW managers, clients, settings, or factories, `Injected[...]` constructor fields, FastAPI app factory composition, test overrides, or rules that keep containers out of core use cases and services.
+description: Wire dependency injection for a Specx Python service with `diwire`. Use when adding `ioc/container.py`, explicit dependency registrations for capabilities, repositories, gateways, UoW managers, clients, settings, or factories, `Injected[...]` constructor fields, FastAPI app factory/lifecycle composition, test overrides, or rules that keep containers out of core use cases and services.
 ---
 
 # Specx Diwire Composition
@@ -14,9 +14,10 @@ overrides need `diwire`. Read `references/diwire.md` before writing DI code.
   `Injected[DependencyType]`.
 - Capabilities are normal injectable collaborators. Register only capability
   abstractions or existing instances that auto-wiring cannot infer.
-- Only `ioc/`, top-level delivery `__main__.py`/factory modules, and tests
-  create or use `diwire.Container`.
-- Do not inject `Container`.
+- Only `ioc/`, top-level delivery `__main__.py`/factory/lifecycle modules, and
+  tests create or use `diwire.Container`.
+- Do not inject `Container` except in `FastAPILifecycle`, where it is used only
+  to call `container.aclose()` during app shutdown.
 - Do not inject `logging.Logger` or register loggers in the container. Runtime
   logging is configured once by a top-level infrastructure configurator; classes
   that log create local stdlib loggers.
@@ -26,6 +27,8 @@ overrides need `diwire`. Read `references/diwire.md` before writing DI code.
   implementations, factories, and instances that auto-wiring cannot infer.
   Keep registration in private `_register_dependencies(...)` inside
   `ioc/container.py`.
+- Register the container instance itself with `provides=Container` only for the
+  FastAPI lifecycle shutdown dependency.
 - Register concrete gateway implementations for their core `BaseGateway` ports.
 - Register health readiness gateway implementations, such as
   `SQLAlchemyReadinessCheckGateway`, for `ReadinessCheckGateway` when

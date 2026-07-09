@@ -23,21 +23,23 @@ Use this skill whenever code talks to external systems. Read
 4. Inject external clients, session factories, Redis clients, SDK clients, or
    project-owned client factories. Do not hide client construction inside
    business methods.
-5. Keep technical query/request code in infrastructure.
-6. Repositories may return entities. Gateways must not return entities; return
+5. Give long-lived app-owned infrastructure resources an explicit async
+   `close()` method; FastAPI lifecycle owns calling it on shutdown.
+6. Keep technical query/request code in infrastructure.
+7. Repositories may return entities. Gateways must not return entities; return
    DTOs, primitives, value objects, or explicit result objects. Do not return
    ORM models or SDK response objects to core.
-7. Translate low-level exceptions into core exceptions only when callers need to
+8. Translate low-level exceptions into core exceptions only when callers need to
    handle them.
-8. For transactional persistence, implement an active `UnitOfWork` and a
+9. For transactional persistence, implement an active `UnitOfWork` and a
    `UnitOfWorkManager`; register the manager, not repositories, active UoWs,
    or UoW providers for use-case injection.
-9. Register adapter bindings in private `_register_dependencies(...)` inside
+10. Register adapter bindings in private `_register_dependencies(...)` inside
    `ioc/container.py`.
-10. Add focused integration tests only when the adapter has meaningful
+11. Add focused integration tests only when the adapter has meaningful
     project-owned behavior to protect; do not add generic CRUD or upstream
     library tests just because an adapter file exists.
-11. For SQLAlchemy adapters, add or update Alembic migrations with
+12. For SQLAlchemy adapters, add or update Alembic migrations with
    `$specx-sqlalchemy-migrations`.
 
 Logging is top-level runtime infrastructure, not a core-scope adapter. Put

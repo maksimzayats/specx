@@ -27,6 +27,7 @@ src/order_service/
     fastapi/
       __main__.py
       factory.py
+      lifecycle.py
       controllers/probes.py
       schemas/probe_schema.py
   infrastructure/
@@ -102,6 +103,8 @@ Recommended content:
 - Shared technical infrastructure lives in `src/order_service/infrastructure`.
 - Runtime logging is configured by
   `src/order_service/infrastructure/logging/configurator.py`.
+- FastAPI lifespan is owned by
+  `src/order_service/delivery/fastapi/lifecycle.py`.
 - Scope-owned adapters live under `core/<scope>/infrastructure`.
 - DI composition lives in `src/order_service/ioc/container.py`.
 - Foundation bases come from `specx.core.foundation`,
@@ -145,6 +148,13 @@ Recommended content:
   `infrastructure/logging` using Python stdlib `logging.config.dictConfig`.
 - The FastAPI runtime entrypoint resolves `LoggingConfigurator` and calls
   `configure()` before resolving `FastAPIFactory`.
+- The FastAPI app factory injects `FastAPILifecycle` and passes it to
+  `FastAPI(lifespan=...)`.
+- `FastAPILifecycle` inherits `BaseLifecycle[FastAPI]`, closes app-owned
+  resources such as SQLAlchemy session factories, then calls
+  `container.aclose()` on shutdown.
+- Do not run migrations, schema creation, or business workflows in FastAPI
+  lifespan.
 - Do not inject loggers, register `logging.Logger` in the DI container, or
   pass loggers through constructors. Classes that actually log create a private
   class logger in `__post_init__` with
@@ -171,8 +181,9 @@ Recommended content:
 - Persistence use cases inject `UnitOfWorkManager`, not repositories, active
   UoWs, providers, SQLAlchemy sessions/engines/session factories, or concrete
   infrastructure adapters directly.
-- Only `ioc`, top-level delivery `__main__.py`/factory code, and tests may use
-  `diwire.Container`.
+- Only `ioc`, top-level delivery `__main__.py`/factory/lifecycle code, and
+  tests may use `diwire.Container`. `Injected[Container]` is allowed only in
+  `FastAPILifecycle` for shutdown cleanup.
 - Non-foundation source classes need explicit packaged or local bases,
   matching suffixes, and scoped docstrings with concrete `Example:` blocks.
 - Prefer `@dataclass(frozen=True, kw_only=True, slots=True)` for commands,
@@ -216,6 +227,9 @@ Recommended content:
   monkeypatching `logging.config.dictConfig`, and asserting the generated
   readable stdlib config. Use `caplog` only when a log record is meaningful
   project behavior.
+- Unit-test `FastAPILifecycle` by overriding closeable infrastructure resources
+  and asserting shutdown order. FastAPI route integration helpers must run ASGI
+  lifespan before opening `AsyncClient`.
 - Do not create per-target test folders, `harness.py`, target factories,
   target harnesses, `tests/_support/fakes`, `tests/**/_fakes.py`, fake modules
   outside those mirrored unit port/capability packages, generic
@@ -273,6 +287,12 @@ and a `LoggingConfigurator(BaseConfigurator)` that calls
 `logging.config.dictConfig` with `disable_existing_loggers=False`, a readable
 console formatter, and root level/handler settings. Keep loggers local to
 classes that emit logs; do not make loggers DI dependencies.
+
+Create `delivery/fastapi/lifecycle.py` as part of the first runnable slice.
+`FastAPILifecycle(BaseLifecycle[FastAPI])` owns app lifespan cleanup: close
+long-lived infrastructure resources, then call `container.aclose()` in a
+nested `finally`. Register the container instance in `ioc/container.py` for
+this lifecycle dependency only.
 
 Use `$specx-add-core-use-case`, `$specx-add-core-service`,
 `$specx-add-delivery-controller`, `$specx-diwire-composition`, and

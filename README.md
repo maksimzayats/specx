@@ -34,6 +34,9 @@ and architecture tests.
 - **Standard runtime logging.** Generated API services configure Python stdlib
   logging once through top-level infrastructure and keep logger creation local
   to classes that actually emit log records.
+- **Explicit FastAPI lifespans.** Generated FastAPI apps inject a
+  `FastAPILifecycle` into the app factory, pass it to `FastAPI(lifespan=...)`,
+  and close app-owned resources plus the DI container during shutdown.
 - **Explicit foundation boundaries.** Generated services import stateless base
   classes from `specx.core.foundation`, `specx.delivery.foundation`, and
   `specx.infrastructure.foundation` instead of vendoring a foundation tree.
@@ -122,7 +125,7 @@ def test_specx_architecture() -> None:
 - `specx-sqlalchemy-migrations` adds async Alembic configuration, revisions,
   migration commands, and drift tests.
 - `specx-add-delivery-controller` adds top-level FastAPI controllers, schemas,
-  route registration, and delivery-only helpers.
+  route registration, delivery lifecycles, and delivery-only helpers.
 - `specx-settings` adds `pydantic-settings` configuration without direct
   environment reads in core code.
 - `specx-tests` adds unit, integration, end-to-end, DI, migration, and
@@ -151,6 +154,7 @@ src/<package>/
     fastapi/
       __main__.py
       factory.py
+      lifecycle.py
       controllers/
       schemas/
       services/
@@ -202,8 +206,13 @@ SQLAlchemy declarative base. Local foundation module filenames are not
 - Runtime logging is configured once in top-level infrastructure. Do not inject
   `logging.Logger` or register loggers in `diwire.Container`; classes that
   actually log create private stdlib class loggers.
-- `diwire.Container` belongs in `ioc`, top-level delivery factory/entrypoint
-  code, and tests only.
+- FastAPI lifespan lives in `delivery/fastapi/lifecycle.py`, inherits
+  `BaseLifecycle[FastAPI]`, closes app-owned infrastructure resources, then
+  calls `container.aclose()` on shutdown. It must not run migrations or schema
+  creation.
+- `diwire.Container` belongs in `ioc`, top-level delivery
+  factory/entrypoint/lifecycle code, and tests only. `Injected[Container]` is
+  allowed only in `FastAPILifecycle`.
 
 ## Reference Service
 
@@ -211,6 +220,7 @@ The sample service under `samples/url-shortener-service/` is a working generated
 project used to validate the skills. It includes:
 
 - FastAPI delivery with `url_shortener_service.delivery.fastapi.__main__:app`.
+- FastAPI lifespan cleanup for SQLAlchemy and DI container resources.
 - URL and operational probe use cases with command/query inputs and DTO
   outputs.
 - Split pure/read/effect services.

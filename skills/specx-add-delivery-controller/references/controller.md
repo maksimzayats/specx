@@ -138,6 +138,7 @@ Commands and queries live in the same file as their use case.
 
 ```python
 from specx.core.foundation.factory import BaseFactory
+from order_service.delivery.fastapi.lifecycle import FastAPILifecycle
 
 
 @dataclass(kw_only=True, slots=True)
@@ -145,31 +146,88 @@ class FastAPIFactory(BaseFactory):
     """Factory that composes the FastAPI app and route controllers.
 
     Example:
-        app = FastAPIFactory(_users_controller=controller)()
+        app = FastAPIFactory(
+            _lifecycle=lifecycle,
+            _users_controller=controller,
+        )()
     """
 
+    _lifecycle: Injected[FastAPILifecycle]
     _users_controller: Injected[UsersController]
 
     def __call__(self) -> FastAPI:
-        app = FastAPI(title="Order Service", redoc_url=None)
+        app = FastAPI(
+            title="Order Service",
+            redoc_url=None,
+            lifespan=self._lifecycle,
+        )
         users_router = APIRouter(tags=["users"])
         self._users_controller.register(users_router)
         app.include_router(users_router)
         return app
 ```
 
+## FastAPI Lifecycle
+
+Put FastAPI lifespan ownership in `delivery/fastapi/lifecycle.py`:
+
+```python
+from collections.abc import AsyncIterator
+from contextlib import AbstractAsyncContextManager, asynccontextmanager
+from dataclasses import dataclass
+
+from diwire import Container, Injected
+from fastapi import FastAPI
+from specx.delivery.foundation.lifecycle import BaseLifecycle
+
+
+@dataclass(kw_only=True, slots=True)
+class FastAPILifecycle(BaseLifecycle[FastAPI]):
+    """FastAPI lifespan manager for application-owned resources.
+
+    Example:
+        app = FastAPI(lifespan=FastAPILifecycle(...))
+    """
+
+    _container: Injected[Container]
+    _session_factory: Injected[SQLAlchemySessionFactory]
+
+    def __call__(self, app: FastAPI) -> AbstractAsyncContextManager[None]:
+        return self._lifespan(app=app)
+
+    @asynccontextmanager
+    async def _lifespan(self, *, app: FastAPI) -> AsyncIterator[None]:
+        del app
+
+        try:
+            yield
+        finally:
+            try:
+                await self._session_factory.close()
+            finally:
+                await self._container.aclose()
+```
+
+The lifecycle is the only generated class allowed to inject
+`diwire.Container`, and only so it can close the container on shutdown. Do not
+run migrations, schema creation, business workflows, or request handling in
+lifespan.
+
 ## Integration Test
 
 ```python
 import pytest
+from diwire import Container
 from fastapi import status
+
+from tests._support.clients.fastapi import open_test_async_client
 
 
 @pytest.mark.anyio
 async def test_register_user_returns_created_user(
-    transactional_test_async_client_factory: TestAsyncClientFactory,
+    container: Container,
 ) -> None:
-    async with transactional_test_async_client_factory() as client:
+    async with open_test_async_client(container) as client:
         response = await client.post(
             "/api/v1/users",
             json={"email": "ada@example.com", "password": "secret"},
@@ -182,6 +240,9 @@ async def test_register_user_returns_created_user(
 FastAPI integration tests use the real internal app graph and transactional
 database. Do not mock use cases or services here; keep those checks in unit
 tests.
+
+The generic FastAPI test client helper must run ASGI lifespan explicitly before
+opening `AsyncClient`; HTTPX transports do not trigger lifespan by themselves.
 
 Use `fastapi.status` constants for response status assertions instead of raw
 integer literals.
