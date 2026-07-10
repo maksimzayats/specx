@@ -11,6 +11,14 @@ foundation tree:
 - `specx.infrastructure.foundation` for runtime settings, configurators, and
   infrastructure-specific bases such as SQLAlchemy model bases.
 
+## Contents
+
+- [Packaged Bases](#packaged-bases)
+- [Naming Rules](#naming-rules)
+- [Usage Examples](#usage-examples)
+- [Local Extension Rule](#local-extension-rule)
+- [Guardrails](#guardrails)
+
 Prefer standard-library dataclasses for core data classes unless the user asks
 for another model type. Commands, queries, DTOs, and entities should normally
 use `@dataclass(frozen=True, kw_only=True, slots=True)`. Keep Pydantic at the
@@ -37,7 +45,8 @@ Do not create an empty local `foundation/` package. Create
 `src/<package>/foundation/` only when current code has a real project-local base
 category or a stateful framework base that must not be shared globally, such as
 the project SQLAlchemy declarative base. Keep local foundation modules small
-and stable.
+and stable, and keep concrete shared primitives under `shared/` rather than
+exempting them from category checks by placing them in `foundation/`.
 
 ## Packaged Bases
 
@@ -48,7 +57,7 @@ Use these imports first:
 | `BaseDTO` | `specx.core.foundation.dto` | Core result DTOs and application output payloads, not use-case inputs. |
 | `BaseCommand` | `specx.core.foundation.command` | State-changing use-case inputs. |
 | `BaseQuery` | `specx.core.foundation.query` | Read-only use-case inputs. |
-| `BaseEntity` | `specx.core.foundation.entity` | Framework-free entities and value objects. |
+| `BaseEntity` | `specx.core.foundation.entity` | Framework-free entities. It is not a generic value-object base. |
 | `BaseUseCase` | `specx.core.foundation.use_case` | Externally meaningful application actions. |
 | `BasePureService` | `specx.core.foundation.pure_service` | Deterministic helpers with no IO or runtime state. |
 | `BaseReadService` | `specx.core.foundation.read_service` | Read-only orchestration helpers. |
@@ -60,7 +69,7 @@ Use these imports first:
 | `BaseUnitOfWorkManager` | `specx.core.foundation.unit_of_work_manager` | Objects that open, finish, and close active UoWs. |
 | `BaseFactory` | `specx.core.foundation.factory` | Dependency-injected factories and app factories. |
 | `BaseConfigurator` | `specx.infrastructure.foundation.configurator` | Bootstrap/configuration objects. |
-| `BaseRuntimeSettings` | `specx.infrastructure.foundation.settings` | `pydantic-settings` runtime settings. |
+| `BaseRuntimeSettings` | `specx.infrastructure.foundation.settings` | `pydantic-settings` runtime settings, with typed `from_environment()` loading. |
 | `BaseStrEnum` | `specx.core.foundation.enums` | String enums used by settings and application values. |
 | `BaseApplicationError` | `specx.core.foundation.exceptions` | Application errors translated by delivery layers. |
 | `BaseApplicationValueError` | `specx.core.foundation.exceptions` | Invalid application values rejected before persistence. |
@@ -278,6 +287,12 @@ class BaseSQLAlchemyModel(DeclarativeBase):
     )
 ```
 
+The `%(constraint_name)s` check-constraint convention requires each
+`CheckConstraint` (and schema type that emits one on the target database) to
+have an explicit name. Name those constraints in model declarations so model
+import and Alembic autogeneration do not fail; use a different documented
+convention if the project intentionally permits unnamed checks.
+
 Avoid local copies of packaged bases such as `BaseDTO`, `BaseUseCase`, or
 `BasePureService`. A project-local SQLAlchemy declarative base is not a copy of
 a stateless packaged base; it owns project-specific metadata.
@@ -287,7 +302,8 @@ a stateless packaged base; it owns project-specific metadata.
 Useful checks:
 
 - non-foundation source classes inherit explicit packaged or local bases;
-- major classes have scoped docstrings with concrete `Example:` blocks;
+- every project source class has a scoped docstring with a concrete `Example:`
+  block;
 - class names use the suffix implied by the most-specific base;
 - capabilities do not act as services, repositories, gateways, helpers,
   managers, or generic dependencies;
@@ -302,3 +318,8 @@ Useful checks:
   `ioc`, scope infrastructure, or application logic;
 - local SQLAlchemy bases, if added, do not create engines, sessions,
   migrations, or database schema.
+
+`specx.testing.architecture` packages most of these checks, but it does not
+currently enforce project-local foundation import direction. Keep that item in
+review guidance or add a focused custom rule when a local foundation package
+exists.

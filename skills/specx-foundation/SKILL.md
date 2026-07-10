@@ -17,12 +17,14 @@ category may need a project-local foundation base. Read
 3. Add a project-local `foundation/` module only when current code needs a real
    project-local base category or a stateful framework base that must not be
    shared globally, such as a SQLAlchemy declarative base.
-4. Keep project-local foundation tiny: marker bases, common external base
-   wrappers, justified ABCs, stateful framework bases, and stable cross-layer
-   primitives only.
-5. Give any project-local base a docstring that explains what it protects and
-   includes a concrete usage example.
-6. Make every non-foundation project class inherit an explicit scoped base.
+4. Keep project-local foundation limited to base definitions: marker bases,
+   common external-base wrappers, justified ABCs, and stateful framework bases.
+   Put stable cross-scope concrete primitives under `shared/`, not
+   `foundation/`.
+5. Give every project source class, including each local base, a docstring that
+   explains what it protects and includes a concrete usage example.
+6. Make every non-foundation project source class inherit an explicit scoped
+   base.
 7. Name each class with the suffix implied by its base ancestry, such as
    `TaskDTO`, `TaskEntity`, `TaskResponseSchema`, `CreateTaskUseCase`, or
    `TaskTitleNormalizerService`.
@@ -34,9 +36,9 @@ category may need a project-local foundation base. Read
 10. Keep `BaseCommand` and `BaseQuery` as use-case input bases, independent from
    `BaseDTO`. Commands and queries are not result DTOs.
 11. When an application value has a limited known set, model it with
-   `BaseStrEnum` instead of plain `str` or `Literal[...]`.
+    `BaseStrEnum` instead of plain `str` or `Literal[...]`.
 12. Keep business rules, delivery behavior, adapter code, and runtime wiring out
-   of project-local foundation modules.
+    of project-local foundation modules.
 
 ## Code Style
 

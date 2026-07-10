@@ -30,9 +30,10 @@ class AlwaysFailRule(BaseRule[str, ArchitectureContext, SpecxArchitectureViolati
         )
 
 
-def test_config_rejects_invalid_package_names(tmp_path: Path) -> None:
+@pytest.mark.parametrize("package_name", ["", "3demo", "bad-name", "class"])
+def test_config_rejects_invalid_package_names(tmp_path: Path, package_name: str) -> None:
     with pytest.raises(SpecxConfigurationError, match="package_name"):
-        SpecxArchitectureConfig(project_root=tmp_path, package_name="bad-name")
+        SpecxArchitectureConfig(project_root=tmp_path, package_name=package_name)
 
 
 def test_disabled_rules_suppress_only_selected_rule(tmp_path: Path) -> None:

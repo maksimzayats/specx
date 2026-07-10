@@ -4,6 +4,15 @@ Services own focused reusable core behavior. Delivery-only helpers such as
 auth dependencies, rate limiting, and request-context adapters live under
 `delivery/`, not `core/<scope>/services/`.
 
+## Contents
+
+- [Class shape](#class-shape)
+- [Service base choice](#service-base-choice)
+- [Dependency choice](#dependency-choice)
+- [UoW parameters](#uow-parameters)
+- [Unit tests](#unit-tests)
+- [Avoid](#avoid)
+
 Do not call small collaborators services by default. Use `Service` for reusable
 business/application behavior. Use `BaseCapability` for small replaceable
 abilities that do one narrow thing, can be replaced in tests, and do not own
@@ -13,25 +22,26 @@ workflows, UoW scopes, repositories, or gateways.
 
 ```python
 from dataclasses import dataclass
+from decimal import Decimal
 
 from diwire import Injected
 
+from order_service.core.orders.capabilities.tax_rate_capability import TaxRateCapability
 from specx.core.foundation.pure_service import BasePureService
 
 
 @dataclass(kw_only=True, slots=True)
 class OrderPricingService(BasePureService):
-    """Service that prices orders from items and tax policy.
+    """Service that adds the current tax rate to an order subtotal.
 
     Example:
-        total = service.price(items=(OrderItem(price=Money("10.00")),))
+        total = service.price(subtotal=Decimal("10.00"))
     """
 
-    _tax_policy_service: Injected[TaxPolicyService]
+    _tax_rate_capability: Injected[TaxRateCapability]
 
-    def price(self, *, items: tuple[OrderItem, ...]) -> Money:
-        subtotal = sum((item.price for item in items), Money.zero())
-        tax = self._tax_policy_service.calculate_tax(amount=subtotal)
+    def price(self, *, subtotal: Decimal) -> Decimal:
+        tax = subtotal * self._tax_rate_capability.current_rate()
         return subtotal + tax
 ```
 
@@ -55,20 +65,30 @@ They may use effect gateways or repository mutators through an active UoW
 passed by a command use case. They do not open UoW scopes or own transaction
 lifecycle.
 
+A database rollback cannot undo an already completed gateway call. When one
+workflow must persist state and notify another system, make the consistency
+policy explicit: prefer recording an outbox/intent in the UoW and dispatching
+it separately, or define idempotency, retry, and compensation behavior. Do not
+present a database transaction plus an external call as one atomic operation.
+
 `ReadinessProbeService` is a valid read service when it coordinates readiness
 gateway ports and returns core DTOs. It must not import SQLAlchemy, Redis,
 FastAPI, or top-level infrastructure directly; put those checks in
-`core/health/infrastructure/<technology>/` gateway adapters.
+`core/health/infrastructure/<technology>/` gateway adapters. Each adapter must
+use a short timeout appropriate for operational probing.
 
 ## Dependency Choice
 
 Inject a concrete class when it is project-owned, has no external IO, has one
 implementation, and tests can use it deterministically.
 
-Inject a core repository or gateway port when it wraps external IO, hides a
-framework or SDK, has multiple real implementations, or replacing it in tests
-is important. Repository ports live under `core/<scope>/repositories/`.
-Gateway ports live under `core/<scope>/gateways/`.
+Inject a repository port for persistence owned by the service. Inject a
+gateway port for an outbound business capability supplied by another system,
+especially when it hides a framework or SDK or has multiple real
+implementations. Repository ports live under `core/<scope>/repositories/`;
+gateway ports live under `core/<scope>/gateways/`. Do not introduce an
+interface solely for mocking; unit tests can override a concrete dependency in
+the test container.
 
 ## UoW Parameters
 
@@ -138,14 +158,15 @@ def test_order_pricer_adds_tax(container: Container) -> None:
     container.add_instance(capability, provides=TaxRateCapability)
     service = container.resolve(OrderPricingService)
 
-    result = service.price(items=(OrderItem(price=Money("10.00")),))
+    result = service.price(subtotal=Decimal("10.00"))
 
-    assert result == Money("12.00")
+    assert result == Decimal("12.0000")
 ```
 
-Use inline `MagicMock` or `AsyncMock` in the test body when only one behavior
-needs to change for that scenario. Reused unit-test doubles may live in
-mirrored
+Use inline `MagicMock`, `AsyncMock`, or `create_autospec` in the test body when
+only one behavior needs to change for that scenario. Give mocks at least a
+spec; prefer `create_autospec(..., instance=True, spec_set=True)` because it
+also rejects invalid call signatures. Reused unit-test doubles may live in mirrored
 `tests/unit/core/<scope>/{capabilities,gateways,repositories}/fake_<source_module>.py`
 modules. Do not create per-target folders, `harness.py`, target factories,
 target harnesses, `tests/_support/fakes`, shared `_fakes.py` files, fake

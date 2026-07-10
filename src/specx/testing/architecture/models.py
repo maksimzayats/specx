@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import re
+import keyword
 from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import StrEnum
@@ -20,9 +20,6 @@ RuleIdentifier: TypeAlias = SpecxRuleId | StrEnum | str
 
 class SpecxConfigurationError(BaseSpecxError):
     """Raised when a Specx architecture configuration cannot be evaluated."""
-
-
-PACKAGE_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
 def empty_disabled_rules() -> frozenset[RuleIdentifier]:
@@ -93,9 +90,10 @@ class SpecxArchitectureConfig:
     path_exclusions: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
-        if PACKAGE_NAME_PATTERN.fullmatch(self.package_name) is None:
+        if not self.package_name.isidentifier() or keyword.iskeyword(self.package_name):
             raise SpecxConfigurationError(
-                f"package_name must be one Python identifier, got {self.package_name!r}",
+                f"package_name must be one non-keyword Python identifier, "
+                f"got {self.package_name!r}",
             )
 
         normalized_root = self.project_root.expanduser()

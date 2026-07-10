@@ -21,19 +21,25 @@ before adding controller code.
    FastAPI lifespan managers inherit `BaseLifecycle[FastAPI]`.
 6. Add docstrings with scope and a concrete `Example:` to controllers, schemas,
    and delivery services.
-7. Inject use cases or delivery services with `Injected[...]`. Operational
-   probe controllers inject the reusable `core/health` probe use cases.
+7. Inject use cases or delivery services with `Injected[...]`. A simple
+   delivery-owned `/healthz` response needs no core workflow; inject
+   `core/health` use cases when readiness checks a required external dependency
+   or probe policy is reused across deliveries.
 8. Map request schema/path data into the use case's same-file `Command` or
    `Query` input.
 9. Call the use case.
 10. Map the result into a response schema.
-11. Translate known application exceptions into HTTP responses.
-12. Register full public business route paths such as `/api/v1/users`. Do not
+11. Declare the success status explicitly when it is not `200`, such as `201`
+    for a resource-creating `POST` or `204` for a response with no body.
+12. Translate known application exceptions into stable, non-sensitive HTTP
+    responses. Do not expose raw exception messages.
+13. Register full public business route paths such as `/api/v1/users`. Do not
    split API prefixes across routers and route fragments. Operational probes
    are the only unversioned exception: `/healthz` and `/readyz`.
-13. For FastAPI apps with long-lived resources, inject `FastAPILifecycle` into
+14. For FastAPI apps with long-lived resources, inject `FastAPILifecycle` into
    the app factory and pass it to `FastAPI(lifespan=...)`.
-14. Add integration tests at the HTTP boundary.
+15. Add integration tests at the HTTP boundary, including the declared success
+    code and each translated application error.
 
 ## Code Style
 

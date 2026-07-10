@@ -124,7 +124,7 @@ class CoreInnerPackagesDoNotImportOuterLayersOrIOLibrariesRule(ArchitectureRuleB
                     violations.append(
                         _violation(self.id, path=path, message=f"imports {module}"),
                     )
-                if parts and parts[0] in {"fastapi", "httpx", "redis", "sqlalchemy"}:
+                if parts and parts[0] in {"fastapi", "httpx", "httpx2", "redis", "sqlalchemy"}:
                     violations.append(
                         _violation(self.id, path=path, message=f"imports {module}"),
                     )
@@ -1454,27 +1454,43 @@ class RootAgentsMDDocumentsProjectCommandsAndBoundariesRule(ArchitectureRuleBase
         if not path.exists():
             return (_violation(self.id, path=path, message="AGENTS.md is missing"),)
         text = path.read_text(encoding="utf-8")
+        normalized_text = " ".join(text.split())
         required_fragments = {
             f"Package lives under `src/{context.config.package_name}`",
             f"FastAPI entrypoint: `{context.config.package_name}.delivery.fastapi.__main__:app`",
             "make check",
             "make lint",
             "make test",
-            "BaseCapability",
-            "BaseGateway",
-            "BasePureService",
-            "BaseReadService",
-            "BaseEffectService",
-            "Use cases return DTOs, not entities",
-            "Query use cases must not call repository mutators",
-            "Use cases that touch persistence inject `UnitOfWorkManager`",
-            "must not inject repositories, active UoWs, providers",
-            "SQLAlchemy sessions/engines/session factories",
             "LoggingConfigurator",
             "FastAPILifecycle",
             "container.aclose()",
             "Do not inject loggers",
         }
+        base_index = class_base_name_index(context)
+        optional_base_fragments = {
+            "BaseCapability": "BaseCapability",
+            "BaseGateway": "BaseGateway",
+            "BasePureService": "BasePureService",
+            "BaseReadService": "BaseReadService",
+            "BaseEffectService": "BaseEffectService",
+        }
+        required_fragments.update(
+            fragment
+            for base, fragment in optional_base_fragments.items()
+            if _project_uses_foundation_base(base_index, base)
+        )
+        if _project_uses_foundation_base(base_index, "BaseUseCase"):
+            required_fragments.add("Use cases return DTOs, not entities")
+        if _project_uses_foundation_base(base_index, "BaseQuery"):
+            required_fragments.add("Query use cases must not call repository mutators")
+        if _required_integration_test_source_paths(context):
+            required_fragments.update(
+                {
+                    "Use cases that touch persistence inject `UnitOfWorkManager`",
+                    "must not inject repositories, active UoWs, providers",
+                    "SQLAlchemy sessions/engines/session factories",
+                }
+            )
         if _project_uses_alembic(context):
             required_fragments.update(
                 {
@@ -1485,7 +1501,9 @@ class RootAgentsMDDocumentsProjectCommandsAndBoundariesRule(ArchitectureRuleBase
             )
         violations: list[SpecxArchitectureViolation] = []
         missing_fragments = sorted(
-            fragment for fragment in required_fragments if fragment not in text
+            fragment
+            for fragment in required_fragments
+            if " ".join(fragment.split()) not in normalized_text
         )
         if missing_fragments:
             violations.append(
@@ -2404,6 +2422,16 @@ def _project_uses_alembic(context: ArchitectureContext) -> bool:
     return (context.project_root / "alembic.ini").exists() or (
         context.project_root / "migrations"
     ).exists()
+
+
+def _project_uses_foundation_base(
+    class_base_names: dict[str, set[str]],
+    foundation_base: str,
+) -> bool:
+    return any(
+        class_has_foundation_base(class_name, foundation_base, class_base_names)
+        for class_name in class_base_names
+    )
 
 
 def _mirrored_test_paths(

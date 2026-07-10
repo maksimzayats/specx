@@ -49,7 +49,8 @@ Read `references/testing.md` before creating test files.
   `_scenarios.py`, fake modules outside those mirrored unit port/capability
   packages, or double classes in `conftest.py`.
 - Use `MagicMock` or `AsyncMock` inline in the test function when only one
-  behavior needs to be changed for that scenario.
+  behavior needs to be changed for that scenario. Prefer autospeccing when
+  call signatures matter and `spec_set` when unexpected attributes must fail.
 - Unit tests replace external IO, time, randomness, network, Redis, database,
   and framework resources with local doubles or inline mocks.
 - Integration tests use the real internal app graph. Do not mock internal use
@@ -57,7 +58,12 @@ Read `references/testing.md` before creating test files.
 - Add core use-case integration tests under `tests/integration/core/...` for
   use cases that inject a UoW manager; delivery tests should own HTTP mapping,
   not be the only persistence proof.
-- Core health tests cover reusable liveness/readiness services and use cases.
+- Persistence integration tests use the production database family when
+  dialect behavior matters. A rollback harness may not replace isolated
+  commit-visible tests for locking, concurrency, isolation, or after-commit
+  behavior.
+- Core health tests cover required-dependency readiness and any reusable probe
+  services and use cases.
   Delivery probe tests cover `/healthz` and `/readyz` as operational endpoints,
   not versioned business API routes. `/healthz` must prove a lightweight
   process response only; `/readyz` must prove required infrastructure readiness,
@@ -71,6 +77,9 @@ Read `references/testing.md` before creating test files.
 - Unit-test FastAPI lifecycle managers by overriding closeable infrastructure
   resources and asserting shutdown order. Route integration helpers must run
   ASGI lifespan explicitly.
+- Use `httpx2`, not legacy `httpx`, for generated HTTP client and ASGI transport
+  tests. Enter `LifespanManager`, then pass the yielded manager's `manager.app`
+  to `ASGITransport` so request scopes receive lifespan state.
 - FastAPI route tests compare response status codes with `fastapi.status`
   constants, not raw integer literals.
 - Use `container.resolve(...)` for normal synchronous graph construction, even
@@ -82,6 +91,10 @@ Read `references/testing.md` before creating test files.
 - Use native pytest fixtures for test dependencies. Do not enable
   `diwire.integrations.pytest_plugin`, and do not use `Injected[...]`
   parameters in tests.
+- AnyIO runs tests on every installed supported backend by default. If the app
+  graph is asyncio-specific, override the top-level `anyio_backend` fixture to
+  return `"asyncio"`; leave it unpinned only when the suite intentionally
+  supports every installed backend.
 - Do not add filler smoke tests that only assert `container.resolve(...)`
   returns an instance.
 - Do not hand-build application graphs in test bodies. Resolve project classes
@@ -94,7 +107,7 @@ Read `references/testing.md` before creating test files.
   paths, direct persistence dependency rejection in use cases, container
   imports, and `AGENTS.md` command coverage.
 - Disable built-in guardrails only with explicit `SpecxRuleId` values and a
-  project reason.
+  project reason recorded beside the disabled value.
 - Add `extra_rules` only for project-specific checks that are not covered by a
   built-in `SpecxRuleId`.
 - Existing workflows may use `references/render_architecture_guardrails.py` to

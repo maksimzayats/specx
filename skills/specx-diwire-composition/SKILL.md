@@ -12,6 +12,8 @@ overrides need `diwire`. Read `references/diwire.md` before writing DI code.
 
 - Application classes receive dependencies through constructor fields typed as
   `Injected[DependencyType]`.
+- Keep injection constructor-based. Do not hide dependency resolution in
+  application functions with `resolver_context.inject`.
 - Capabilities are normal injectable collaborators. Register only capability
   abstractions or existing instances that auto-wiring cannot infer.
 - Only `ioc/`, top-level delivery `__main__.py`/factory/lifecycle modules, and
@@ -23,6 +25,9 @@ overrides need `diwire`. Read `references/diwire.md` before writing DI code.
   that log create local stdlib loggers.
 - Do not call `container.resolve()` inside core use cases or services.
 - Let `diwire` auto-wire concrete project classes.
+- Let `diwire` auto-register `BaseRuntimeSettings` subclasses as root-scoped
+  singleton factories. Register a settings instance only for an intentional
+  test override or an explicitly prebuilt configuration object.
 - Register only abstractions, external adapter bindings, gateway
   implementations, factories, and instances that auto-wiring cannot infer.
   Keep registration in private `_register_dependencies(...)` inside
@@ -57,6 +62,8 @@ overrides need `diwire`. Read `references/diwire.md` before writing DI code.
 - Keep tests on native pytest fixtures. Do not enable
   `diwire.integrations.pytest_plugin`, and do not use `Injected[...]`
   parameters in test functions.
+- FastAPI async test helpers must enter `LifespanManager` and pass the yielded
+  manager's state-aware `manager.app` to the HTTPX2 `ASGITransport`.
 
 ## Code Style
 

@@ -94,7 +94,6 @@ def test_specx_architecture() -> None:
 
 - A reusable agent skill catalog under `skills/`.
 - A typed Python guardrail package under `src/specx/`.
-- A generated reference service under `samples/url-shortener-service/`.
 - Rule-based architecture guardrails exposed through
   `specx.testing.architecture`.
 - A compatibility renderer that writes the tiny generated-project pytest
@@ -213,28 +212,6 @@ SQLAlchemy declarative base. Local foundation module filenames are not
 - `diwire.Container` belongs in `ioc`, top-level delivery
   factory/entrypoint/lifecycle code, and tests only. `Injected[Container]` is
   allowed only in `FastAPILifecycle`.
-
-## Reference Service
-
-The sample service under `samples/url-shortener-service/` is a working generated
-project used to validate the skills. It includes:
-
-- FastAPI delivery with `url_shortener_service.delivery.fastapi.__main__:app`.
-- FastAPI lifespan cleanup for SQLAlchemy and DI container resources.
-- URL and operational probe use cases with command/query inputs and DTO
-  outputs.
-- Split pure/read/effect services.
-- SQLAlchemy repositories and UoW manager.
-- Stdlib logging configurator and meaningful class-local log records.
-- Alembic migrations and drift checks.
-- Architecture tests that call the rule-based `specx` guardrail package.
-
-Run it from the sample directory:
-
-```sh
-cd samples/url-shortener-service
-make check
-```
 
 ## Contributing
 

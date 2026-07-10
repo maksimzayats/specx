@@ -2,19 +2,38 @@
 
 Use cases coordinate externally meaningful application actions.
 
+## Contents
+
+- [Class shape](#class-shape)
+- [Inputs and results](#inputs-and-results)
+- [Transaction rules](#transaction-rules)
+- [Exceptions](#exceptions)
+- [Operational probe use cases](#operational-probe-use-cases)
+- [Unit test pattern](#unit-test-pattern)
+- [Avoid](#avoid)
+
 ## Class Shape
 
 ```python
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from diwire import Injected
 
-from order_service.core.users.dtos.register_user_result_dto import RegisterUserResultDTO
-from order_service.core.users.repositories.user_unit_of_work import (
-    UserUnitOfWorkManager,
-)
 from specx.core.foundation.command import BaseCommand
 from specx.core.foundation.use_case import BaseUseCase
+from users_service.core.users.capabilities.password_hashing_capability import (
+    PasswordHashingCapability,
+)
+from users_service.core.users.dtos.register_user_result_dto import RegisterUserResultDTO
+from users_service.core.users.exceptions.user_already_exists_error import (
+    UserAlreadyExistsError,
+)
+from users_service.core.users.repositories.user_unit_of_work import (
+    UserUnitOfWorkManager,
+)
+from users_service.core.users.services.email_normalization_service import (
+    EmailNormalizationService,
+)
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)
@@ -26,7 +45,7 @@ class RegisterUserCommand(BaseCommand):
     """
 
     email: str
-    password: str
+    password: str = field(repr=False)
 
 
 @dataclass(kw_only=True, slots=True)
@@ -42,30 +61,36 @@ class RegisterUserUseCase(BaseUseCase):
         )
     """
 
-    _identity_normalizer_service: Injected[IdentityNormalizerService]
-    _password_hashing_service: Injected[PasswordHashingService]
+    _email_normalization_service: Injected[EmailNormalizationService]
+    _password_hashing_capability: Injected[PasswordHashingCapability]
     _unit_of_work_manager: Injected[UserUnitOfWorkManager]
 
     async def execute(self, *, command: RegisterUserCommand) -> RegisterUserResultDTO:
-        normalized = self._identity_normalizer_service.normalize(command=command)
-        password_hash = self._password_hashing_service.hash_password(
-            raw_password=normalized.password,
+        normalized_email = self._email_normalization_service.normalize(
+            email=command.email,
+        )
+        password_hash = self._password_hashing_capability.hash_password(
+            raw_password=command.password,
         )
 
         async with self._unit_of_work_manager as unit_of_work:
             existing_user = await unit_of_work.users.find_by_email(
-                email=normalized.email,
+                email=normalized_email,
             )
             if existing_user is not None:
                 raise UserAlreadyExistsError
 
             user = await unit_of_work.users.create(
-                email=normalized.email,
+                email=normalized_email,
                 password_hash=password_hash,
             )
-
-        return RegisterUserResultDTO(user_id=user.id)
+            return RegisterUserResultDTO(user_id=user.id)
 ```
+
+Returning from inside `async with` still awaits the unit of work's
+`__aexit__` before the caller receives the DTO. A commit or cleanup failure
+therefore prevents the result from escaping, and the direct return also avoids
+an unnecessary temporary that strict Ruff flags as `RET504`.
 
 ## Inputs And Results
 
@@ -74,7 +99,7 @@ and `BaseDTO` for results. Treat these as distinct core data classes by
 default. Commands and queries are input contracts, not DTOs.
 
 ```python
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from specx.core.foundation.command import BaseCommand
 from specx.core.foundation.query import BaseQuery
@@ -89,7 +114,7 @@ class RegisterUserCommand(BaseCommand):
     """
 
     email: str
-    password: str
+    password: str = field(repr=False)
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)
@@ -105,6 +130,12 @@ Define the command or query in the same file as the use case. Do not make
 commands or queries inherit `BaseDTO`, do not put them under `dtos/`, and do
 not add a `DTO` suffix to them. Define result DTOs under `core/<scope>/dtos/`,
 not inline with the use case.
+
+Dataclass-generated representations include field values by default. Use
+`field(repr=False)` for passwords, tokens, credentials, and other secrets, and
+do not log or attach the whole input object to exceptions. This reduces
+accidental disclosure; it is not a substitute for avoiding secret retention
+or applying delivery-edge validation.
 
 Result DTO file:
 
@@ -132,7 +163,8 @@ class RegisterUserResultDTO(BaseDTO):
 - Open at most one UoW scope inside `execute(...)`.
 - Open the scope only when the use case needs transactional persistence.
 - Commands may change state. Queries are read-only and should not call
-  repository mutators such as `add`, `save`, `create`, `update`, or `delete`.
+  repository mutators such as `add`, `save`, `create`, `update`, or `delete`,
+  or gateways with external write effects.
 - Inject the scope `UnitOfWorkManager`, not `Provider[UnitOfWork]` and not an
   active UoW instance. The manager opens a fresh active UoW for each
   `execute(...)` call.
@@ -148,15 +180,31 @@ class RegisterUserResultDTO(BaseDTO):
   collaborators that need repositories.
 - Do not let services open transactions.
 - Do not commit, rollback, or close sessions outside the UoW implementation.
+- Keep infrastructure/runtime settings out of use cases. Convert runtime
+  configuration into typed core policy values or injectable core collaborators
+  at the composition boundary.
 - Return DTOs from use cases. Do not return entities from `execute(...)`.
 - If repositories return entities, map them to result DTOs before returning
-  from `execute(...)`; a read/effect service may own that explicit DTO
-  construction when the use case delegates to it.
+  from `execute(...)`; construct the DTO while required entity attributes are
+  still available and return it directly inside the `async with` block. Python
+  awaits the UoW's `__aexit__` before delivering that return to the caller, so
+  commit and cleanup still finish first. A read/effect service may own that
+  explicit DTO construction when the use case delegates to it.
 - Any use case that injects a `UnitOfWorkManager` needs a core integration test
   in the flat mirrored file
   `tests/integration/core/<scope>/use_cases/test_<module>.py` against the real
-  transactional database graph. Delivery route tests do not replace this core
-  persistence-facing proof.
+  persistence graph and, when database-backed, the transactional database
+  graph. Delivery route tests do not replace this core persistence-facing
+  proof.
+
+A preflight lookup is not a concurrency guarantee. Back invariants such as a
+unique email with a database constraint and translate the adapter's conflict
+into a core exception; integration-test that translation and rollback path.
+
+A database UoW cannot roll back an external gateway effect. For workflows that
+persist state and notify another system, prefer a transactional outbox/intent
+or explicitly design idempotency, retries, and compensation. Do not imply that
+two independent systems participate in one atomic transaction.
 
 Good service delegation:
 
@@ -178,7 +226,8 @@ async with self._unit_of_work_manager as unit_of_work:
 ## Exceptions
 
 Put application exceptions under `exceptions/` or near the use case when
-the error is local:
+the error is local. Errors shared with a repository or gateway adapter belong
+under the scope's `exceptions/` package, not inside a use-case module:
 
 ```python
 from specx.core.foundation.exceptions import BaseApplicationError
@@ -196,12 +245,15 @@ Delivery translates these errors to HTTP responses.
 
 ## Operational Probe Use Cases
 
-Reusable health/readiness probes can be modeled as core query use cases under
-`core/health` when more than one delivery layer may expose them. Keep them
-read-only and framework-free:
+Model required-dependency readiness as a core query workflow under
+`core/health`; cross-delivery probe policy belongs there too. Keep a simple
+process-only liveness response in delivery. Add `CheckLivenessUseCase` only
+when framework-independent liveness policy is genuinely reused across
+deliveries. Any justified core probe workflow stays read-only and
+framework-free:
 
-- `CheckLivenessUseCase` returns lightweight process liveness and must not call
-  databases, queues, caches, network services, or SDKs.
+- An optional `CheckLivenessUseCase` returns lightweight process liveness and
+  must not call databases, queues, caches, network services, or SDKs.
 - `CheckReadinessUseCase` coordinates readiness services and gateway ports that
   check required infrastructure.
 - FastAPI paths, `Cache-Control`, `200`/`503`, OpenAPI exclusion, and delivery
@@ -212,47 +264,46 @@ read-only and framework-free:
 `tests/unit/core/users/use_cases/test_register_user.py`:
 
 ```python
-from dataclasses import dataclass, field
+from types import TracebackType
 from typing import Literal
+from unittest.mock import create_autospec
 
 import pytest
 from diwire import Container
 
-from specx.core.foundation.repository import BaseRepository
-from specx.core.foundation.unit_of_work import BaseUnitOfWork
-from specx.core.foundation.unit_of_work_manager import BaseUnitOfWorkManager
+from users_service.core.users.capabilities.password_hashing_capability import (
+    PasswordHashingCapability,
+)
+from users_service.core.users.exceptions.user_already_exists_error import (
+    UserAlreadyExistsError,
+)
+from users_service.core.users.repositories.user_repository import UserRepository
+from users_service.core.users.repositories.user_unit_of_work import (
+    UserUnitOfWork,
+    UserUnitOfWorkManager,
+)
 from users_service.core.users.use_cases.register_user import (
     RegisterUserCommand,
     RegisterUserUseCase,
 )
 
 
-@dataclass(kw_only=True, slots=True)
-class FakeUsersRepository(BaseRepository):
-    """Fake users repository for use-case unit tests.
-
-    Example:
-        users = FakeUsersRepository(emails={"ada@example.com"})
-    """
-
-    emails: set[str] = field(default_factory=set)
-
-    async def find_by_email(self, *, email: str) -> object | None:
-        return object() if email in self.emails else None
-
-
-class FakeUnitOfWork(BaseUnitOfWork):
+class FakeUnitOfWork(UserUnitOfWork):
     """Fake active UoW that exposes test repositories.
 
     Example:
         unit_of_work = FakeUnitOfWork(users=users)
     """
 
-    def __init__(self, *, users: FakeUsersRepository) -> None:
-        self.users = users
+    def __init__(self, *, users: UserRepository) -> None:
+        self._users = users
+
+    @property
+    def users(self) -> UserRepository:
+        return self._users
 
 
-class FakeUnitOfWorkManager(BaseUnitOfWorkManager[FakeUnitOfWork]):
+class FakeUnitOfWorkManager(UserUnitOfWorkManager):
     """Fake manager that opens an active fake UoW for each test action.
 
     Example:
@@ -260,21 +311,22 @@ class FakeUnitOfWorkManager(BaseUnitOfWorkManager[FakeUnitOfWork]):
             await unit_of_work.users.find_by_email(email="ada@example.com")
     """
 
-    def __init__(self, *, users: FakeUsersRepository) -> None:
+    def __init__(self, *, users: UserRepository) -> None:
         self._users = users
         self._unit_of_work: FakeUnitOfWork | None = None
         self.committed_count = 0
         self.rolled_back_count = 0
 
-    @property
-    def users(self) -> FakeUsersRepository:
-        return self._users
-
     async def __aenter__(self) -> FakeUnitOfWork:
         self._unit_of_work = FakeUnitOfWork(users=self._users)
         return self._unit_of_work
 
-    async def __aexit__(self, exc_type, exc, traceback) -> Literal[False]:
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> Literal[False]:
         if self._unit_of_work is None:
             raise AssertionError("unit of work manager was not active")
         if exc_type is None:
@@ -289,9 +341,21 @@ class FakeUnitOfWorkManager(BaseUnitOfWorkManager[FakeUnitOfWork]):
 async def test_register_user_rejects_duplicate_email(
     container: Container,
 ) -> None:
-    users = FakeUsersRepository(emails={"ada@example.com"})
+    users = create_autospec(UserRepository, instance=True, spec_set=True)
+    users.find_by_email.return_value = object()
     unit_of_work_manager = FakeUnitOfWorkManager(users=users)
-    container.add_instance(unit_of_work_manager, provides=UsersUnitOfWorkManager)
+    password_hashing_capability = create_autospec(
+        PasswordHashingCapability,
+        instance=True,
+        spec_set=True,
+    )
+    password_hashing_capability.hash_password.return_value = "test-password-hash"
+
+    container.add_instance(
+        password_hashing_capability,
+        provides=PasswordHashingCapability,
+    )
+    container.add_instance(unit_of_work_manager, provides=UserUnitOfWorkManager)
     use_case = container.resolve(RegisterUserUseCase)
 
     with pytest.raises(UserAlreadyExistsError):
@@ -308,8 +372,9 @@ async def test_register_user_rejects_duplicate_email(
 One-off class-based doubles live in the `test_*.py` file that uses them.
 Reused unit-test doubles may live in mirrored
 `tests/unit/core/<scope>/{capabilities,gateways,repositories}/fake_<source_module>.py`
-modules. Inline `MagicMock` or `AsyncMock` in the test body when only one
-collaborator behavior needs to change. Do not create per-target folders,
+modules. Inline `MagicMock`, `AsyncMock`, or `create_autospec` in the test body
+when only one collaborator behavior needs to change. Give mocks at least a
+spec and prefer autospeccing when call signatures matter. Do not create per-target folders,
 `harness.py`, target factories, target harnesses, `tests/_support/fakes`,
 shared `_fakes.py` files, fake modules outside those mirrored unit
 port/capability packages, or double classes in `conftest.py`.

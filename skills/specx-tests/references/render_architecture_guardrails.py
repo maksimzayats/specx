@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import keyword
 import re
 from pathlib import Path
 
@@ -19,7 +20,7 @@ def test_specx_architecture() -> None:
 
     assert_specx_architecture(
         SpecxArchitectureConfig(
-            project_root=Path(__file__).resolve().parents[3],
+            project_root=Path(__file__).resolve().parents[{project_root_parent_index}],
             package_name="{package_name}",
             disabled_rules=disabled_rules,
         )
@@ -44,31 +45,48 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    if PACKAGE_PATTERN.fullmatch(args.package) is None:
+    if PACKAGE_PATTERN.fullmatch(args.package) is None or keyword.iskeyword(args.package):
         parser.error(
-            "--package must be one Python package identifier, such as url_shortener_service"
+            "--package must be one non-keyword Python package identifier, "
+            "such as url_shortener_service"
         )
+    if args.output.suffix != ".py" or args.output.name == "__init__.py":
+        parser.error("--output must be a Python test module, not __init__.py")
+
+    tests_root = _tests_root(args.output)
+    if tests_root is None:
+        parser.error("--output must be inside the project's tests directory")
+
+    resolved_output = args.output.resolve()
+    project_root_parent_index = len(resolved_output.parent.relative_to(tests_root.parent).parts)
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    for directory in _test_package_directories(args.output):
+    for directory in _test_package_directories(args.output, tests_root=tests_root):
         (directory / "__init__.py").touch(exist_ok=True)
     args.output.write_text(
-        WRAPPER_TEMPLATE.format(package_name=args.package),
+        WRAPPER_TEMPLATE.format(
+            package_name=args.package,
+            project_root_parent_index=project_root_parent_index,
+        ),
         encoding="utf-8",
     )
     return 0
 
 
-def _test_package_directories(output: Path) -> tuple[Path, ...]:
+def _tests_root(output: Path) -> Path | None:
     resolved_output = output.resolve()
-    directories = (resolved_output.parent, *resolved_output.parents)
-    tests_root = next((directory for directory in directories if directory.name == "tests"), None)
-    if tests_root is None:
-        return ()
+    return next(
+        (directory for directory in resolved_output.parents if directory.name == "tests"),
+        None,
+    )
+
+
+def _test_package_directories(output: Path, *, tests_root: Path) -> tuple[Path, ...]:
+    resolved_output = output.resolve()
 
     return tuple(
         directory
-        for directory in reversed(directories)
+        for directory in reversed(resolved_output.parents)
         if directory == tests_root or tests_root in directory.parents
     )
 

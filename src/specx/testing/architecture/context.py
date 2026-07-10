@@ -88,6 +88,7 @@ PURE_SERVICE_FORBIDDEN_DEPENDENCY_FRAGMENTS = (
 PURE_SERVICE_FORBIDDEN_IMPORT_ROOTS = {
     "fastapi",
     "httpx",
+    "httpx2",
     "openai",
     "random",
     "redis",

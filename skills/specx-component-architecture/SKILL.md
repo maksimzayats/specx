@@ -18,11 +18,12 @@ than one layer. Read `references/boundaries.md` for the full rules.
   Inner core packages must not import it.
 - Scoped Specx foundation packages: packaged base classes under
   `specx.core.foundation`, `specx.delivery.foundation`, and
-  `specx.infrastructure.foundation`. Every project class should inherit an
-  explicit packaged base directly or through a project-local base.
-- `foundation/`: optional project-local extension point only for real
-  project-local base categories or stateful framework bases that must not be
-  shared globally, such as a SQLAlchemy declarative base.
+  `specx.infrastructure.foundation`. Every non-foundation source class must
+  inherit an explicit packaged base directly or through a project-local base;
+  local bases explicitly inherit the packaged or framework base they extend.
+- `foundation/`: optional project-local extension point for base definitions
+  only: real project-local base categories or stateful framework bases that
+  must not be shared globally, such as a SQLAlchemy declarative base.
 - `delivery/`: runnable framework apps, controllers, schemas, auth
   dependencies, request parsing, response serialization, HTTP error translation,
   app lifecycle managers, and delivery-only services.
@@ -60,9 +61,12 @@ than one layer. Read `references/boundaries.md` for the full rules.
 - Use a port or ABC only for a real external boundary or multiple
   implementations.
 - Use one delivery controller per scoped set of use cases.
-- Use `core/health` for reusable operational liveness/readiness behavior that
-  more than one delivery layer can expose; keep framework route/status/header
-  mapping in delivery and technical checks behind gateway adapters.
+- Use `core/health` when readiness checks any required external dependency or
+  probe policy is reusable across delivery layers. Keep a simple
+  framework-specific liveness probe in delivery, and do not invent core probe
+  services and use cases solely to satisfy the layer diagram.
+- When `core/health` is justified, keep framework route/status/header mapping
+  in delivery and technical checks behind gateway adapters.
 - Keep request/response schemas in top-level `delivery/`. Keep use-case DTOs in
   `core/<scope>/dtos/`.
 - Prefer `@dataclass(frozen=True, kw_only=True, slots=True)` for commands,
@@ -84,8 +88,9 @@ than one layer. Read `references/boundaries.md` for the full rules.
   adapters directly.
 - Services may receive an active UoW from a use case, but services must not
   open UoW scopes or own commit/rollback.
-- Give major classes a docstring that explains scope and includes a concrete
-  `Example:`.
+- Give every project source class a docstring that explains scope and includes
+  a concrete `Example:`; the packaged rule checks abstract ports, local bases,
+  enums, and errors as well as concrete behavior classes.
 - Keep controller-only helpers such as auth and rate limiting in `delivery/`.
 - Keep FastAPI lifespan ownership in `delivery/fastapi/lifecycle.py`. The
   lifecycle releases app-owned resources and closes the DI container on
@@ -98,6 +103,9 @@ than one layer. Read `references/boundaries.md` for the full rules.
   secrets, credentials, request bodies, full external URLs, or infrastructure
   topology.
 - Do not create bare classes without explicit bases.
+- Treat the packaged delivery guardrails as a FastAPI baseline. For another
+  delivery framework, explicitly disable and replace the FastAPI-specific
+  built-ins instead of copying FastAPI paths or guidance into the project.
 
 ## Code Style
 
