@@ -15,6 +15,8 @@ and clean `core` / `delivery` / `infrastructure` / `ioc` boundaries.
 - `skills/<skill-name>/agents/openai.yaml` contains OpenAI skill UI metadata.
 - `.agents/skills/` is the tracked local-discovery mirror of canonical
   `skills/`; update it with `make sync-skills` rather than editing it directly.
+- `docs/` is the self-contained Storybook documentation package; its MDX pages
+  live under `docs/pages/`.
 - `src/specx/core/foundation/` contains reusable core foundation bases.
 - `src/specx/delivery/foundation/` contains delivery foundation bases.
 - `src/specx/infrastructure/foundation/` contains infrastructure foundation bases.
@@ -31,8 +33,9 @@ and clean `core` / `delivery` / `infrastructure` / `ioc` boundaries.
 - Type-check package code: `make type`
 - Run package tests: `make test`
 - Build package distributions: `make build`
-- Run the Storybook documentation locally: `npm ci && make docs`
-- Build the static Storybook documentation: `npm ci && make docs-build`
+- Install the Storybook documentation dependencies: `npm --prefix docs ci`
+- Run the Storybook documentation locally: `make docs`
+- Build the static Storybook documentation: `make docs-build`
 - Verify installed package typing: `make verifytypes`
 - Validate skill metadata only: `make validate-skills`
 - Synchronize the local skill mirror: `make sync-skills`

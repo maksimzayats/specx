@@ -35,14 +35,14 @@ if (navigationPaths.size !== navigationPages.length) {
   failures.push("The documentation navigation manifest contains duplicate paths.")
 }
 
-const docsDirectory = path.join(root, "docs")
-const docsFiles = (await readdir(docsDirectory))
+const pagesDirectory = path.join(root, "pages")
+const docsFiles = (await readdir(pagesDirectory, { recursive: true }))
   .filter((file) => file.endsWith(".mdx"))
   .sort()
 const sourcePages = new Map()
 
 for (const file of docsFiles) {
-  const source = await readFile(path.join(docsDirectory, file), "utf8")
+  const source = await readFile(path.join(pagesDirectory, file), "utf8")
   const metaMatch = source.match(/<Meta\s+title="([^"]+)"\s*\/>/)
   if (!metaMatch) {
     failures.push(`${file}: missing a single-line <Meta title="Section/Page" /> declaration.`)

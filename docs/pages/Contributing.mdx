@@ -20,9 +20,9 @@ environment, then establish a clean baseline:
 
 ```sh
 uv sync --locked --all-groups
-npm ci
+npm --prefix docs ci
 make check
-npm run docs:check
+npm --prefix docs run docs:check
 ```
 
 ## Change a skill
@@ -62,15 +62,16 @@ Update rule behavior and the skills that teach it in the same change.
 
 ## Change these docs
 
-Documentation pages are MDX files under `docs/`. Add each page to `.storybook/docsNavigation.ts`
-and the inline Storybook order in `.storybook/preview.ts`. Every page except Introduction ends with
-`NextPrev`, and internal links use Storybook docs paths.
+Documentation pages are MDX files under `docs/pages/`. Add each page to
+`docs/.storybook/docsNavigation.ts` and the inline Storybook order in
+`docs/.storybook/preview.ts`. Every page except Introduction ends with `NextPrev`, and internal
+links use Storybook docs paths.
 
 ```sh
-npm run docs:check
-npm run types
-npm run build-storybook -- --output-dir storybook-static
-npm run docs:check-built
+npm --prefix docs run docs:check
+npm --prefix docs run types
+npm --prefix docs run build-storybook -- --output-dir storybook-static
+npm --prefix docs run docs:check-built
 ```
 
 Inspect the built site in light and dark themes and at mobile width. Tables and code samples must

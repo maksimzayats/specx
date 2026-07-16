@@ -21,10 +21,10 @@ build:
 	uv build --no-sources
 
 docs:
-	npm run storybook
+	npm --prefix docs run storybook
 
 docs-build:
-	npm run build-storybook
+	npm --prefix docs run build-storybook
 
 verifytypes: build
 	@wheel="$$(ls -t dist/specx-*.whl | head -n 1)"; \

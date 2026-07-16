@@ -9,7 +9,7 @@ const preview: Preview = {
     options: {
       storySort: {
         // Storybook statically parses this value and requires an inline literal.
-        // scripts/check-docs.mjs keeps it aligned with docsNavigation.ts.
+        // docs/scripts/check-docs.mjs keeps it aligned with docsNavigation.ts.
         order: [
           "Overview",
           ["Introduction", "How Specx works", "Quickstart", "Choose a workflow"],

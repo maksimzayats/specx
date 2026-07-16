@@ -155,7 +155,7 @@ The documentation site follows the same Storybook, React/Vite, MDX, and GitHub
 Pages approach used by OpenAI's Apps SDK UI documentation. Run it locally with:
 
 ```sh
-npm ci
+npm --prefix docs ci
 make docs
 ```
 

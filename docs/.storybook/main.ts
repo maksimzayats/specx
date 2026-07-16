@@ -3,7 +3,7 @@ import path from "path"
 import remarkGfm from "remark-gfm"
 
 const config: StorybookConfig = {
-  stories: ["../docs/**/*.mdx"],
+  stories: ["../pages/**/*.mdx"],
   addons: [
     "@storybook/addon-links",
     {
