@@ -33,7 +33,7 @@ export const CustomDocsContainer = ({
 
   useLayoutEffect(() => applyDocumentTheme(theme), [theme])
   return (
-    <MDXProvider components={{ pre: (props) => <CodeBlock {...props} theme={theme} /> }}>
+    <MDXProvider components={{ pre: CodeBlock }}>
       <DocsContainer context={context} theme={THEMES[theme]}>
         {children}
       </DocsContainer>

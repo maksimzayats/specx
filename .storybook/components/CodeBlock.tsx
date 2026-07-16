@@ -11,9 +11,6 @@ import toml from "react-syntax-highlighter/dist/esm/languages/prism/toml"
 import tsx from "react-syntax-highlighter/dist/esm/languages/prism/tsx"
 import typescript from "react-syntax-highlighter/dist/esm/languages/prism/typescript"
 import yaml from "react-syntax-highlighter/dist/esm/languages/prism/yaml"
-import { oneDark, oneLight } from "react-syntax-highlighter/dist/esm/styles/prism"
-
-import type { Theme } from "../addon-theme/constants"
 
 SyntaxHighlighter.registerLanguage("bash", bash)
 SyntaxHighlighter.registerLanguage("http", http)
@@ -43,12 +40,10 @@ type CodeElementProps = {
   className?: string
 }
 
-type CodeBlockProps = ComponentPropsWithoutRef<"pre"> & {
-  theme: Theme
-}
+type CodeBlockProps = ComponentPropsWithoutRef<"pre">
 
-export const CodeBlock = ({ children, theme, ...preProps }: CodeBlockProps) => {
-  const [copied, setCopied] = useState(false)
+export const CodeBlock = ({ children, ...preProps }: CodeBlockProps) => {
+  const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">("idle")
   const codeElement = Children.toArray(children).find(isValidElement)
 
   if (!codeElement) {
@@ -63,29 +58,55 @@ export const CodeBlock = ({ children, theme, ...preProps }: CodeBlockProps) => {
   const code = String(codeProps.children ?? "").replace(/\n$/, "")
 
   const copyCode = async () => {
-    await navigator.clipboard.writeText(code)
-    setCopied(true)
-    window.setTimeout(() => setCopied(false), 1600)
+    try {
+      await navigator.clipboard.writeText(code)
+      setCopyStatus("copied")
+    } catch {
+      setCopyStatus("error")
+    }
+    window.setTimeout(() => setCopyStatus("idle"), 1600)
   }
+
+  const copyLabel =
+    copyStatus === "copied" ? "Copied code" : copyStatus === "error" ? "Copy failed" : "Copy code"
+  const HighlightedPre = ({
+    children: highlightedChildren,
+    className,
+    style,
+    ...highlightedProps
+  }: ComponentPropsWithoutRef<"pre">) => (
+    <pre
+      {...preProps}
+      {...highlightedProps}
+      className={[preProps.className, className].filter(Boolean).join(" ") || undefined}
+      style={{ ...preProps.style, ...style }}
+      tabIndex={preProps.tabIndex ?? 0}
+    >
+      {highlightedChildren}
+    </pre>
+  )
 
   return (
     <div className="docblock-source specx-code-block">
       <SyntaxHighlighter
+        PreTag={HighlightedPre}
         codeTagProps={{ className: requestedLanguage ? `language-${requestedLanguage}` : undefined }}
-        customStyle={{ background: "transparent", margin: 0, padding: "20px 20px 32px" }}
         language={language}
-        style={theme === "dark" ? oneDark : oneLight}
+        showInlineLineNumbers={false}
+        showLineNumbers={false}
+        useInlineStyles={false}
         wrapLongLines={false}
       >
         {code}
       </SyntaxHighlighter>
       <button
-        aria-label="Copy code"
+        aria-label={copyLabel}
+        aria-live="polite"
         className="specx-code-copy"
         onClick={copyCode}
         type="button"
       >
-        {copied ? "Copied" : "Copy"}
+        {copyStatus === "copied" ? "Copied" : copyStatus === "error" ? "Retry" : "Copy"}
       </button>
     </div>
   )

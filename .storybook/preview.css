@@ -5,6 +5,9 @@
   --gray-150: light-dark(#dfdfdf, #1c1c1c);
   --gray-300: light-dark(#afafaf, #303030);
   --gray-350: light-dark(#9f9f9f, #393939);
+  --gray-400: light-dark(#8f8f8f, #414141);
+  --gray-600: light-dark(#414141, #8f8f8f);
+  --gray-800: light-dark(#212121, #cdcdcd);
   --alpha-base: light-dark(#0d0d0d, #ffffff);
   --alpha-02: color-mix(in srgb, var(--alpha-base) 2%, transparent);
   --alpha-04: color-mix(in srgb, var(--alpha-base) 4%, transparent);
@@ -16,10 +19,17 @@
   --text: light-dark(#292929, #dcdcdc);
   --text-secondary: light-dark(#5d5d5d, #afafaf);
   --surface: light-dark(#ffffff, #212121);
+  --code-text: light-dark(#2e3438, #c9cdcf);
+  --code-strong-text: light-dark(#0d0d0d, #ffffff);
   --focus-ring: light-dark(#3a10e5, #9f8cff);
   --font-code:
-    "JetBrains Mono", ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Monaco, Consolas,
-    monospace;
+    ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono",
+    "DejaVu Sans Mono", "Courier New", monospace;
+  --syntax-blue: light-dark(#004f99, #99ceff);
+  --syntax-green: light-dark(#008635, #40c977);
+  --syntax-pink: light-dark(#e04c91, #ff8cc1);
+  --syntax-purple: light-dark(#8046d9, #ad7bf9);
+  --syntax-function: light-dark(#0f786d, #ffe48c);
   --radius-md: 8px;
 }
 
@@ -276,43 +286,145 @@ body {
   overflow: hidden !important;
   border: 1px solid var(--alpha-10) !important;
   border-radius: var(--radius-md) !important;
-  background: light-dark(var(--gray-25), #181818) !important;
+  background: var(--gray-25) !important;
   box-shadow: none !important;
 }
 
 .specx-code-block {
   position: relative;
-  margin: 25px 0 40px !important;
+  margin: 18px 0 24px !important;
 }
 
 .specx-code-block > pre {
   overflow-x: auto !important;
+  display: block !important;
+  padding: 14px 20px !important;
   margin: 0 !important;
   background: transparent !important;
+  color: var(--code-text) !important;
   font-family: var(--font-code) !important;
-  font-size: 14px !important;
-  line-height: 20px !important;
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  line-height: 19px !important;
 }
 
 .specx-code-block > pre code {
   border: 0 !important;
   background: transparent !important;
+  color: inherit !important;
   font-family: var(--font-code) !important;
+}
+
+.specx-code-block > pre code * {
+  font-family: inherit !important;
+}
+
+.specx-code-block > pre code::after {
+  display: inline-block;
+  width: 52px;
+  content: "";
+}
+
+.specx-code-block .token.comment,
+.specx-code-block .token.prolog,
+.specx-code-block .token.doctype,
+.specx-code-block .token.cdata {
+  color: light-dark(var(--gray-400), var(--gray-600)) !important;
+  font-style: italic !important;
+}
+
+.specx-code-block .token.tag,
+.specx-code-block .token.selector {
+  color: #e04c91 !important;
+}
+
+.specx-code-block .token.namespace {
+  opacity: 0.7;
+}
+
+.specx-code-block .token.attr-value,
+.specx-code-block .token.string {
+  color: var(--syntax-green) !important;
+}
+
+.specx-code-block .token.url,
+.specx-code-block .token.symbol,
+.specx-code-block .token.number,
+.specx-code-block .token.boolean,
+.specx-code-block .token.variable,
+.specx-code-block .token.constant,
+.specx-code-block .token.inserted,
+.specx-code-block .token.atrule {
+  color: var(--syntax-pink) !important;
+}
+
+.specx-code-block .token.function,
+.specx-code-block .token.builtin {
+  color: var(--syntax-function) !important;
+}
+
+.specx-code-block .token.class-name,
+.specx-code-block .token.maybe-class-name,
+.specx-code-block .token.decorator,
+.specx-code-block .token.annotation {
+  color: var(--syntax-purple) !important;
+}
+
+.specx-code-block .token.plain-text {
+  color: var(--code-strong-text) !important;
+}
+
+.specx-code-block .token.keyword,
+.specx-code-block .token.function-variable,
+.specx-code-block .token.attr-name,
+.specx-code-block .token.property,
+.specx-code-block .token.regex,
+.specx-code-block .token.entity {
+  color: var(--syntax-blue) !important;
+}
+
+.specx-code-block .token.directive.tag .token.tag {
+  color: #393a34 !important;
+}
+
+.specx-code-block .token.punctuation,
+.specx-code-block .token.operator {
+  color: light-dark(var(--gray-400), var(--gray-800)) !important;
+}
+
+.specx-code-block .token.deleted {
+  color: #9a050f !important;
+}
+
+.specx-code-block .token.important {
+  color: #ee9900 !important;
+}
+
+.specx-code-block .token.important,
+.specx-code-block .token.bold {
+  font-weight: 600 !important;
+}
+
+.specx-code-block .token.italic {
+  font-style: italic !important;
 }
 
 .specx-code-copy {
   position: absolute;
-  right: 0;
-  bottom: 0;
-  padding: 8px 16px;
-  border: 1px solid var(--alpha-12);
-  border-radius: 8px 0 0;
-  background: var(--surface);
-  color: var(--text);
+  right: -1px;
+  bottom: -1px;
+  padding: 4px 10px;
+  border: 1px solid light-dark(var(--alpha-10), var(--alpha-15));
+  border-right: 0;
+  border-bottom: 0;
+  border-radius: var(--radius-md) 0 var(--radius-md) 0;
+  background: light-dark(#ffffff, var(--gray-25));
+  color: var(--code-strong-text);
   cursor: pointer;
   font: inherit;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 16px;
 }
 
 .specx-code-copy:hover {
@@ -320,6 +432,11 @@ body {
 }
 
 .specx-code-copy:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -3px;
+}
+
+.specx-code-block > pre:focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: -3px;
 }
