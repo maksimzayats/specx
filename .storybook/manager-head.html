@@ -1,20 +1,39 @@
+<link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+
 <style>
   :root {
-    --specx-gray-100: #ededed;
-    --specx-gray-400: #8f8f8f;
-    --specx-gray-500: #5d5d5d;
-    --specx-gray-750: #292929;
-    --specx-input-border: rgb(0 0 0 / 8%);
-    --specx-input-border-hover: rgb(0 0 0 / 15%);
+    --gray-100: light-dark(#ededed, #181818);
+    --gray-150: light-dark(#dfdfdf, #1c1c1c);
+    --gray-200: light-dark(#c4c4c4, #212121);
+    --gray-300: light-dark(#afafaf, #303030);
+    --gray-350: light-dark(#9f9f9f, #393939);
+    --gray-400: light-dark(#8f8f8f, #414141);
+    --gray-500: #5d5d5d;
+    --gray-650: light-dark(#393939, #9f9f9f);
+    --gray-750: light-dark(#292929, #b9b9b9);
+    --gray-900: light-dark(#181818, #ededed);
+    --alpha-base: light-dark(#0d0d0d, #ffffff);
+    --alpha-08: color-mix(in srgb, var(--alpha-base) 8%, transparent);
+    --alpha-30: color-mix(in srgb, var(--alpha-base) 30%, transparent);
+    --input-border: light-dark(rgb(0 0 0 / 8%), rgb(255 255 255 / 18%));
+    --input-border-hover: light-dark(rgb(0 0 0 / 15%), rgb(255 255 255 / 25%));
+    --input-border-focus: light-dark(rgb(0 0 0 / 25%), rgb(255 255 255 / 35%));
+    --text: light-dark(var(--gray-750), #dcdcdc);
+    --text-secondary: light-dark(var(--gray-500), #afafaf);
+    --surface: light-dark(#ffffff, var(--gray-200));
   }
 
   * {
-    scrollbar-color: rgb(13 13 13 / 30%) transparent;
+    scrollbar-color: var(--alpha-30) transparent;
     scrollbar-width: thin;
   }
 
   .sidebar-header {
     margin-top: -6px !important;
+  }
+
+  .sidebar-header a {
+    pointer-events: none;
   }
 
   .sidebar-header a:focus {
@@ -27,33 +46,133 @@
     display: none !important;
   }
 
+  div:has(+ .sidebar-container) {
+    display: none;
+  }
+
   .search-field {
+    position: relative;
     height: 36px !important;
     margin-top: -6px !important;
-    box-shadow: 0 0 0 1px var(--specx-input-border) !important;
+    box-shadow: 0 0 0 1px var(--input-border) !important;
     transition: box-shadow 0.15s ease;
   }
 
+  .search-field::before {
+    position: absolute;
+    z-index: 2;
+    top: 100%;
+    right: 0;
+    left: 0;
+    height: 20px;
+    margin-top: 1px;
+    background: var(--surface);
+    content: "";
+    mask-image: linear-gradient(0deg, transparent, #000000);
+    pointer-events: none;
+  }
+
   .search-field:hover {
-    box-shadow: 0 0 0 1px var(--specx-input-border-hover) !important;
+    box-shadow: 0 0 0 1px var(--input-border-hover) !important;
+  }
+
+  .search-field:has(#storybook-explorer-searchfield:focus) {
+    box-shadow: 0 0 0 1px var(--input-border-focus) !important;
   }
 
   #storybook-explorer-searchfield {
     font-size: 14px !important;
   }
 
+  .search-field > div:last-child > div {
+    display: none !important;
+  }
+
+  .search-field > div:last-child > button {
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border-radius: 100%;
+    margin-right: 4px;
+  }
+
+  .search-field > div:last-child > button:hover {
+    background: var(--gray-100) !important;
+    color: var(--gray-900) !important;
+  }
+
+  .search-result-recentlyOpened {
+    padding-left: 10px !important;
+    margin-top: 0 !important;
+    margin-bottom: 4px !important;
+    color: light-dark(var(--gray-400), var(--gray-650)) !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+  }
+
+  .search-result-item {
+    padding: 8px 10px !important;
+    border-radius: 6px !important;
+    margin-bottom: 2px !important;
+    background: transparent !important;
+  }
+
+  .search-result-item:hover {
+    background: var(--gray-100) !important;
+  }
+
+  .search-result-item > div:first-child {
+    display: none !important;
+  }
+
+  .search-result-item--label > div:first-child {
+    margin-bottom: 2px !important;
+    color: var(--text) !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+  }
+
+  .search-result-item--label > div:first-child mark {
+    background: var(--alpha-08) !important;
+    color: var(--text) !important;
+  }
+
+  .search-result-item--label > div:last-child {
+    color: var(--text-secondary) !important;
+    font-size: 12px !important;
+  }
+
+  #root > div > div:nth-child(2),
+  #root > div > div:nth-child(3):has(.sidebar-container) {
+    border: 0 !important;
+  }
+
   #storybook-explorer-menu {
+    position: absolute;
+    top: 99px;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    overflow: auto;
     padding: 20px 12px 10px;
+    margin: 0;
   }
 
   [data-nodetype="root"] {
-    margin: 0 0 4px !important;
-    color: var(--specx-gray-400) !important;
+    margin-top: 0 !important;
+    margin-bottom: 4px !important;
+    color: light-dark(var(--gray-400), var(--gray-650)) !important;
     font-size: 14px !important;
     font-weight: 500 !important;
     letter-spacing: 0 !important;
     pointer-events: none !important;
     text-transform: none !important;
+  }
+
+  .sidebar-item ~ [data-nodetype="root"] {
+    margin-top: 20px !important;
   }
 
   [data-nodetype="root"] button:first-child {
@@ -67,26 +186,113 @@
 
   .sidebar-item {
     min-height: auto !important;
-    margin-bottom: 2px !important;
     border-radius: 6px !important;
+    margin-bottom: 2px !important;
     font-weight: 500 !important;
+    transition: background-color 0.1s ease;
+  }
+
+  .sidebar-item:not([data-selected="true"]):hover,
+  .sidebar-item[data-selected="true"] {
+    background: var(--gray-100) !important;
+  }
+
+  .sidebar-item > button {
+    align-items: center !important;
+  }
+
+  .sidebar-item > button > div {
+    margin-top: 0 !important;
+  }
+
+  .sidebar-item > button:first-child {
+    padding-top: 4px !important;
   }
 
   .sidebar-item > a:first-child {
     min-height: 36px !important;
     align-items: center !important;
-    padding-left: 10px !important;
-    color: var(--specx-gray-750) !important;
+    padding: 0 0 0 10px !important;
+    color: var(--text) !important;
     font-weight: inherit !important;
   }
 
-  .sidebar-item:not([data-selected="true"]):hover,
   .sidebar-item[data-selected="true"] {
-    background: var(--specx-gray-100) !important;
+    color: var(--gray-900) !important;
+    font-weight: 600 !important;
   }
 
-  .sidebar-item[data-selected="true"] {
-    color: var(--specx-gray-750) !important;
-    font-weight: 600 !important;
+  @media (min-width: 600px) {
+    [data-test-id="sb-preview-toolbar"] {
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      background: transparent !important;
+      box-shadow: none !important;
+      pointer-events: none !important;
+    }
+
+    [data-test-id="sb-preview-toolbar"] button {
+      pointer-events: all !important;
+    }
+
+    [data-view-mode="story"] [data-test-id="sb-preview-toolbar"] {
+      position: static !important;
+      pointer-events: all !important;
+    }
+  }
+
+  @media (max-width: 599px) {
+    #root > div > div:last-child {
+      position: absolute !important;
+      background: none !important;
+    }
+
+    #root > div > div:last-child > div > button {
+      position: fixed;
+      top: 8px;
+      left: 8px;
+      cursor: pointer;
+    }
+
+    #root > div > div:last-child > div > button svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    #root > div > div:last-child > div > button p {
+      display: none;
+    }
+
+    #root > div > div:nth-child(3) {
+      border: 0 !important;
+    }
+
+    #root > div > div:nth-child(3) button[title="Open addon panel"] {
+      display: none !important;
+    }
+  }
+
+  [data-test-id="sb-preview-toolbar"] > div {
+    justify-content: flex-end !important;
+    width: 100%;
+    padding: 0 8px;
+    margin: 0 !important;
+  }
+
+  [data-test-id="sb-preview-toolbar"] > div > div:last-child {
+    display: none !important;
+  }
+
+  .sb-bar > div > div > span:first-child {
+    display: none !important;
+  }
+
+  #storybook-preview-iframe {
+    opacity: 0 !important;
+  }
+
+  #storybook-preview-iframe[data-is-loaded="true"] {
+    opacity: 1 !important;
   }
 </style>

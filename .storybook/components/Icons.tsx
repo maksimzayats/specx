@@ -1,11 +1,13 @@
 import React, { type SVGProps } from "react"
 
 const iconProps = {
+  "aria-hidden": true,
   fill: "none",
+  focusable: "false",
   stroke: "currentColor",
   strokeLinecap: "round",
   strokeLinejoin: "round",
-  strokeWidth: 1.75,
+  strokeWidth: 2,
   viewBox: "0 0 24 24",
 } as const
 

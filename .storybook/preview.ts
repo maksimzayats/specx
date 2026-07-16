@@ -1,5 +1,7 @@
 import type { Preview } from "@storybook/react"
 
+import { getThemeStore } from "./addon-theme/themeStore"
+import { CustomDocsContainer, WithTheme } from "./components/StorybookApp"
 import "./preview.css"
 
 const preview: Preview = {
@@ -10,6 +12,7 @@ const preview: Preview = {
       },
     },
     docs: {
+      container: CustomDocsContainer,
       toc: {
         contentsSelector: ".sbdocs-content",
         headingSelector: "h2, h3",
@@ -17,6 +20,10 @@ const preview: Preview = {
         title: "",
       },
     },
+  },
+  decorators: [WithTheme],
+  initialGlobals: {
+    theme: getThemeStore(),
   },
 }
 
