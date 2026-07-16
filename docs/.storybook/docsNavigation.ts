@@ -86,4 +86,12 @@ for (const section of docsNavigation) {
   }
 }
 
-export const docsHref = (path: string) => `?path=/docs/${path}--docs`
+export const docsHref = (path: string) => {
+  const sectionSeparator = path.indexOf("-")
+
+  if (sectionSeparator === -1) {
+    throw new Error(`Documentation path must include a section: ${path}`)
+  }
+
+  return `/docs/${path.slice(0, sectionSeparator)}/${path.slice(sectionSeparator + 1)}/`
+}

@@ -4,7 +4,7 @@
   "description": "Storybook documentation for Specx",
   "scripts": {
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build --disable-telemetry",
+    "build-storybook": "node scripts/build-docs.mjs",
     "docs:check": "node scripts/check-docs.mjs",
     "docs:check-built": "node scripts/check-docs.mjs --built",
     "types": "tsc --noEmit"

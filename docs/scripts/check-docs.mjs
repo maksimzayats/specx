@@ -1,17 +1,16 @@
 import { readFile, readdir } from "node:fs/promises"
 import path from "node:path"
 
+import { readNavigationPages, storyPathToRoute } from "./docs-navigation.mjs"
+
 const root = process.cwd()
 const navigationSource = await readFile(
   path.join(root, ".storybook", "docsNavigation.ts"),
   "utf8",
 )
-const pagePattern = /\{\s*title:\s*"([^"]+)",\s*path:\s*"([^"]+)",?\s*\}/g
-const navigationPages = [...navigationSource.matchAll(pagePattern)].map((match) => ({
-  path: match[2],
-  title: match[1],
-}))
+const navigationPages = await readNavigationPages(root)
 const navigationPaths = new Set(navigationPages.map((page) => page.path))
+const navigationRoutes = new Set(navigationPages.map((page) => storyPathToRoute(page.path)))
 const failures = []
 
 const previewSource = await readFile(path.join(root, ".storybook", "preview.ts"), "utf8")
@@ -63,9 +62,14 @@ for (const file of docsFiles) {
     failures.push(`${file}: NextPrev current path does not match ${storyPath}.`)
   }
 
-  for (const linkMatch of source.matchAll(/\?path=\/docs\/([^"#)\s]+)--docs/g)) {
-    if (!navigationPaths.has(linkMatch[1])) {
-      failures.push(`${file}: internal documentation link targets unknown path ${linkMatch[1]}.`)
+  if (source.includes("?path=/docs/")) {
+    failures.push(`${file}: internal documentation links must use canonical /docs/ routes.`)
+  }
+
+  const linkedRoutes = new Set([...source.matchAll(/\/docs\/[a-z0-9][a-z0-9/-]*/g)].map((match) => match[0]))
+  for (const route of linkedRoutes) {
+    if (!navigationRoutes.has(route)) {
+      failures.push(`${file}: internal documentation link is not a canonical route: ${route}.`)
     }
   }
 }
@@ -92,6 +96,22 @@ if (process.argv.includes("--built")) {
     const storyId = `${page.path}--docs`
     if (!builtIds.has(storyId)) {
       failures.push(`Built Storybook index is missing ${storyId}.`)
+    }
+
+    const routeEntry = path.join(root, "storybook-static", storyPathToRoute(page.path), "index.html")
+    try {
+      const routeHtml = await readFile(routeEntry, "utf8")
+      const baseIndex = routeHtml.indexOf('<base href="/" />')
+      const firstRelativeAssetIndex = routeHtml.search(/(?:href|src)="\.\//)
+
+      if (baseIndex === -1 || (firstRelativeAssetIndex !== -1 && baseIndex > firstRelativeAssetIndex)) {
+        failures.push(`Built documentation route loads relative assets before its base URL: ${storyPathToRoute(page.path)}.`)
+      }
+      if (!routeHtml.includes("restoreStorybookRoute")) {
+        failures.push(`Built documentation route is missing its Storybook bootstrap: ${storyPathToRoute(page.path)}.`)
+      }
+    } catch {
+      failures.push(`Built documentation route is missing ${storyPathToRoute(page.path)}.`)
     }
   }
 }
