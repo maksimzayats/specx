@@ -160,7 +160,7 @@ make docs
 ```
 
 Create the static production build with `make docs-build`. Pushes to `main`
-publish that build to [maksimzayats.github.io/specx](https://maksimzayats.github.io/specx/).
+publish that build through the repository's configured GitHub Pages domain.
 
 ## What You Get
 
