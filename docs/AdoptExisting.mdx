@@ -1,0 +1,80 @@
+import { Meta, Subtitle, Title } from "@storybook/blocks"
+import { NextPrev } from "@storybookComponents/NextPrev"
+
+<Meta title="Guides/Adopt Specx in an existing service" />
+
+<Title>Adopt Specx in an existing service</Title>
+<Subtitle>Introduce checks and boundaries without replacing a working application in one pass.</Subtitle>
+
+## 1. Map the current service
+
+Identify the import package, runtime entrypoints, application actions, delivery frameworks, database
+ownership, external clients, composition mechanism, migration system, and test layers. Do this before
+moving files: a repository named `services/` may contain several different responsibilities.
+
+## 2. Add the package
+
+```sh
+uv add specx
+```
+
+Specx requires a `src/` layout for CLI discovery. If more than one importable package exists below
+`src/`, set the package explicitly:
+
+```toml
+[tool.specx]
+package = "order_service"
+select = [
+  "core",
+  "use-cases",
+]
+```
+
+Selectors may be exact rule IDs, rule families, or `ALL`. `select` replaces the default set;
+`extend-select` adds to it. Unknown keys and selectors are configuration errors.
+
+## 3. Capture a baseline
+
+```sh
+uv run specx check --output-format json > specx-report.json
+```
+
+Group violations by boundary rather than fixing them file by file. A useful sequence is import
+direction, use-case contracts, transaction ownership, delivery mapping, composition, class
+categories, and test layout. Structural fixes often remove several later violations.
+
+## 4. Use narrow temporary exceptions
+
+Ignore only exact semantic IDs and record the project reason next to the configuration:
+
+```toml
+[tool.specx]
+select = ["ALL"]
+ignore = [
+  "packages.init-files-are-empty", # Existing public re-export API; remove after import migration.
+]
+exclude = [
+  "src/order_service/generated/**",
+]
+```
+
+Path exclusions use project-relative glob patterns. Do not ignore whole families when one rule or
+generated path is the actual exception.
+
+## 5. Move ownership before renaming classes
+
+Keep core independent from FastAPI, ORM, network, cache, and container APIs. Move framework mapping
+to top-level delivery, concrete external work to scope infrastructure, app-wide technical resources
+to top-level infrastructure, and bindings to `ioc`. Then choose the most specific foundation base and
+suffix for each class.
+
+## 6. Broaden selection and add CI
+
+Move toward `select = ["ALL"]`. Technology rules run automatically under `ALL` when their required
+surface exists. An explicitly selected missing technology family emits a warning but does not create
+fake directories to satisfy the checker.
+
+Run `uv run --locked specx check` in the same non-mutating validation path as Ruff, typing, and tests.
+Architecture violations fail with status 1; configuration errors fail with status 2.
+
+<NextPrev current="guides-adopt-specx-in-an-existing-service" />

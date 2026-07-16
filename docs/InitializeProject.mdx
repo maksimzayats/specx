@@ -1,0 +1,74 @@
+import { Meta, Subtitle, Title } from "@storybook/blocks"
+import { NextPrev } from "@storybookComponents/NextPrev"
+
+<Meta title="Guides/Initialize a project" />
+
+<Title>Initialize a project</Title>
+<Subtitle>Render the strict framework-neutral baseline and control its generated names.</Subtitle>
+
+## Create the default project
+
+```sh
+uvx specx init billing-service
+```
+
+By default, the target directory supplies both names: `billing-service` becomes the distribution name
+and `billing_service` becomes the import package. The generated project targets Python 3.14.
+
+The initializer then runs:
+
+```sh
+uv add specx diwire
+uv add --dev mypy pytest ruff
+```
+
+uv selects compatible versions and writes the environment and lockfile. Specx does not render stale
+dependency floors into a new project.
+
+## Set names or Python explicitly
+
+```sh
+uvx specx init services/billing \
+  --name acme-billing \
+  --package acme_billing \
+  --python 3.13
+```
+
+| Option | Meaning | Default |
+| --- | --- | --- |
+| `PATH` | New project directory | Current directory |
+| `--name` | Lowercase distribution name after normalization | Target directory name |
+| `--package` | Lowercase Python import package | Distribution name with `_` separators |
+| `--python` | Python `major.minor` used by generated tooling | `3.14` |
+| `--no-sync` | Render files without running `uv add` | Dependencies are synchronized |
+
+The package must be a lowercase ASCII Python identifier and cannot be a keyword. The Python value is
+shape-checked rather than restricted to a release list.
+
+## Render without dependency changes
+
+Use `--no-sync` for an offline review, a workspace with centralized dependency management, or a test
+of generated output:
+
+```sh
+uvx specx init billing-service --no-sync
+cd billing-service
+uv add specx diwire
+uv add --dev mypy pytest ruff
+make check
+```
+
+## Target safety
+
+The target must be new, empty, or contain only a `.git` directory. Specx rejects files, symlink
+targets, and partially populated projects instead of merging a template over them. If dependency
+installation fails after rendering, the files remain in place and the error names the command to
+rerun.
+
+## What the initializer leaves out
+
+The baseline proves package layout, core behavior, DI composition, tests, and strict tooling. It does
+not choose an HTTP framework, database, queue, cache, migration tool, or deployment system. Use the
+relevant guide when the first real feature needs one of those boundaries.
+
+<NextPrev current="guides-initialize-a-project" />

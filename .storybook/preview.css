@@ -16,6 +16,7 @@
   --text: light-dark(#292929, #dcdcdc);
   --text-secondary: light-dark(#5d5d5d, #afafaf);
   --surface: light-dark(#ffffff, #212121);
+  --focus-ring: light-dark(#3a10e5, #9f8cff);
   --radius-md: 8px;
 }
 
@@ -49,7 +50,7 @@ body {
 
 .sbdocs-content {
   flex: 1 !important;
-  min-width: 200px !important;
+  min-width: 0 !important;
   max-width: 780px !important;
   margin-right: auto !important;
   margin-left: auto !important;
@@ -214,11 +215,22 @@ body {
 }
 
 .sbdocs-content > :where(table:not(.sb-anchor, .sb-unstyled, .sb-unstyled table)) {
-  overflow: hidden;
+  display: block;
+  overflow-x: auto;
+  max-width: 100%;
   width: 100%;
   border-style: hidden;
   border-radius: var(--radius-md);
   box-shadow: 0 0 0 1px light-dark(var(--alpha-08), var(--gray-350)) !important;
+}
+
+.sbdocs-content > :where(pre:not(.sb-anchor, .sb-unstyled, .sb-unstyled pre)) {
+  overflow-x: auto !important;
+  max-width: 100% !important;
+}
+
+.sbdocs-content > :where(table, pre) {
+  scrollbar-width: thin;
 }
 
 .sbdocs-content > :where(table:not(.sb-anchor, .sb-unstyled, .sb-unstyled table)) thead th {
@@ -298,7 +310,7 @@ body {
 }
 
 .specx-card:focus-visible {
-  outline: 2px solid #3a10e5;
+  outline: 2px solid var(--focus-ring);
   outline-offset: 3px;
 }
 
@@ -336,6 +348,133 @@ body {
   margin: 0;
   color: var(--text-secondary);
   font-size: 15px;
+}
+
+.specx-footer-nav {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  margin-top: 96px;
+}
+
+.specx-footer-link {
+  position: relative;
+  display: flex;
+  min-height: 74px;
+  flex-direction: column;
+  justify-content: center;
+  padding: 16px 20px;
+  border-radius: var(--radius-md);
+  color: var(--text) !important;
+  text-decoration: none !important;
+}
+
+.specx-footer-link::before {
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--alpha-12);
+  border-radius: var(--radius-md);
+  background: transparent;
+  content: "";
+  transition:
+    background-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.specx-footer-link:hover::before {
+  background: light-dark(var(--alpha-02), var(--alpha-04));
+}
+
+.specx-footer-link:active::before {
+  transform: scale(0.98);
+}
+
+.specx-footer-link:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+.specx-footer-link:last-child {
+  text-align: right;
+}
+
+.specx-footer-direction,
+.specx-footer-title {
+  position: relative;
+  display: block;
+}
+
+.specx-footer-direction {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.specx-footer-title {
+  margin-top: 3px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.specx-path {
+  overflow-x: auto;
+  padding: 16px 18px;
+  border: 1px solid var(--alpha-12);
+  border-radius: var(--radius-md);
+  margin: 18px 0 28px;
+  background: light-dark(var(--gray-25), var(--alpha-04));
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 14px;
+  line-height: 22px;
+  white-space: pre;
+}
+
+.specx-decision-table td:first-child {
+  width: 28%;
+  font-weight: 600;
+}
+
+@media (width < 560px) {
+  .specx-footer-nav {
+    grid-template-columns: 1fr;
+    margin-top: 64px;
+  }
+
+  .specx-footer-link:last-child {
+    text-align: left;
+  }
+}
+
+@media (width < 420px) {
+  .specx-card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .specx-card::before,
+  .specx-footer-link::before,
+  .sbdocs-content .sbdocs-a,
+  .toc-list-item > a {
+    transition: none !important;
+  }
+
+  .specx-card:active::before,
+  .specx-footer-link:active::before {
+    transform: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .specx-card,
+  .specx-footer-link {
+    border: 1px solid CanvasText;
+  }
+
+  .specx-card:focus-visible,
+  .specx-footer-link:focus-visible {
+    outline-color: Highlight;
+  }
 }
 
 @media (width >= 769px) {

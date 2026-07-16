@@ -1,0 +1,80 @@
+import { Meta, Subtitle, Title } from "@storybook/blocks"
+import { NextPrev } from "@storybookComponents/NextPrev"
+
+<Meta title="Guides/Add core behavior" />
+
+<Title>Add core behavior</Title>
+<Subtitle>Turn one application action into a tested use case, then extract only the behavior that is genuinely shared.</Subtitle>
+
+## Prerequisites
+
+Choose one application action and write down its input, result, known failures, and whether it reads,
+writes, or calls an external system. Work inside one existing `core/<scope>/` package. Install the
+Specx skills before asking an agent to make the change.
+
+## 1. Ask for one vertical slice
+
+```text
+Use $specx-add-core-use-case, $specx-add-core-service, and $specx-tests.
+
+Add CancelOrderUseCase to the orders scope. It accepts one CancelOrderCommand with order_id,
+loads the order inside a unit of work, rejects an order that has already shipped, records the
+cancellation, and returns CancelOrderDTO. Add the smallest service or capability only if behavior
+is reused. Add focused unit tests for success, missing order, and already-shipped order. Run the
+architecture checker and the relevant tests.
+```
+
+State the business outcomes rather than prescribing every class. The selected skills supply the
+repository's class categories, naming rules, injection style, and test layout.
+
+## 2. Inspect the core files
+
+A persistence-backed action normally changes a small set of files:
+
+```text
+src/order_service/core/orders/
+  dtos/cancel_order_dto.py
+  exceptions/order_already_shipped_error.py
+  use_cases/cancel_order.py
+tests/unit/core/orders/use_cases/test_cancel_order.py
+```
+
+The use-case module defines exactly one same-file `CancelOrderCommand`. `execute` accepts that one
+keyword-only command and returns the DTO. The command, DTO, and exception use domain names; no
+FastAPI, Pydantic, SQLAlchemy, or provider SDK type enters the core contract.
+
+Every project class inherits the narrowest suitable Specx foundation base and has a concrete
+`Example:` in its docstring. Secret-bearing dataclass fields use `field(repr=False)`.
+
+## 3. Check whether extraction helps
+
+Keep short, action-specific decisions in the use case. Extract behavior only when it has its own
+contract or is reused:
+
+| Category | Use it for |
+| --- | --- |
+| Pure service | Deterministic reusable decisions with no time, randomness, settings, repository, or IO access |
+| Read service | Reusable read orchestration that does not write or own a transaction |
+| Effect service | Reusable behavior that performs effects inside a transaction owned by the caller |
+| Capability | One narrow replaceable ability, such as hashing or ID generation |
+
+A service can accept an active unit of work; it cannot inject a manager and open the scope itself.
+Direct `BaseCapability` subclasses end in `Capability`. A stable capability family can use a local
+base such as `BaseClock`, with implementations such as `SystemClock`.
+
+## 4. Verify behavior and boundaries
+
+Tests mirror the source module and resolve the use case from the native pytest `container` fixture.
+Register one-off mocks or local doubles before resolution, then assert the returned DTO, relevant
+collaborator calls, and each named failure.
+
+```sh
+uv run pytest tests/unit/core/orders/use_cases/test_cancel_order.py
+uv run specx check
+make check
+```
+
+If the action needs persistence, continue with [Add persistence](?path=/docs/guides-add-persistence--docs).
+For a complete worked feature, see [Build your first core feature](?path=/docs/tutorial-build-your-first-core-feature--docs).
+
+<NextPrev current="guides-add-core-behavior" />

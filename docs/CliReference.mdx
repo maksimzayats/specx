@@ -1,0 +1,91 @@
+import { Meta, Subtitle, Title } from "@storybook/blocks"
+import { NextPrev } from "@storybookComponents/NextPrev"
+
+<Meta title="Reference/CLI" />
+
+<Title>CLI</Title>
+<Subtitle>Command syntax, output contracts, and exit status for the `specx` executable.</Subtitle>
+
+## `specx init`
+
+```text
+specx init [PATH] [--name NAME] [--package PACKAGE] [--python MAJOR.MINOR] [--no-sync]
+```
+
+| Argument | Description | Default |
+| --- | --- | --- |
+| `PATH` | New, empty, or `.git`-only project directory | Current directory |
+| `--name` | Distribution name | Normalized target directory name |
+| `--package` | Lowercase import package | Derived from the distribution name |
+| `--python` | Generated Python `major.minor` | `3.14` |
+| `--no-sync` | Skip `uv add` commands | Synchronize dependencies |
+
+The initializer returns 0 after rendering and optional synchronization. Unsafe targets, invalid
+names, missing uv, and failed dependency commands return 2. If a dependency command fails, rendered
+files remain for manual recovery.
+
+## `specx check`
+
+```text
+specx check [ROOT] [--output-format {text,json}]
+```
+
+`ROOT` defaults to the current directory and must contain `pyproject.toml`. Text output prints one
+flat diagnostic per line followed by a summary. Paths inside the project are relative.
+
+```text
+src/order_service/core/orders/use_cases/get_order.py:24:1: error use-cases.return-dtos execute returns OrderEntity
+Found 1 violation(s) and 0 warning(s).
+```
+
+JSON output is a versioned integration contract:
+
+```json
+{
+  "diagnostics": [
+    {
+      "column": 1,
+      "line": 24,
+      "message": "execute returns OrderEntity",
+      "path": "src/order_service/core/orders/use_cases/get_order.py",
+      "rule_id": "use-cases.return-dtos",
+      "severity": "error"
+    }
+  ],
+  "root": "/workspace/order-service",
+  "summary": {"errors": 1, "warnings": 0},
+  "version": 1
+}
+```
+
+The root is absolute. Diagnostics contain severity, rule ID, message, path, line, and column; missing
+locations are `null`. Internal symbol names are not included in JSON.
+
+## `specx rule list`
+
+```text
+specx rule list
+```
+
+Lists built-in rules sorted by semantic ID. Each line contains the ID, family, default or opt-in
+status, and one-line summary. Project-specific `extra_rules` are Python configuration and do not
+appear here.
+
+## `specx rule explain`
+
+```text
+specx rule explain RULE_ID
+```
+
+The ID must match exactly. Output includes family, default status, required project surface when one
+exists, and the rule's documentation. An unknown ID returns 2 and names the available IDs.
+
+## Exit status
+
+| Status | Meaning |
+| --- | --- |
+| `0` | Command completed; checks have no violations. Warnings may exist. |
+| `1` | Architecture check found one or more violations. |
+| `2` | CLI usage, configuration, initialization, syntax, IO, or execution error. |
+
+<NextPrev current="reference-cli" />

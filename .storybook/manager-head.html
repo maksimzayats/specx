@@ -21,6 +21,7 @@
     --text: light-dark(var(--gray-750), #dcdcdc);
     --text-secondary: light-dark(var(--gray-500), #afafaf);
     --surface: light-dark(#ffffff, var(--gray-200));
+    --focus-ring: light-dark(#3a10e5, #9f8cff);
   }
 
   * {
@@ -33,11 +34,12 @@
   }
 
   .sidebar-header a {
-    pointer-events: none;
+    border-radius: 6px;
   }
 
-  .sidebar-header a:focus {
-    outline: 0;
+  .sidebar-header a:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 3px;
   }
 
   .sidebar-header > div:last-child,
@@ -220,6 +222,13 @@
   .sidebar-item[data-selected="true"] {
     color: var(--gray-900) !important;
     font-weight: 600 !important;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .search-field,
+    .sidebar-item {
+      transition: none !important;
+    }
   }
 
   @media (min-width: 600px) {

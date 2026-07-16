@@ -1,0 +1,52 @@
+import { Meta, Subtitle, Title } from "@storybook/blocks"
+import { NextPrev } from "@storybookComponents/NextPrev"
+
+<Meta title="Concepts/Transactions and units of work" />
+
+<Title>Transactions and units of work</Title>
+<Subtitle>Make one use case visibly responsible for opening and finishing transactional work.</Subtitle>
+
+## The manager and active object have different lifetimes
+
+A scope-specific unit-of-work manager is safe to inject into a use case. Entering it creates a
+short-lived active unit of work containing repositories bound to one transaction. Exiting commits on
+success or rolls back on failure, then releases resources.
+
+```python
+async with self._unit_of_work_manager as unit_of_work:
+    order = await unit_of_work.orders.get(order_id=command.order_id)
+    await unit_of_work.orders.save(order.cancel())
+
+    return CancelOrderDTO(order_id=order.id)
+```
+
+The return completes only after Python awaits the context manager's `__aexit__`, so commit and cleanup
+can still fail before the DTO reaches the caller.
+
+## Why use cases own the scope
+
+The application action knows which decisions should succeed or fail together. If a service or
+repository silently opens a transaction, the caller cannot see whether two changes are atomic. Specx
+therefore rejects service-owned scopes and direct repository, session, engine, session-factory, or
+concrete-adapter injection into persistence use cases.
+
+A use case opens at most one manager scope. A read or effect service may receive the active unit of
+work as a method argument and use its repositories, but does not commit, roll back, or nest another
+scope.
+
+## Database and external effects are not automatically atomic
+
+A unit of work controls owned persistence. It cannot roll back an email already sent, a payment
+captured by another provider, or a message accepted by a remote queue. Design ordering, idempotency,
+outbox, retry, or compensation deliberately when one action crosses those boundaries.
+
+Specx's built-in rules check ownership patterns; they do not prove distributed atomicity or enforce an
+outbox policy.
+
+## Composition owns implementations, not active transactions
+
+Bind the concrete manager implementation to the manager port. The manager creates active units of
+work and repositories when entered. Do not register an active unit, session-bound repository, or
+provider for injection into long-lived application classes.
+
+<NextPrev current="concepts-transactions-and-units-of-work" />

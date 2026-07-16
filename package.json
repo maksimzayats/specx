@@ -5,6 +5,8 @@
   "scripts": {
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build --disable-telemetry",
+    "docs:check": "node scripts/check-docs.mjs",
+    "docs:check-built": "node scripts/check-docs.mjs --built",
     "types": "tsc --noEmit"
   },
   "engines": {
@@ -15,6 +17,7 @@
   },
   "devDependencies": {
     "@mdx-js/react": "^3.1.0",
+    "@storybook/addon-docs": "^8.6.18",
     "@storybook/addon-essentials": "8.6.18",
     "@storybook/addon-links": "8.6.18",
     "@storybook/blocks": "8.6.18",
@@ -28,6 +31,7 @@
     "@types/react-dom": "^19.0.3",
     "react": "19.0.0",
     "react-dom": "19.0.0",
+    "remark-gfm": "^4.0.1",
     "storybook": "8.6.18",
     "typescript": "^5.7.3",
     "vite": "^6.2.4"

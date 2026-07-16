@@ -1,0 +1,112 @@
+import { Meta, Subtitle, Title } from "@storybook/blocks"
+import { NextPrev } from "@storybookComponents/NextPrev"
+
+<Meta title="Guides/Configure settings and logging" />
+
+<Title>Configure settings and logging</Title>
+<Subtitle>Load runtime values beside their technical consumer and configure process logging once.</Subtitle>
+
+## Prerequisites
+
+List each runtime value, its owning adapter or process concern, its safe default, and whether it is a
+secret. Keep business policy out of environment variables unless composition maps it into a typed
+core collaborator.
+
+## 1. Ask for one configuration slice
+
+```text
+Use $specx-settings, $specx-diwire-composition, and $specx-tests.
+
+Configure the user-directory HTTP adapter with USER_DIRECTORY_BASE_URL,
+USER_DIRECTORY_TIMEOUT_SECONDS, and USER_DIRECTORY_API_KEY. Put its settings beside the adapter,
+document non-secret values in .env.example, use SecretStr for the key, and keep settings out of
+core. Add top-level stdlib logging configuration with LOG_LEVEL. Add isolated environment-source
+and logging-configuration tests, then run all checks.
+```
+
+## 2. Inspect adapter settings
+
+Settings inherit `BaseRuntimeSettings` and live next to their technical consumer:
+
+```python
+from typing import ClassVar
+
+from pydantic import AnyHttpUrl, PositiveFloat, SecretStr
+from pydantic_settings import SettingsConfigDict
+
+from specx.infrastructure.foundation.settings import BaseRuntimeSettings
+
+
+class UserDirectorySettings(BaseRuntimeSettings):
+    """Runtime settings for the user-directory HTTP adapter.
+
+    Example:
+        UserDirectorySettings.model_validate(
+            {
+                "api_key": "test-key",
+                "base_url": "https://directory.example.test",
+            },
+        )
+
+    """
+
+    model_config: ClassVar[SettingsConfigDict] = SettingsConfigDict(
+        env_prefix="USER_DIRECTORY_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        dotenv_filtering="match_prefix",
+        extra="forbid",
+    )
+
+    api_key: SecretStr
+    base_url: AnyHttpUrl
+    timeout_seconds: PositiveFloat = 5.0
+```
+
+Runtime code uses `UserDirectorySettings.from_environment()`. Tests and embedding applications use
+`model_validate(...)`. Unwrap `SecretStr` only at the adapter call that needs the raw value. Do not
+inject settings into core use cases, services, capabilities, entities, repositories, or gateway
+ports.
+
+## 3. Document safe environment values
+
+`.env.example` records names and non-secret placeholders; `.env` stays untracked:
+
+```dotenv
+USER_DIRECTORY_BASE_URL=https://example.invalid
+USER_DIRECTORY_TIMEOUT_SECONDS=5.0
+# USER_DIRECTORY_API_KEY=replace-at-runtime
+LOG_LEVEL=INFO
+```
+
+Avoid direct `os.environ` reads outside settings and composition code. Do not put working
+credentials in examples, tests, shell history, or logs.
+
+## 4. Configure logging once
+
+Top-level `infrastructure/logging/LoggingConfigurator` inherits `BaseConfigurator` and applies
+`logging.config.dictConfig` before the runtime app is composed. Set `disable_existing_loggers=False`
+so server and library loggers remain visible.
+
+Do not inject or register `logging.Logger`. A class that emits records creates a private class logger
+in `__post_init__` using its full module and qualified class name. Never log credentials, tokens,
+secret-bearing inputs, request bodies, full external URLs, database parameters, or infrastructure
+topology.
+
+## 5. Verify isolated sources
+
+Environment-source tests change into `tmp_path` before using `monkeypatch`, preventing a developer's
+`.env` from leaking into the case. Logging tests override `LoggingSettings`, patch
+`logging.config.dictConfig`, and assert the produced dictionary rather than global logging state.
+
+```sh
+uv run pytest tests/unit/core/users/infrastructure/http/test_user_directory_settings.py
+uv run pytest tests/unit/infrastructure/logging/test_logging_configurator.py
+uv run specx check
+make check
+```
+
+Related: [Configuration](?path=/docs/reference-configuration--docs) and
+[Compose dependencies](?path=/docs/guides-compose-dependencies--docs).
+
+<NextPrev current="guides-configure-settings-and-logging" />

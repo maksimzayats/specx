@@ -8,38 +8,70 @@ import { CliIcon, FoundationIcon, GuardrailsIcon, SkillsIcon } from "@storybookC
 <Meta title="Overview/Introduction" />
 
 <Title>Specx</Title>
-<Subtitle>Agent skills and typed architecture guardrails for Python services.</Subtitle>
+<Subtitle>Agent skills and executable architecture rules for Python services.</Subtitle>
 
-Hello, world. This is the initial home for Specx documentation. The publishing structure and visual
-system are ready; detailed guides, reference material, and examples will follow.
+Specx gives coding agents a concrete way to build and change Python backends without letting
+framework, persistence, and application concerns drift together. It combines four surfaces:
+
+- **Agent skills** describe how to structure projects and implement common backend work.
+- **The project initializer** renders a strict framework-neutral starting point.
+- **Foundation classes** give project classes explicit architectural categories.
+- **Architecture checks** inspect the result and report semantic rule IDs.
+
+The skills guide the change. The checks inspect the result. Neither replaces normal design review,
+tests, or framework documentation.
 
 ## Start here
 
 <Unstyled>
   <div className="specx-card-grid">
     <DocsCard
-      href="https://github.com/maksimzayats/specx/tree/main/skills"
+      href="?path=/docs/overview-quickstart--docs"
+      icon={<CliIcon />}
+      title="Quickstart"
+      subtitle="Initialize a service and run its first checks."
+    />
+    <DocsCard
+      href="?path=/docs/tutorial-build-your-first-core-feature--docs"
+      icon={<FoundationIcon />}
+      title="First core feature"
+      subtitle="Build one complete framework-neutral feature."
+    />
+    <DocsCard
+      href="?path=/docs/guides-install-agent-skills--docs"
       icon={<SkillsIcon />}
       title="Agent skills"
-      subtitle="Browse reusable workflows for explicit Python services."
+      subtitle="Install the catalog and choose the right workflow."
     />
     <DocsCard
-      href="https://github.com/maksimzayats/specx/tree/main/src/specx"
-      icon={<FoundationIcon />}
-      title="Foundation bases"
-      subtitle="Explore typed foundations for core, delivery, and infrastructure."
-    />
-    <DocsCard
-      href="https://github.com/maksimzayats/specx/tree/main/src/specx/testing"
+      href="?path=/docs/reference-architecture-rules--docs"
       icon={<GuardrailsIcon />}
-      title="Architecture guardrails"
-      subtitle="Enforce clean boundaries with executable architecture checks."
-    />
-    <DocsCard
-      href="https://github.com/maksimzayats/specx#install"
-      icon={<CliIcon />}
-      title="Get started"
-      subtitle="Install the skills, initialize a project, and run the Specx CLI."
+      title="Guardrails"
+      subtitle="See what Specx checks and how to configure it."
     />
   </div>
 </Unstyled>
+
+## Where Specx fits
+
+Use Specx when a Python service needs explicit application boundaries that coding agents can follow
+and CI can verify. The catalog covers framework-neutral cores, FastAPI delivery, DIWire composition,
+SQLAlchemy and Alembic, runtime settings, external adapters, and test structure.
+
+Specx is deliberately opinionated. Use cases take one command or query and return DTOs. Transactional
+work enters through a unit-of-work manager. Delivery and infrastructure stay outside the inner core.
+Project classes inherit a foundation category that states their role.
+
+If those constraints do not match the service you want to build, adopt individual ideas rather than
+disabling most of the rule set.
+
+## Typical ways to use it
+
+- Start a new service with `specx init`, then ask an agent to apply the relevant Specx skill.
+- Install the Python package in an existing `src/`-layout service and introduce guardrails gradually.
+- Use the foundation classes without the skills when humans own the implementation workflow.
+- Install the skills without the package for design guidance, then add executable checks when the
+  project is ready.
+
+Specx is currently alpha software. Treat generated changes like any other code change: inspect the
+diff, run the project checks, and review migration or infrastructure code before release.

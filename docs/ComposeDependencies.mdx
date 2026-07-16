@@ -1,0 +1,88 @@
+import { Meta, Subtitle, Title } from "@storybook/blocks"
+import { NextPrev } from "@storybookComponents/NextPrev"
+
+<Meta title="Guides/Compose dependencies" />
+
+<Title>Compose dependencies</Title>
+<Subtitle>Bind ports at the application edge, let DIWire assemble project classes, and verify the real graph.</Subtitle>
+
+## Prerequisites
+
+Finish the core port and its concrete adapter first. Know which resources are process-owned and need
+shutdown. The initializer must already have created `ioc/container.py` and the native pytest
+`container` fixture.
+
+## 1. Ask for explicit edge bindings
+
+```text
+Use $specx-diwire-composition and $specx-tests.
+
+Bind SQLAlchemyOrderUnitOfWorkManager to OrderUnitOfWorkManager and OpenAITaskSummaryGateway
+to TaskSummaryGateway. Register the shared HTTP client and SQLAlchemy engine once, preserve
+recursive registration for project classes, and update the lifecycle to close app-owned resources
+before container shutdown. Add a composition test that resolves CreateOrderUseCase through the
+real graph. Do not introduce container lookups in core, delivery controllers, or adapters.
+```
+
+## 2. Inspect the composition root
+
+The container keeps recursive project-class wiring and a short private binding function:
+
+```python
+from diwire import Container, DependencyRegistrationPolicy, MissingPolicy
+
+
+def get_container() -> Container:
+    container = Container(
+        missing_policy=MissingPolicy.REGISTER_RECURSIVE,
+        dependency_registration_policy=DependencyRegistrationPolicy.REGISTER_RECURSIVE,
+    )
+    _register_dependencies(container)
+    return container
+
+
+def _register_dependencies(container: Container) -> None:
+    container.add(OpenAITaskSummaryGateway, provides=TaskSummaryGateway)
+    container.add(SQLAlchemyOrderUnitOfWorkManager, provides=OrderUnitOfWorkManager)
+```
+
+Concrete project classes with `Injected[...]` fields resolve recursively. Register interfaces,
+resource factories, and intentional overrides explicitly; do not register every use case or service
+by hand. Settings subclasses are root-scoped singletons unless a test or embedding application adds
+a prebuilt instance.
+
+## 3. Keep container access at the edge
+
+`diwire.Container` belongs in `ioc`, top-level delivery runtime/factory/lifecycle modules, and tests.
+Core classes, controllers, and adapters declare dependencies in fields rather than resolving them.
+
+If a FastAPI lifecycle owns shutdown, register the container instance so that lifecycle can inject
+it. `FastAPILifecycle` is the only ordinary generated project class allowed to receive the container,
+and only to call `container.aclose()` after other app-owned resources are closed.
+
+## 4. Resolve and test the real graph
+
+Runtime code configures logging, resolves the outer factory, and calls it. A focused composition test
+should resolve at least one use case that crosses every new binding. Unit tests can replace one edge
+before resolving the target:
+
+```python
+gateway = FakePricingGateway(price=100)
+container.add_instance(gateway, provides=PricingGateway)
+use_case = container.resolve(CreateOrderUseCase)
+```
+
+Use the native fixture. Do not enable DIWire's pytest plugin, inject test parameters with
+`Injected[...]`, or construct a second graph in the test body.
+
+```sh
+uv run pytest tests/integration/ioc
+uv run specx check
+make check
+```
+
+Related: [Use cases, services, and capabilities](?path=/docs/concepts-use-cases-services-and-capabilities--docs),
+[Foundation API](?path=/docs/reference-foundation-api--docs), and
+[Test a service](?path=/docs/guides-test-a-service--docs).
+
+<NextPrev current="guides-compose-dependencies" />

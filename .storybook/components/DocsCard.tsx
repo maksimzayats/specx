@@ -13,7 +13,7 @@ export const DocsCard = ({ href, icon, title, subtitle }: DocsCardProps) => (
       <span aria-hidden="true" className="specx-card-icon">
         {icon}
       </span>
-      <span className="specx-card-title">{title}</span>
+      <h3 className="specx-card-title">{title}</h3>
       <span className="specx-card-subtitle">{subtitle}</span>
     </span>
   </a>

@@ -1,0 +1,248 @@
+import { Meta, Subtitle, Title } from "@storybook/blocks"
+import { NextPrev } from "@storybookComponents/NextPrev"
+
+<Meta title="Tutorial/Build your first core feature" />
+
+<Title>Build your first core feature</Title>
+<Subtitle>Add a complete read-only application action to a fresh Specx project.</Subtitle>
+
+This tutorial adds parcel quotes to the framework-neutral project created by `specx init`. It uses a
+pure service for the calculation, a query use case for the application action, a DTO for the result,
+and container-resolved unit tests.
+
+## 1. Create the project
+
+```sh
+uvx specx init parcel-service
+cd parcel-service
+```
+
+The generated health slice should pass before you add code:
+
+```sh
+make check
+```
+
+## 2. Add the package files
+
+Create empty `__init__.py` files in each new package. Specx keeps package initializers empty so imports
+point to the module that owns a class.
+
+```text
+src/parcel_service/core/parcels/
+  __init__.py
+  dtos/
+    __init__.py
+    parcel_quote_dto.py
+  exceptions/
+    __init__.py
+    invalid_parcel_weight_value_error.py
+  services/
+    __init__.py
+    parcel_quote_service.py
+  use_cases/
+    __init__.py
+    quote_parcel.py
+tests/unit/core/parcels/
+  __init__.py
+  services/
+    __init__.py
+    test_parcel_quote_service.py
+  use_cases/
+    __init__.py
+    test_quote_parcel.py
+```
+
+## 3. Define the result DTO
+
+Put application results under the scope's `dtos` package. Core data is frozen, keyword-only, and
+slotted by default.
+
+```python
+# src/parcel_service/core/parcels/dtos/parcel_quote_dto.py
+from dataclasses import dataclass
+
+from specx.core.foundation.dto import BaseDTO
+
+
+@dataclass(frozen=True, kw_only=True, slots=True)
+class ParcelQuoteDTO(BaseDTO):
+    """Price quoted for one parcel.
+
+    Example:
+        ParcelQuoteDTO(amount_pence=725)
+
+    """
+
+    amount_pence: int
+```
+
+## 4. Add the pure service
+
+The calculation does not read or write anything outside its arguments, so it inherits
+`BasePureService`. First define the application value error used for invalid weights:
+
+```python
+# src/parcel_service/core/parcels/exceptions/invalid_parcel_weight_value_error.py
+from specx.core.foundation.exceptions import BaseApplicationValueError
+
+
+class InvalidParcelWeightValueError(BaseApplicationValueError):
+    """Raised when a parcel quote receives a non-positive weight.
+
+    Example:
+        InvalidParcelWeightValueError()
+
+    """
+```
+
+The service owns this invariant so every delivery applies the same rule:
+
+```python
+# src/parcel_service/core/parcels/services/parcel_quote_service.py
+from dataclasses import dataclass
+
+from specx.core.foundation.pure_service import BasePureService
+
+from parcel_service.core.parcels.dtos.parcel_quote_dto import ParcelQuoteDTO
+from parcel_service.core.parcels.exceptions.invalid_parcel_weight_value_error import (
+    InvalidParcelWeightValueError,
+)
+
+
+@dataclass(kw_only=True, slots=True)
+class ParcelQuoteService(BasePureService):
+    """Calculate parcel prices from weight without external IO.
+
+    Example:
+        quote = service.quote(weight_grams=1500)
+
+    """
+
+    def quote(self, *, weight_grams: int) -> ParcelQuoteDTO:
+        """Return the base price plus a per-kilogram charge."""
+        if weight_grams <= 0:
+            raise InvalidParcelWeightValueError
+
+        kilograms = max(1, (weight_grams + 999) // 1000)
+
+        return ParcelQuoteDTO(amount_pence=425 + kilograms * 150)
+```
+
+## 5. Add the query use case
+
+The query lives in the same module as the use case. `execute` accepts that one input and returns the
+DTO. DIWire supplies the service through the `Injected` field.
+
+```python
+# src/parcel_service/core/parcels/use_cases/quote_parcel.py
+from dataclasses import dataclass
+
+from diwire import Injected
+from specx.core.foundation.query import BaseQuery
+from specx.core.foundation.use_case import BaseUseCase
+
+from parcel_service.core.parcels.dtos.parcel_quote_dto import ParcelQuoteDTO
+from parcel_service.core.parcels.services.parcel_quote_service import ParcelQuoteService
+
+
+@dataclass(frozen=True, kw_only=True, slots=True)
+class QuoteParcelQuery(BaseQuery):
+    """Input for quoting one parcel by weight.
+
+    Example:
+        QuoteParcelQuery(weight_grams=1500)
+
+    """
+
+    weight_grams: int
+
+
+@dataclass(kw_only=True, slots=True)
+class QuoteParcelUseCase(BaseUseCase):
+    """Application action that returns a parcel quote.
+
+    Example:
+        result = use_case.execute(query=QuoteParcelQuery(weight_grams=1500))
+
+    """
+
+    _parcel_quote_service: Injected[ParcelQuoteService]
+
+    def execute(self, *, query: QuoteParcelQuery) -> ParcelQuoteDTO:
+        """Return a quote for the supplied parcel weight."""
+        return self._parcel_quote_service.quote(weight_grams=query.weight_grams)
+```
+
+## 6. Test through the container
+
+The generated `tests/unit/conftest.py` already returns a fresh application container. Resolve project
+classes from it instead of constructing a parallel graph in the test.
+
+```python
+# tests/unit/core/parcels/services/test_parcel_quote_service.py
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+import pytest
+
+from parcel_service.core.parcels.exceptions.invalid_parcel_weight_value_error import (
+    InvalidParcelWeightValueError,
+)
+from parcel_service.core.parcels.services.parcel_quote_service import ParcelQuoteService
+
+if TYPE_CHECKING:
+    from diwire import Container
+
+
+def test_quote_rounds_weight_up_to_a_kilogram(container: Container) -> None:
+    service = container.resolve(ParcelQuoteService)
+
+    result = service.quote(weight_grams=1500)
+
+    assert result.amount_pence == 725
+
+
+def test_quote_rejects_non_positive_weight(container: Container) -> None:
+    service = container.resolve(ParcelQuoteService)
+
+    with pytest.raises(InvalidParcelWeightValueError):
+        service.quote(weight_grams=0)
+```
+
+```python
+# tests/unit/core/parcels/use_cases/test_quote_parcel.py
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from parcel_service.core.parcels.use_cases.quote_parcel import (
+    QuoteParcelQuery,
+    QuoteParcelUseCase,
+)
+
+if TYPE_CHECKING:
+    from diwire import Container
+
+
+def test_quote_parcel_returns_the_calculated_price(container: Container) -> None:
+    use_case = container.resolve(QuoteParcelUseCase)
+
+    result = use_case.execute(query=QuoteParcelQuery(weight_grams=1500))
+
+    assert result.amount_pence == 725
+```
+
+## 7. Check the result
+
+```sh
+make check
+uv run specx check --output-format json
+```
+
+You now have an application action that is independent of HTTP and persistence. A later FastAPI
+controller can map request data into `QuoteParcelQuery`; it should not move pricing policy into the
+route.
+
+<NextPrev current="tutorial-build-your-first-core-feature" />

@@ -1,0 +1,60 @@
+import { Meta, Subtitle, Title } from "@storybook/blocks"
+import { NextPrev } from "@storybookComponents/NextPrev"
+
+<Meta title="Reference/Foundation API" />
+
+<Title>Foundation API</Title>
+<Subtitle>The 24 packaged base categories and their module-specific import paths.</Subtitle>
+
+Foundation `__init__.py` files are empty by design. Import a base from the module shown below, not from
+the package root.
+
+## Core foundations
+
+| Base | Module | Contract |
+| --- | --- | --- |
+| `BaseCommand` | `specx.core.foundation.command` | Frozen, keyword-only, slotted state-changing input base. |
+| `BaseQuery` | `specx.core.foundation.query` | Frozen, keyword-only, slotted read-only input base. |
+| `BaseDTO` | `specx.core.foundation.dto` | Frozen, keyword-only, slotted use-case result base. |
+| `BaseEntity` | `specx.core.foundation.entity` | Frozen, keyword-only, slotted framework-free state base. |
+| `BaseStrEnum` | `specx.core.foundation.enums` | String enum category for closed value sets. |
+| `BaseApplicationError` | `specx.core.foundation.exceptions` | Application error translated at delivery edges. |
+| `BaseApplicationValueError` | `specx.core.foundation.exceptions` | Invalid application value category. |
+| `BaseUseCase` | `specx.core.foundation.use_case` | Marker for externally meaningful actions. |
+| `BasePureService` | `specx.core.foundation.pure_service` | Deterministic service category. |
+| `BaseReadService` | `specx.core.foundation.read_service` | Read-only orchestration category. |
+| `BaseEffectService` | `specx.core.foundation.effect_service` | Side-effecting service category without transaction ownership. |
+| `BaseCapability` | `specx.core.foundation.capability` | Narrow injectable collaborator category. |
+| `BaseFactory` | `specx.core.foundation.factory` | Runtime object composition/creation category; defines empty slots. |
+| `BaseGateway` | `specx.core.foundation.gateway` | ABC-backed outbound business capability port. |
+| `BaseRepository` | `specx.core.foundation.repository` | ABC-backed owned-persistence port. |
+| `BaseUnitOfWork` | `specx.core.foundation.unit_of_work` | ABC-backed active transaction object. |
+| `BaseUnitOfWorkManager[UoW]` | `specx.core.foundation.unit_of_work_manager` | Abstract async context manager returning `UoW`; exits with `Literal[False]`. |
+
+Subclasses that add dataclass fields should repeat the intended dataclass decorator; dataclass options
+do not automatically apply to a subclass. Gateway, repository, and unit-of-work project methods are
+abstract only when the project marks them with `@abstractmethod`.
+
+## Delivery foundations
+
+| Base | Module | Contract |
+| --- | --- | --- |
+| `BaseController[Registry]` | `specx.delivery.foundation.controller` | Abstract synchronous `register(registry)` method. |
+| `BaseLifecycle[App]` | `specx.delivery.foundation.lifecycle` | Abstract callable returning an async context manager. |
+| `BaseDeliveryService` | `specx.delivery.foundation.service` | Marker for transport-only helpers. |
+| `BaseFastAPISchema` | `specx.delivery.foundation.fastapi.schema` | Pydantic model with `extra="forbid"` and `from_attributes=True`. |
+
+`LifecycleState` is `Mapping[str, Any] | None` and can describe state yielded by framework lifespan.
+
+## Infrastructure foundations
+
+| Base | Module | Contract |
+| --- | --- | --- |
+| `BaseConfigurator` | `specx.infrastructure.foundation.configurator` | Marker for runtime configuration applicators. |
+| `BaseRuntimeSettings` | `specx.infrastructure.foundation.settings` | Pydantic settings using `.env`, `extra="ignore"`, and `from_environment()`. |
+| `BaseSQLAlchemyModel` | `specx.infrastructure.foundation.sqlalchemy.model` | Compatibility declarative base with constraint naming conventions. |
+
+Generated services define a project-local SQLAlchemy declarative base so metadata is not shared
+globally. The packaged SQLAlchemy base exists for compatibility and direct library use.
+
+<NextPrev current="reference-foundation-api" />

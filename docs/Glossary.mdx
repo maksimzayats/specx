@@ -1,0 +1,93 @@
+import { Meta, Subtitle, Title } from "@storybook/blocks"
+import { NextPrev } from "@storybookComponents/NextPrev"
+
+<Meta title="Reference/Glossary" />
+
+<Title>Glossary</Title>
+<Subtitle>The project terms that carry a specific architectural meaning in Specx.</Subtitle>
+
+## Application action
+
+An externally meaningful operation represented by one use case. It receives one command or query and
+returns DTOs.
+
+## Architecture checker
+
+The `specx check` command and `specx.testing.architecture` API. They apply configured built-in and
+custom rules to a service repository and report violations and warnings without changing files.
+
+## Capability
+
+One narrow injectable and replaceable ability, smaller than a service. It does not own a workflow or
+act as a repository or gateway.
+
+## Command
+
+A same-file use-case input that requests work allowed to change state. Commands are input contracts,
+not DTOs.
+
+## Composition root
+
+The `ioc` and outer runtime code that creates the DIWire container, binds ports to adapters, loads
+technical settings, and resolves the application factory.
+
+## Delivery
+
+The transport edge: controllers, schemas, auth, request/response mapping, framework factories,
+lifecycle, and delivery-only helpers.
+
+## DTO
+
+A framework-free core result returned by a use case. A DTO is distinct from a delivery schema and a
+persistence entity.
+
+## Entity
+
+Core application state used inside behavior and persistence. Entities do not cross use-case output
+boundaries.
+
+## Foundation base
+
+A base class that names a project class category. Packaged bases are stateless defaults; a local base
+exists only for a real project-specific category or stateful framework base.
+
+## Gateway
+
+A core port for an outbound business capability supplied by an external system. It uses business
+language, declares effects, and does not return entities or provider objects.
+
+## Infrastructure adapter
+
+A technical implementation of a core repository or gateway port. It owns database, cache, file,
+queue, HTTP, or SDK details.
+
+## Query
+
+A same-file use-case input for read-only work. Even an empty query is an explicit input contract.
+
+## Project class
+
+A class defined under the service's source package. Specx uses the term when a rule applies to
+application code rather than third-party or standard-library types.
+
+## Repository
+
+A core port for persistence the application owns. An active unit of work exposes scope repositories
+bound to its transaction.
+
+## Scope
+
+An application area under `core/<scope>/` that owns related behavior, contracts, entities, ports, and
+technical adapters.
+
+## Service
+
+Focused reusable core behavior classified as pure, read, or effect. Services do not own application
+entrypoints or unit-of-work lifecycle.
+
+## Unit of work
+
+A short-lived active transaction object exposing repositories. A manager opens, commits or rolls
+back, and closes it inside one use-case execution.
+
+<NextPrev current="reference-glossary" />

@@ -1,0 +1,87 @@
+import { Meta, Subtitle, Title } from "@storybook/blocks"
+import { NextPrev } from "@storybookComponents/NextPrev"
+
+<Meta title="Overview/Quickstart" />
+
+<Title>Quickstart</Title>
+<Subtitle>Create a framework-neutral service, inspect it, and run the same checks an agent will use.</Subtitle>
+
+## Prerequisites
+
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/). The package declares Python
+3.11 or newer, and the initializer defaults to Python 3.14. Node.js is only needed to install the
+agent skill catalog.
+
+Specx is alpha software. Before adopting its constraints, review the current
+[limitations and compatibility notes](?path=/docs/reference-limitations--docs).
+
+## Install the skills
+
+The following command installs every Specx skill for Codex:
+
+```sh
+npx skills add maksimzayats/specx --skill '*' --agent codex -y
+```
+
+Skill installation and Python package installation are separate. The skills teach an agent how to
+work; the package provides the initializer, foundation classes, and checks.
+
+## Initialize a project
+
+```sh
+uvx specx init order-service
+cd order-service
+make check
+```
+
+The initializer creates a new directory, adds `specx` and `diwire`, adds the development tools, and
+lets uv write the lockfile. It refuses to overwrite a non-empty directory. Use `--no-sync` when you
+only want the files and will manage dependencies yourself.
+
+The result includes a small health slice:
+
+<pre className="specx-path"><code>{`src/order_service/
+  core/health/
+    dtos/health_status_dto.py
+    enums/health_status_enum.py
+    services/health_status_service.py
+    use_cases/check_health.py
+  ioc/container.py
+tests/unit/core/health/
+AGENTS.md
+Makefile
+pyproject.toml`}</code></pre>
+
+There is no FastAPI app, database, migration directory, or empty placeholder layer. Add those only
+when the service needs them.
+
+## Run the guardrails directly
+
+```sh
+uv run specx check
+uv run specx rule list
+uv run specx rule explain use-cases.return-dtos
+```
+
+`specx check` discovers the single importable package below `src/`. A clean run exits with status 0,
+architecture violations exit with status 1, and configuration or execution errors exit with status
+2.
+
+## Make the first change
+
+Ask the agent for the outcome and name the relevant skill when you know it:
+
+```text
+Use $specx-add-core-use-case to add a read-only quote action under core/orders.
+Return an OrderQuoteDTO and add focused unit tests.
+```
+
+You do not need to choose a skill for every request. The catalog descriptions are trigger-oriented,
+so an agent can select one from the work you describe. Naming the skill is useful when you want that
+workflow followed exactly.
+
+Next: follow [Build your first core feature](?path=/docs/tutorial-build-your-first-core-feature--docs),
+or keep the [CLI](?path=/docs/reference-cli--docs) and
+[Generated project](?path=/docs/reference-generated-project--docs) references nearby while you work.
+
+<NextPrev current="overview-quickstart" />

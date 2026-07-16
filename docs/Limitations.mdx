@@ -1,0 +1,66 @@
+import { Meta, Subtitle, Title } from "@storybook/blocks"
+import { NextPrev } from "@storybookComponents/NextPrev"
+
+<Meta title="Reference/Limitations" />
+
+<Title>Limitations</Title>
+<Subtitle>What Specx assumes, what the static checker can see, and what remains review policy.</Subtitle>
+
+Specx is alpha software and deliberately opinionated. Use these limits to decide whether to adopt the
+whole model, a subset of its practices, or none of it.
+
+## Project model
+
+- One CLI invocation checks one selected `src/<package>` service. There is no monorepo aggregation.
+- The model is class-based and expects empty package initializers, DIWire constructor fields, scoped
+  foundation categories, frozen/slotted core data, Pydantic at technical edges, and mirrored tests.
+- FastAPI has two surface-specific rules. Other delivery frameworks receive only neutral checks.
+- SQLAlchemy projects are expected to use Alembic, and generated HTTP recipes use HTTPX2.
+
+## Static analysis
+
+The scanner parses unexcluded `*.py` files under `src/` and `tests/`. It does not execute imports,
+resolve runtime types, inspect migrations, notebooks, or stub files, or understand every dynamic alias
+and metaprogramming pattern. A syntax error aborts the check.
+
+Several checks use recognizable syntax:
+
+- gateway effects require `External effect:` or `External effects:` in the class docstring;
+- route checks inspect `add_api_route` and literal path arguments;
+- query mutation checks known repository mutator names;
+- AGENTS checks look for canonical command and boundary wording;
+- IO restrictions use known import roots and package parts, not an exhaustive SDK registry.
+
+False positives and blind spots are possible. Use exact exclusions or ignored IDs with a recorded
+reason, and report rule defects with a minimal reproducer.
+
+## Guidance not fully enforced
+
+Review and tests still own:
+
+- marking project port methods abstract;
+- preserving frozen, keyword-only, slotted dataclass options on subclasses;
+- keeping every Pydantic model at an edge;
+- preventing query use cases from invoking write-effect gateways indirectly;
+- correct timeouts, retries, idempotency, outbox, and compensation policy;
+- safe secret handling and log content;
+- distributed transaction behavior and production database semantics;
+- complete project-local foundation import direction.
+
+## CLI and ecosystem
+
+There is no auto-fix, baseline file, watch mode, SARIF output, CLI selector override, inherited Specx
+configuration, TOML custom-rule loading, plugin discovery, `specx --version`, or runtime
+`specx.__version__`.
+
+The Storybook site follows the main branch. The repository does not yet expose a complete public
+release/version compatibility policy, so installed package behavior can lag these docs. Check the
+package metadata, repository commit, and rule list when reproducibility matters.
+
+## Initializer scope
+
+`specx init` renders only the neutral health slice. Skills are instruction packages, not feature
+generators. The initializer's Python version check is syntactic; downstream tool support must be
+verified separately.
+
+<NextPrev current="reference-limitations" />
