@@ -1,0 +1,68 @@
+[project]
+name = "__SPECX_PROJECT_NAME__"
+version = "0.1.0"
+description = "A framework-neutral Python project initialized with Specx."
+readme = "README.md"
+requires-python = ">=__SPECX_PYTHON_VERSION__"
+dependencies = []
+
+[build-system]
+requires = ["uv_build>=0.11.28,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "__SPECX_PACKAGE_NAME__"
+
+[tool.mypy]
+python_version = "__SPECX_PYTHON_VERSION__"
+strict = true
+warn_unreachable = true
+extra_checks = true
+
+[tool.pytest.ini_options]
+minversion = "9.1"
+addopts = "-vv --strict-config --strict-markers --import-mode=importlib"
+testpaths = ["tests"]
+xfail_strict = true
+
+[tool.specx]
+select = ["ALL"]
+
+[tool.ruff]
+target-version = "py__SPECX_PYTHON_TARGET__"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "COM812", # Missing trailing comma.
+    "COM819", # Prohibited trailing comma.
+    "D100", # Missing docstring in a public module.
+    "D203", # Incorrect blank line before class.
+    "D206", # Docstring tab indentation.
+    "D213", # Multiline docstring summary on the second line.
+    "D300", # Triple single quotes.
+    "E111", # Indentation with an invalid multiple.
+    "E114", # Comment indentation with an invalid multiple.
+    "E117", # Over-indented code.
+    "Q000", # Bad quotes in an inline string.
+    "Q001", # Bad quotes in a multiline string.
+    "Q002", # Bad quotes in a docstring.
+    "Q003", # Avoidable escaped quote.
+    "Q004", # Unnecessary escaped quote.
+    "W191", # Tab indentation.
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/__init__.py" = [
+    "D104", # Missing docstring in a public package.
+]
+"tests/**/*.py" = [
+    "D103", # Missing docstring in a public function.
+    "S101", # Use of assert detected.
+]
+"src/**/use_cases/*.py" = [
+    "TC001", # Typing-only first-party import.
+    "TC002", # Typing-only third-party import.
+]

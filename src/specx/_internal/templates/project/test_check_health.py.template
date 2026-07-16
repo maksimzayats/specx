@@ -1,0 +1,20 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from __SPECX_PACKAGE_NAME__.core.health.enums.health_status_enum import HealthStatusEnum
+from __SPECX_PACKAGE_NAME__.core.health.use_cases.check_health import (
+    CheckHealthQuery,
+    CheckHealthUseCase,
+)
+
+if TYPE_CHECKING:
+    from diwire import Container
+
+
+def test_check_health_returns_ok(container: Container) -> None:
+    use_case = container.resolve(CheckHealthUseCase)
+
+    result = use_case.execute(query=CheckHealthQuery())
+
+    assert result.status is HealthStatusEnum.OK

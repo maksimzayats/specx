@@ -1,35 +1,83 @@
 # Specx Project Blueprint
 
-Use this reference to create a new Python backend repo from scratch.
+Use this reference to create a new FastAPI backend repo from scratch. Packaged
+framework-neutral guardrails run by default; this blueprint additionally
+enables the opt-in `fastapi` rule family. Use `$specx-component-architecture`
+for workers, CLIs, or other delivery frameworks.
+
+For a completely new repository, `specx init <path>` creates the canonical
+framework-neutral baseline first. It contains project metadata, strict tooling,
+root `AGENTS.md`, a small `core/health` service and use case,
+`ioc/container.py`, and mirrored unit tests. It does not create delivery,
+infrastructure, or foundation packages.
+
+## Contents
+
+- [Target Package Shape](#target-package-shape)
+- [Root AGENTS.md](#root-agentsmd)
+- [SQLAlchemy And Alembic Additions](#sqlalchemy-and-alembic-additions)
+- [Operational Probe Additions](#operational-probe-additions)
+- [First Runnable Slice](#first-runnable-slice)
 
 ## Target Package Shape
 
-For project `order-service`, use package `order_service`:
+The neutral initializer can be run directly:
+
+```bash
+specx init order-service
+cd order-service
+make check
+```
+
+It runs `uv add specx diwire` and `uv add --dev mypy pytest ruff` by default so uv
+records every selected dependency release, creates the lockfile, and
+synchronizes the environment. Use `--no-sync` only when the caller needs an
+offline or render-only workflow, then run both commands before the generated
+locked commands.
+
+Preserve an existing import package. For a new project named `order-service`,
+`order_service` is a suitable import package; normalize punctuation and spaces,
+then verify that the result satisfies `str.isidentifier()` and is not a Python
+keyword. Choose an explicit valid name if normalization leaves a keyword or
+leading digit. Do not assume the distribution name and import package must
+match.
+
+The neutral initializer renders this complete starter slice:
+
+```text
+src/order_service/
+  core/health/
+    dtos/health_status_dto.py
+    enums/health_status_enum.py
+    services/health_status_service.py
+    use_cases/check_health.py
+  ioc/container.py
+tests/
+  unit/
+    conftest.py
+    core/health/
+      services/test_health_status_service.py
+      use_cases/test_check_health.py
+```
+
+Every shown Python directory also gets an empty `__init__.py`. The health slice
+is deliberately pure and framework-neutral; it demonstrates service/use-case
+composition without creating a delivery or infrastructure layer.
+
+If no business slice was requested, the smallest FastAPI baseline contains only
+files with current behavior:
 
 ```text
 AGENTS.md
 src/order_service/
   __init__.py
-  foundation/
-    __init__.py
-    sqlalchemy_model.py  # only when SQLAlchemy models exist
-  core/
-    __init__.py
-    health/
-      dtos/health_probe_dto.py
-      gateways/readiness_check_gateway.py
-      infrastructure/sqlalchemy/readiness_check_gateway.py
-      services/liveness_probe_service.py
-      services/readiness_probe_service.py
-      use_cases/check_liveness.py
-      use_cases/check_readiness.py
   delivery/
     fastapi/
       __main__.py
       factory.py
       lifecycle.py
-      controllers/probes.py
-      schemas/probe_schema.py
+      controllers/liveness.py
+      schemas/liveness_schema.py
   infrastructure/
     logging/
       configurator.py
@@ -38,34 +86,33 @@ src/order_service/
     container.py
 tests/
   __init__.py
-  _support/
-    clients/
-    db/
-    integration.py
-  unit/
-    __init__.py
-    conftest.py
-    core/
-      health/
-        services/test_liveness_probe_service.py
-        services/test_readiness_probe_service.py
-        use_cases/test_check_liveness.py
-        use_cases/test_check_readiness.py
   integration/
-    __init__.py
-    conftest.py
-    core/
-      health/use_cases/test_check_readiness.py
-    delivery/fastapi/controllers/test_probes.py
-  guardrails/
-    architecture/test_boundaries.py
+    delivery/fastapi/controllers/test_liveness.py
 ```
 
-Create only directories that contain real files. Import default bases from the
-matching scoped Specx foundation package; do not create an empty local
-`foundation/` package. Create `src/<package>/foundation/` only when current code
-needs a real project-local base category or a stateful framework base that must
-not be shared globally, such as a SQLAlchemy declarative base.
+Every shown Python directory also gets an empty `__init__.py`; the diagram
+omits nested initializers for readability. Do not add empty controllers,
+schemas, suites, or helper directories simply because the diagram names a
+category.
+
+Add the first user-requested core scope as a real vertical slice. A typical
+scope adds only the inner packages used by that feature, plus mirrored tests:
+
+```text
+src/order_service/core/<scope>/
+  dtos/<result>_dto.py
+  services/<behavior>_service.py       # only when reusable behavior exists
+  use_cases/<action>.py
+tests/unit/core/<scope>/
+  services/test_<behavior>_service.py  # only when the source service exists
+  use_cases/test_<action>.py
+```
+
+Import default bases from the matching scoped Specx foundation package. Do not
+create an empty local `foundation/` package. Create
+`src/<package>/foundation/` only when current code needs a real project-local
+base category or a stateful framework base that must not be shared globally,
+such as a SQLAlchemy declarative base.
 
 Add `tests/_support/` only when tests need generic clients, DB helpers, or
 shared integration resources. One-off project-specific test doubles stay in the
@@ -76,12 +123,13 @@ manager so persistence-facing behavior is proven against the real
 transactional database.
 
 Every created test directory gets an empty `__init__.py`; do not add test
-package re-exports or setup behavior there.
+package re-exports or setup behavior there. Add `tests/unit/conftest.py` or
+`tests/integration/conftest.py` only when that suite has a real fixture.
 
 When stable cross-scope application primitives exist, add `shared/`. When
 SQLAlchemy exists, add `foundation/sqlalchemy_model.py`, top-level
 `infrastructure/sqlalchemy/`, `alembic.ini`, and `migrations/` with
-`$specx-sqlalchemy-migrations`.
+`$specx-sqlalchemy-migrations`; none belongs in the unconditional baseline.
 
 ## Root AGENTS.md
 
@@ -89,7 +137,11 @@ Create root `AGENTS.md` for every generated repo. Keep it concise, practical,
 and aligned with the actual Makefile targets. Include only commands that exist
 for that project.
 
-Recommended content:
+Recommended content follows. It is a superset: remove commands, fixture notes,
+and whole feature rules that do not match files in the generated project. Keep
+the canonical wording for each applicable boundary rule because the packaged
+guardrail verifies those explicit project-contract phrases while detecting
+whether the corresponding class category exists.
 
 ```markdown
 # Agent Instructions
@@ -116,34 +168,25 @@ Recommended content:
 
 ## Commands
 
-- Install: `uv sync --all-groups`
+- Install: `uv sync --locked --all-groups`
 - Dev server: `make dev`
 - Full check: `make check`
-- Lint/type/format check: `make lint`
+- Lint/type/format/architecture check: `make lint`
 - Format/fix: `make format`
 - Tests: `make test`
-- Targeted unit tests: `uv run pytest tests/unit`
-- Targeted integration tests: `uv run pytest tests/integration`
-- Targeted guardrail tests: `uv run pytest tests/guardrails`
+- Targeted unit tests: `uv run --locked pytest tests/unit`
+- Targeted integration tests: `uv run --locked pytest tests/integration`
 
 ## Architecture Rules
 
-- Controllers call injected use cases and never import infrastructure.
-- Project classes inherit explicit bases from the matching scoped Specx
-  foundation package.
+- Business controllers call injected use cases and never import
+  infrastructure. A delivery-only `/healthz` controller may return its tiny
+  process-liveness response directly.
+- Non-foundation source classes inherit explicit packaged or local scoped
+  bases. Local foundation bases explicitly inherit the packaged or framework
+  base they extend.
 - Public business FastAPI routes use full `/api/v1/...` paths in controllers.
-- Operational probes are the only unversioned route exception: `/healthz` for
-  lightweight process liveness and `/readyz` for traffic readiness.
-- Reusable probe behavior lives under `core/health`; delivery controllers call
-  `CheckLivenessUseCase` and `CheckReadinessUseCase` and map the returned DTOs
-  to framework responses.
-- `/healthz` must not query databases, queues, caches, network services, or
-  external SDKs.
-- `/readyz` checks required infrastructure; SQLAlchemy services use a cheap
-  bounded `SELECT 1` through a health readiness gateway adapter and return
-  `503` when persistence is unavailable.
-- Probe responses must be small, unauthenticated at the app layer, omit
-  secrets/topology/stack traces, and send `Cache-Control: no-store`.
+- Operational probes, when present, are the only unversioned route exception.
 - Runtime logging is configured once by `LoggingConfigurator` in top-level
   `infrastructure/logging` using Python stdlib `logging.config.dictConfig`.
 - The FastAPI runtime entrypoint resolves `LoggingConfigurator` and calls
@@ -178,14 +221,16 @@ Recommended content:
 - Core services inherit `BasePureService`, `BaseReadService`, or
   `BaseEffectService`, end with `Service`, and do not open UoW scopes.
 - Query use cases must not call repository mutators.
-- Persistence use cases inject `UnitOfWorkManager`, not repositories, active
-  UoWs, providers, SQLAlchemy sessions/engines/session factories, or concrete
-  infrastructure adapters directly.
+- Use cases that touch persistence inject `UnitOfWorkManager`.
+- They must not inject repositories, active UoWs, providers, or concrete
+  infrastructure adapters.
+- They must not inject SQLAlchemy sessions/engines/session factories.
 - Only `ioc`, top-level delivery `__main__.py`/factory/lifecycle code, and
   tests may use `diwire.Container`. `Injected[Container]` is allowed only in
   `FastAPILifecycle` for shutdown cleanup.
-- Non-foundation source classes need explicit packaged or local bases,
-  matching suffixes, and scoped docstrings with concrete `Example:` blocks.
+- Every project source class needs a scoped docstring with a concrete
+  `Example:` block. Non-foundation classes also need explicit packaged or local
+  bases and matching suffixes.
 - Prefer `@dataclass(frozen=True, kw_only=True, slots=True)` for commands,
   queries, DTOs, entities, and other core data classes unless the user asks for
   another model type.
@@ -197,11 +242,13 @@ Recommended content:
 
 - Tests mirror source module paths under `tests/unit` or `tests/integration`
   with flat `test_<module>.py` files.
-- `tests/unit/conftest.py` owns the fresh bare unit `container` fixture.
-- `tests/integration/conftest.py` owns the transactional DB-backed
-  integration `container` fixture.
+- When needed, `tests/unit/conftest.py` owns the fresh real-app unit `container`
+  fixture returned by `get_container()` and any project-wide test overrides.
+- When persistence integration exists, `tests/integration/conftest.py` owns the
+  transactional DB-backed integration `container` fixture.
 - Private test helpers live under `tests/_support`; this is not a test suite.
-- Architecture policy wrappers live under `tests/guardrails`.
+- Run architecture policy with `make lint`. Add a wrapper under
+  `tests/guardrails` only when programmatic custom rules are required.
 - Every test directory has an empty `__init__.py`.
 - Required generated tests are currently scoped to core services, use cases,
   and capabilities.
@@ -217,12 +264,6 @@ Recommended content:
   call resolved use cases directly against the transactional DB.
 - Delivery integration tests live under `tests/integration/delivery/...` and
   own HTTP route/status/schema/error mapping.
-- Core health tests cover liveness/readiness services and use cases. When a
-  real readiness adapter exists, add a core integration test proving
-  `CheckReadinessUseCase` reports the transactional database as ready.
-- Delivery probe tests cover `/healthz`, `/readyz`, readiness failure, and the
-  absence of legacy `/api/v1/health`. They assert `Cache-Control: no-store`,
-  `503` on readiness failure, and that probe routes stay out of OpenAPI.
 - Unit-test `LoggingConfigurator` by overriding `LoggingSettings`,
   monkeypatching `logging.config.dictConfig`, and asserting the generated
   readable stdlib config. Use `caplog` only when a log record is meaningful
@@ -250,8 +291,11 @@ Recommended content:
   fixtures.
 ```
 
-When SQLAlchemy/Alembic exists, also add the migration shape, commands, and
-rules:
+Replace `order_service` with the real package name and entrypoint.
+
+## SQLAlchemy And Alembic Additions
+
+When SQLAlchemy/Alembic exists, add the migration shape, commands, and rules:
 
 ```markdown
 ## Project Shape
@@ -272,14 +316,62 @@ rules:
   `make migration-check`.
 ```
 
-Replace `order_service` with the real package name and entrypoint.
+The `%(constraint_name)s` naming convention used by the Specx SQLAlchemy base
+requires explicit names for `CheckConstraint` objects and schema types that
+emit checks on the target database. Document and enforce that model rule, or
+choose another reviewed convention before the first migration.
 
-## First Vertical Slice
+## Operational Probe Additions
 
-For a new API repo, create reusable `core/health` operational probe behavior so
-multiple delivery layers can expose the same liveness/readiness contract.
-Delivery still owns framework details such as route paths, status codes,
-headers, schemas, and OpenAPI exclusion.
+Keep a simple `/healthz` liveness response in delivery. Add `core/health` and
+`/readyz` when readiness checks any required external dependency or probe
+policy is reused by multiple deliveries. If that condition is met, add only
+the needed packages:
+
+```text
+src/order_service/core/health/
+  dtos/health_probe_dto.py
+  gateways/readiness_check_gateway.py
+  services/readiness_probe_service.py
+  use_cases/check_readiness.py
+src/order_service/core/health/infrastructure/<technology>/
+  readiness_check_gateway.py
+tests/unit/core/health/
+  services/test_readiness_probe_service.py
+  use_cases/test_check_readiness.py
+tests/integration/core/health/use_cases/
+  test_check_readiness.py
+tests/integration/delivery/fastapi/controllers/
+  test_probes.py
+```
+
+Add these concise rules to the generated `AGENTS.md` only when the project has
+the corresponding endpoints and core slice:
+
+```markdown
+## Operational Probes
+
+- `/healthz` is a lightweight process-liveness endpoint and must not query
+  databases, queues, caches, network services, or external SDKs.
+- `/readyz` reports whether the instance can receive traffic and returns `503`
+  when a required dependency is unavailable.
+- Bound each readiness dependency call with a short application-side timeout;
+  for SQLAlchemy use a cheap `SELECT 1` through a readiness gateway adapter.
+- Required-dependency readiness and cross-delivery probe policy live under
+  `core/health`; delivery owns route paths, status codes, headers, schemas, and
+  OpenAPI inclusion.
+- Probe responses are small, unauthenticated at the app layer, omit secrets,
+  topology, and stack traces, and send `Cache-Control: no-store`.
+- Probe integration tests cover liveness, readiness success and failure,
+  `Cache-Control: no-store`, and exclusion from OpenAPI when intended.
+```
+
+## First Runnable Slice
+
+Build the first user-requested business slice through core, delivery, IOC, and
+tests. If no domain feature is specified, use the small delivery `/healthz`
+endpoint shown in the baseline to prove that app composition and lifespan work;
+do not manufacture a core health workflow for that simple response.
 
 Create top-level `infrastructure/logging` as part of the first runnable slice.
 Use `LoggingSettings(BaseRuntimeSettings)` with a `LogLevelEnum(BaseStrEnum)`,

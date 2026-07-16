@@ -5,6 +5,15 @@ free from container access. Generated projects use `diwire` heavily in tests:
 fixtures provide containers, tests register overrides directly when needed, and
 targets are resolved with `container.resolve(Target)`.
 
+## Contents
+
+- [Injectable classes](#injectable-classes)
+- [Container](#container)
+- [FastAPI composition](#fastapi-composition)
+- [Pytest containers](#pytest-containers)
+- [Test overrides](#test-overrides)
+- [Do not](#do-not)
+
 ## Injectable Classes
 
 ```python
@@ -16,6 +25,7 @@ from order_service.core.orders.dtos.create_order_result_dto import CreateOrderRe
 from order_service.core.orders.repositories.order_unit_of_work import (
     OrderUnitOfWorkManager,
 )
+from order_service.core.orders.services.order_pricing_service import OrderPricingService
 from specx.core.foundation.command import BaseCommand
 from specx.core.foundation.use_case import BaseUseCase
 
@@ -45,13 +55,18 @@ class CreateOrderUseCase(BaseUseCase):
     async def execute(self, *, command: CreateOrderCommand) -> CreateOrderResultDTO:
         async with self._unit_of_work_manager as uow:
             order = await uow.orders.create(sku=command.sku)
-
-        return CreateOrderResultDTO(order_id=order.id)
+            return CreateOrderResultDTO(order_id=order.id)
 ```
+
+Python awaits the unit of work's `__aexit__` before completing this return, so
+the DTO reaches the caller only after commit and cleanup succeed.
 
 Use private fields for dependencies and inherit the matching scoped Specx
 foundation base. Prefer concrete project classes unless there is a real
-boundary.
+boundary. Keep this injection constructor-based; Specx application code does
+not use `resolver_context.inject` function wrappers. DIWire's mypy plugin only
+refines those wrappers, so constructor-field injection does not require the
+plugin.
 
 ## Container
 
@@ -78,6 +93,22 @@ def _register_dependencies(container: Container) -> None:
         provides=OrderUnitOfWorkManager,
     )
 ```
+
+DIWire recognizes `pydantic-settings` subclasses and auto-registers them as
+zero-argument, root-scoped singleton factories. Let it resolve
+`BaseRuntimeSettings` subclasses normally. Register a prebuilt settings instance
+only for an intentional override, and do so before resolving its consumer:
+
+```python
+settings = UserDirectorySettings.model_validate(
+    {"base_url": "https://example.test"},
+)
+container.add_instance(settings, provides=UserDirectorySettings)
+```
+
+Runtime settings belong at delivery, infrastructure, and composition edges.
+Core use cases and services receive typed core policies or capabilities, not
+`BaseRuntimeSettings` subclasses.
 
 Do not register SQLAlchemy repositories that require an active session directly
 in the runtime container. Create those repositories inside the active UoW, or
@@ -121,18 +152,29 @@ Use native pytest fixtures that return explicit containers. Do not enable
 `diwire.integrations.pytest_plugin`, and do not use `Injected[...]` parameters
 in test functions.
 
-Unit tests start from a fresh bare container:
+Unit tests start from a fresh application container built by the real
+composition root:
 
 ```python
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+import pytest
+
+from order_service.ioc.container import get_container
+
+if TYPE_CHECKING:
+    from diwire import Container
+
+
 @pytest.fixture
 def container() -> Container:
-    return Container(
-        missing_policy=MissingPolicy.REGISTER_RECURSIVE,
-        dependency_registration_policy=DependencyRegistrationPolicy.REGISTER_RECURSIVE,
-    )
+    return get_container()
 ```
 
-Tests register overrides directly before resolving the target:
+Add an override to this fixture when it applies to the whole test suite. Tests
+register scenario-specific overrides directly before resolving the target:
 
 ```python
 @pytest.mark.anyio
@@ -152,7 +194,7 @@ When only one behavior changes, create the mock inline in the test:
 @pytest.mark.anyio
 async def test_create_order_propagates_pricing_error(container: Container) -> None:
     pricing_gateway = MagicMock(spec=PricingGateway)
-    pricing_gateway.price = AsyncMock(side_effect=PricingUnavailableError)
+    pricing_gateway.price = AsyncMock(side_effect=PricingUnavailableError())
     container.add_instance(pricing_gateway, provides=PricingGateway)
     use_case = container.resolve(CreateOrderUseCase)
 
@@ -177,22 +219,31 @@ For FastAPI route tests, keep app construction after any test-specific
 external-boundary override by using a generic helper:
 
 ```python
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from asgi_lifespan import LifespanManager
+from diwire import Container
+from httpx2 import ASGITransport, AsyncClient
+
+from order_service.delivery.fastapi.factory import FastAPIFactory
 
 
 @asynccontextmanager
 async def open_test_async_client(container: Container) -> AsyncIterator[AsyncClient]:
     app_factory = container.resolve(FastAPIFactory)
     app = app_factory()
-    transport = ASGITransport(app=app)
 
-    async with LifespanManager(app):
+    async with LifespanManager(app) as manager:
+        transport = ASGITransport(app=manager.app)
+
         async with AsyncClient(transport=transport, base_url="http://testserver") as client:
             yield client
 ```
 
-Use `asgi-lifespan` for the helper because HTTPX ASGI transports do not trigger
-application lifespan by themselves.
+Use `asgi-lifespan` for the helper because HTTPX2 ASGI transports do not trigger
+application lifespan by themselves. `manager.app` is the state-aware ASGI app;
+using the original app loses state yielded by the lifespan context.
 
 For integration tests that replace persistence failure behavior, register the
 replacement session factory before resolving use cases, repositories, UoWs,
@@ -206,6 +257,11 @@ controllers, or `FastAPIFactory`.
 - Do not inject `logging.Logger` or register it as a dependency. Use local
   stdlib class loggers for classes that actually log.
 - Do not resolve dependencies from inside core.
+- Do not inject runtime settings into core use cases, services, capabilities,
+  entities, repositories, or gateway ports. Map genuine business configuration
+  to typed core collaborators at composition.
+- Do not use `resolver_context.inject` to hide resolution in application
+  functions; keep project dependencies in constructor fields.
 - Do not instantiate project use cases, services, controllers, repositories, or
   UoW managers by hand in tests; resolve project classes from `container`.
 - Do not hide manual production graph assembly in test helper classes.

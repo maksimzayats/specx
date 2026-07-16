@@ -13,15 +13,15 @@ and clean `core` / `delivery` / `infrastructure` / `ioc` boundaries.
 - `skills/<skill-name>/references/*.md` contains detailed implementation
   patterns and examples.
 - `skills/<skill-name>/agents/openai.yaml` contains OpenAI skill UI metadata.
+- `.agents/skills/` is the tracked local-discovery mirror of canonical
+  `skills/`; update it with `make sync-skills` rather than editing it directly.
 - `src/specx/core/foundation/` contains reusable core foundation bases.
 - `src/specx/delivery/foundation/` contains delivery foundation bases.
 - `src/specx/infrastructure/foundation/` contains infrastructure foundation bases.
 - `src/specx/testing/` contains the public rule-based architecture test API.
 - `src/specx/_internal/` contains package internals that are not public API.
-- `tests/` validates the `specx` package and sample-service integration.
+- `tests/` validates the `specx` package and skill helper scripts.
 - `scripts/validate_skills.py` validates the skill catalog.
-- `samples/url-shortener-service/` is a generated reference service used to validate
-  the skills. It may be untracked while iterating.
 
 ## Root Commands
 
@@ -33,6 +33,7 @@ and clean `core` / `delivery` / `infrastructure` / `ioc` boundaries.
 - Build package distributions: `make build`
 - Verify installed package typing: `make verifytypes`
 - Validate skill metadata only: `make validate-skills`
+- Synchronize the local skill mirror: `make sync-skills`
 - List local installable skills: `make list-skills`
 - Inspect local skills manually: `npx skills add . --list --full-depth`
 - Install from GitHub: `npx skills add maksimzayats/specx --skill '*' --agent codex -y`
@@ -46,6 +47,10 @@ and clean `core` / `delivery` / `infrastructure` / `ioc` boundaries.
 - `description` must be trigger-oriented, non-empty, and avoid angle brackets.
 - Do not leave `TODO` placeholders.
 - Keep `SKILL.md` concise; put detailed patterns in `references/*.md`.
+- Keep `SKILL.md` at or below 500 lines and add a linked `## Contents` section
+  to Markdown references over 100 lines.
+- Edit canonical `skills/`, run `make sync-skills`, and let validation reject
+  drift in the tracked `.agents/skills/` mirror.
 - If `agents/openai.yaml` exists, `default_prompt` must mention
   `$<skill-name>` and `short_description` must be 25-64 characters.
 - When changing generated-project commands or architecture, update the relevant
@@ -117,9 +122,6 @@ and clean `core` / `delivery` / `infrastructure` / `ioc` boundaries.
 ## Working Rules For Agents
 
 - For catalog changes, run root `make check`.
-- For sample service changes, follow `samples/url-shortener-service/AGENTS.md` and run
-  checks inside that directory.
-- Do not treat sample Makefile commands as root catalog commands.
 - Do not add empty future-facing folders or placeholder skills.
 - Do not duplicate full reference docs in this file; keep stable repo rules here
   and detailed generation rules inside `skills/*/references/`.

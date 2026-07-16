@@ -1,4 +1,4 @@
-.PHONY: build check format lint list-skills test type validate-skills verifytypes
+.PHONY: build check format lint list-skills sync-skills test type validate-skills verifytypes
 
 check: lint type test build verifytypes validate-skills list-skills
 
@@ -29,3 +29,6 @@ validate-skills:
 
 list-skills:
 	npx skills add . --list --full-depth
+
+sync-skills:
+	rsync -a --delete --exclude '.DS_Store' --exclude '__pycache__/' --exclude '*.pyc' skills/ .agents/skills/

@@ -1,0 +1,19 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from __SPECX_PACKAGE_NAME__.core.health.enums.health_status_enum import HealthStatusEnum
+from __SPECX_PACKAGE_NAME__.core.health.services.health_status_service import (
+    HealthStatusService,
+)
+
+if TYPE_CHECKING:
+    from diwire import Container
+
+
+def test_health_status_service_returns_ok(container: Container) -> None:
+    service = container.resolve(HealthStatusService)
+
+    result = service.check()
+
+    assert result.status is HealthStatusEnum.OK

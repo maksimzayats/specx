@@ -1,0 +1,20 @@
+from dataclasses import dataclass
+
+from specx.core.foundation.pure_service import BasePureService
+
+from __SPECX_PACKAGE_NAME__.core.health.dtos.health_status_dto import HealthStatusDTO
+from __SPECX_PACKAGE_NAME__.core.health.enums.health_status_enum import HealthStatusEnum
+
+
+@dataclass(kw_only=True, slots=True)
+class HealthStatusService(BasePureService):
+    """Service that builds the framework-neutral process health result.
+
+    Example:
+        result = service.check()
+
+    """
+
+    def check(self) -> HealthStatusDTO:
+        """Return the current process health result."""
+        return HealthStatusDTO(status=HealthStatusEnum.OK)

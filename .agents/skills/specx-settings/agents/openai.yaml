@@ -1,4 +1,4 @@
 interface:
   display_name: "Specx Settings"
-  short_description: "Add pydantic-settings config"
-  default_prompt: "Use $specx-settings to add injected pydantic-settings configuration."
+  short_description: "Add edge-owned runtime settings"
+  default_prompt: "Use $specx-settings to add edge-owned pydantic-settings configuration."

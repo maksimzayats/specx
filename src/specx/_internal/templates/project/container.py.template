@@ -1,0 +1,9 @@
+from diwire import Container, DependencyRegistrationPolicy, MissingPolicy
+
+
+def get_container() -> Container:
+    """Create the application container with recursive project-class wiring."""
+    return Container(
+        missing_policy=MissingPolicy.REGISTER_RECURSIVE,
+        dependency_registration_policy=DependencyRegistrationPolicy.REGISTER_RECURSIVE,
+    )

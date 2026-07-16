@@ -26,25 +26,32 @@ Use this skill for one application action at a time. Read
    `DTO` suffix.
 7. `execute(...)` accepts exactly one keyword-only argument named `command` or
    `query` and returns DTOs, not entities.
-8. Inject services, capabilities, gateways, settings, and UoW managers with
-   `Injected[...]`. For transactional persistence, inject the scope
+8. Inject services, capabilities, gateways, and UoW managers with
+   `Injected[...]`. Keep infrastructure/runtime settings out of core use cases;
+   expose required business policy as a typed core value or collaborator. For
+   transactional persistence, inject the scope
    `UnitOfWorkManager` and open the active unit of work inside `execute(...)`.
    Do not inject repositories, SQLAlchemy sessions/engines/session factories,
    or concrete infrastructure adapters directly into use cases.
 9. Keep framework schemas, routers, ORM models, Redis clients, HTTP clients,
    and entity return types
    out of the use case.
-10. Add or update flat unit tests for the behavior. The test receives the
+10. Mark secret-bearing dataclass fields with `field(repr=False)` and never log
+    whole commands, queries, or DTOs that may contain sensitive values.
+11. Add or update flat unit tests for the behavior. The test receives the
     native pytest `container` fixture, registers local doubles or inline mocks
     before resolution, and resolves the use case with
     `container.resolve(UseCaseClass)`. If the use case injects a
     `UnitOfWorkManager`, also add a core integration test under
-    `tests/integration/core/...` against the real transactional database graph.
+    `tests/integration/core/...` against the real persistence graph (and the
+    transactional database graph when database-backed).
 
-Operational probe use cases such as `CheckLivenessUseCase` and
-`CheckReadinessUseCase` may live under `core/health` when multiple delivery
-layers should reuse the same probe behavior. Keep HTTP paths, status codes,
-headers, and schemas in delivery.
+`CheckReadinessUseCase` may live under `core/health` when readiness checks any
+required external dependency or multiple delivery layers reuse the policy. Add
+a core `CheckLivenessUseCase` only when framework-independent liveness policy
+is genuinely reused across deliveries; keep a simple process-only liveness
+response in delivery. HTTP paths, status codes, headers, and schemas always
+stay in delivery.
 
 ## Transaction Rule
 
@@ -56,7 +63,8 @@ the active `unit_of_work`, but services do not open transactions. Repository
 calls from a use case stay rooted in the manager-owned `unit_of_work` variable.
 
 Commands are allowed to change state. Queries are read-only and should not call
-repository mutators such as `add`, `save`, `create`, `update`, or `delete`.
+repository mutators such as `add`, `save`, `create`, `update`, or `delete`, or
+invoke gateways with external write effects.
 
 ## Code Style
 

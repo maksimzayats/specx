@@ -1,0 +1,12 @@
+from specx.core.foundation.enums import BaseStrEnum
+
+
+class HealthStatusEnum(BaseStrEnum):
+    """Known process health states returned by the health core.
+
+    Example:
+        HealthStatusEnum.OK
+
+    """
+
+    OK = "ok"

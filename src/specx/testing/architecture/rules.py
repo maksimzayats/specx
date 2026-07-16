@@ -88,12 +88,15 @@ def _violation(
     message: str,
     path: Path | None = None,
     symbol: str | None = None,
+    node: ast.AST | None = None,
 ) -> SpecxArchitectureViolation:
     return SpecxArchitectureViolation(
         rule_id=rule_id,
         message=message,
         path=path,
         symbol=symbol,
+        line=getattr(node, "lineno", None),
+        column=(getattr(node, "col_offset", -1) + 1 if hasattr(node, "col_offset") else None),
     )
 
 
@@ -124,7 +127,7 @@ class CoreInnerPackagesDoNotImportOuterLayersOrIOLibrariesRule(ArchitectureRuleB
                     violations.append(
                         _violation(self.id, path=path, message=f"imports {module}"),
                     )
-                if parts and parts[0] in {"fastapi", "httpx", "redis", "sqlalchemy"}:
+                if parts and parts[0] in {"fastapi", "httpx", "httpx2", "redis", "sqlalchemy"}:
                     violations.append(
                         _violation(self.id, path=path, message=f"imports {module}"),
                     )
@@ -158,7 +161,7 @@ class DeliveryControllersDoNotImportInfrastructureRule(ArchitectureRuleBase):
 
     Controllers should translate framework input and call use cases; concrete
     infrastructure should be composed through IOC or delivery app factories.
-    FastAPI app composition modules may import top-level infrastructure
+    Delivery app composition modules may import top-level infrastructure
     resources, but not scope repositories, ORM models, DDL helpers, or concrete
     scope infrastructure adapters.
     """
@@ -175,19 +178,16 @@ class DeliveryControllersDoNotImportInfrastructureRule(ArchitectureRuleBase):
                     violations.append(
                         _violation(self.id, path=path, message=f"imports {module}"),
                     )
-        for relative in (
-            Path("delivery/fastapi/__main__.py"),
-            Path("delivery/fastapi/factory.py"),
-            Path("delivery/fastapi/lifecycle.py"),
-        ):
-            path = context.src_root / relative
-            if path not in context.ast_project.files:
-                continue
-            for module in _explicit_import_modules(context.tree(path)):
-                if _is_scope_technical_import(module):
-                    violations.append(
-                        _violation(self.id, path=path, message=f"imports {module}"),
-                    )
+        delivery_root = context.src_root / "delivery"
+        for filename in ("__main__.py", "factory.py", "lifecycle.py"):
+            for path in delivery_root.glob(f"*/{filename}"):
+                if path not in context.ast_project.files:
+                    continue
+                for module in _explicit_import_modules(context.tree(path)):
+                    if _is_scope_technical_import(module):
+                        violations.append(
+                            _violation(self.id, path=path, message=f"imports {module}"),
+                        )
         return tuple(violations)
 
 
@@ -1256,7 +1256,7 @@ class OnlyIOCDeliveryAppAndTestsImportContainerRule(ArchitectureRuleBase):
     """Restrict `diwire.Container` imports to composition and tests.
 
     Application classes should receive dependencies rather than importing the
-    container or resolving collaborators directly. FastAPI lifecycle is the
+    container or resolving collaborators directly. A delivery lifecycle is the
     narrow exception because it owns app shutdown and closes the container.
     """
 
@@ -1269,11 +1269,8 @@ class OnlyIOCDeliveryAppAndTestsImportContainerRule(ArchitectureRuleBase):
             if not uses_diwire_container(context.tree(path)):
                 continue
             relative = path.relative_to(context.src_root)
-            allowed = (
-                relative == Path("ioc/container.py")
-                or relative == Path("delivery/fastapi/__main__.py")
-                or relative == Path("delivery/fastapi/factory.py")
-                or relative == Path("delivery/fastapi/lifecycle.py")
+            allowed = relative == Path("ioc/container.py") or _is_delivery_composition_module(
+                relative
             )
             if not allowed:
                 violations.append(
@@ -1300,7 +1297,7 @@ class OnlyIOCDeliveryAppAndTestsImportContainerRule(ArchitectureRuleBase):
                         _violation(
                             self.id,
                             path=path,
-                            message="injects diwire.Container outside FastAPI lifecycle",
+                            message="injects diwire.Container outside delivery lifecycle",
                             symbol=class_node.name,
                         )
                     )
@@ -1377,6 +1374,9 @@ class PublicRoutesUseFullAPIV1PathsRule(ArchitectureRuleBase):
     """
 
     id: SpecxRuleId = SpecxRuleId.PUBLIC_ROUTES_USE_FULL_API_V1_PATHS
+    family = "fastapi"
+    default_enabled = False
+    required_project_surface: str | None = "delivery/fastapi"
 
     def check(self, context: ArchitectureContext) -> tuple[SpecxArchitectureViolation, ...]:
         violations: list[SpecxArchitectureViolation] = []
@@ -1395,20 +1395,35 @@ class PublicRoutesUseFullAPIV1PathsRule(ArchitectureRuleBase):
                 )
                 if path_keyword is None or not isinstance(path_keyword.value, ast.Constant):
                     violations.append(
-                        _violation(self.id, path=path, message="has dynamic route path")
+                        _violation(
+                            self.id,
+                            path=path,
+                            message="has dynamic route path",
+                            node=node,
+                        )
                     )
                     continue
                 route_path = path_keyword.value.value
                 if not isinstance(route_path, str):
                     violations.append(
-                        _violation(self.id, path=path, message=f"uses {route_path!r}")
+                        _violation(
+                            self.id,
+                            path=path,
+                            message=f"uses {route_path!r}",
+                            node=path_keyword.value,
+                        )
                     )
                     continue
                 if route_path in ALLOWED_UNVERSIONED_OPERATIONAL_ROUTE_PATHS:
                     continue
                 if not route_path.startswith("/api/v1/"):
                     violations.append(
-                        _violation(self.id, path=path, message=f"uses {route_path!r}")
+                        _violation(
+                            self.id,
+                            path=path,
+                            message=f"uses {route_path!r}",
+                            node=path_keyword.value,
+                        )
                     )
         return tuple(violations)
 
@@ -1454,27 +1469,40 @@ class RootAgentsMDDocumentsProjectCommandsAndBoundariesRule(ArchitectureRuleBase
         if not path.exists():
             return (_violation(self.id, path=path, message="AGENTS.md is missing"),)
         text = path.read_text(encoding="utf-8")
+        normalized_text = " ".join(text.split())
         required_fragments = {
             f"Package lives under `src/{context.config.package_name}`",
-            f"FastAPI entrypoint: `{context.config.package_name}.delivery.fastapi.__main__:app`",
             "make check",
             "make lint",
             "make test",
-            "BaseCapability",
-            "BaseGateway",
-            "BasePureService",
-            "BaseReadService",
-            "BaseEffectService",
-            "Use cases return DTOs, not entities",
-            "Query use cases must not call repository mutators",
-            "Use cases that touch persistence inject `UnitOfWorkManager`",
-            "must not inject repositories, active UoWs, providers",
-            "SQLAlchemy sessions/engines/session factories",
             "LoggingConfigurator",
-            "FastAPILifecycle",
-            "container.aclose()",
             "Do not inject loggers",
         }
+        base_index = class_base_name_index(context)
+        optional_base_fragments = {
+            "BaseCapability": "BaseCapability",
+            "BaseGateway": "BaseGateway",
+            "BasePureService": "BasePureService",
+            "BaseReadService": "BaseReadService",
+            "BaseEffectService": "BaseEffectService",
+        }
+        required_fragments.update(
+            fragment
+            for base, fragment in optional_base_fragments.items()
+            if _project_uses_foundation_base(base_index, base)
+        )
+        if _project_uses_foundation_base(base_index, "BaseUseCase"):
+            required_fragments.add("Use cases return DTOs, not entities")
+        if _project_uses_foundation_base(base_index, "BaseQuery"):
+            required_fragments.add("Query use cases must not call repository mutators")
+        if _required_integration_test_source_paths(context):
+            required_fragments.update(
+                {
+                    "Use cases that touch persistence inject `UnitOfWorkManager`",
+                    "must not inject repositories, active UoWs, providers",
+                    "SQLAlchemy sessions/engines/session factories",
+                }
+            )
         if _project_uses_alembic(context):
             required_fragments.update(
                 {
@@ -1485,7 +1513,9 @@ class RootAgentsMDDocumentsProjectCommandsAndBoundariesRule(ArchitectureRuleBase
             )
         violations: list[SpecxArchitectureViolation] = []
         missing_fragments = sorted(
-            fragment for fragment in required_fragments if fragment not in text
+            fragment
+            for fragment in required_fragments
+            if " ".join(fragment.split()) not in normalized_text
         )
         if missing_fragments:
             violations.append(
@@ -1501,6 +1531,40 @@ class RootAgentsMDDocumentsProjectCommandsAndBoundariesRule(ArchitectureRuleBase
                 )
             )
         return tuple(violations)
+
+
+class FastAPIRootAgentsMDDocumentsDeliveryRule(ArchitectureRuleBase):
+    """Require FastAPI projects to document their delivery entrypoint and lifecycle.
+
+    Technology-specific delivery guidance is opt-in so framework-neutral
+    projects keep the core Specx architecture contract without fake FastAPI paths.
+    """
+
+    id: SpecxRuleId = SpecxRuleId.FASTAPI_ROOT_AGENTS_MD_DOCUMENTS_DELIVERY
+    family = "fastapi"
+    default_enabled = False
+    required_project_surface: str | None = "delivery/fastapi"
+
+    def check(self, context: ArchitectureContext) -> tuple[SpecxArchitectureViolation, ...]:
+        path = context.project_root / "AGENTS.md"
+        if not path.exists():
+            return (_violation(self.id, path=path, message="AGENTS.md is missing"),)
+
+        normalized_text = " ".join(path.read_text(encoding="utf-8").split())
+        required_fragments = {
+            f"FastAPI entrypoint: `{context.config.package_name}.delivery.fastapi.__main__:app`",
+            "FastAPILifecycle",
+            "container.aclose()",
+        }
+        missing_fragments = sorted(
+            fragment
+            for fragment in required_fragments
+            if " ".join(fragment.split()) not in normalized_text
+        )
+        if not missing_fragments:
+            return ()
+
+        return (_violation(self.id, path=path, message=f"missing fragments {missing_fragments}"),)
 
 
 class TestsMirrorSourceStructureRule(ArchitectureRuleBase):
@@ -2119,7 +2183,7 @@ class InitFilesAreEmptyRule(ArchitectureRuleBase):
         for package_root in (context.src_root, context.project_root / "tests"):
             if not package_root.exists():
                 continue
-            for directory in _python_package_directories(package_root):
+            for directory in _python_package_directories(context, root=package_root):
                 init_path = directory / "__init__.py"
                 if not init_path.exists():
                     violations.append(
@@ -2133,14 +2197,22 @@ class InitFilesAreEmptyRule(ArchitectureRuleBase):
         return tuple(violations)
 
 
-def _python_package_directories(root: Path) -> tuple[Path, ...]:
-    return tuple(
-        directory
-        for directory in sorted((root, *root.rglob("*")))
-        if directory.is_dir()
-        and "__pycache__" not in directory.parts
-        and any(path.suffix == ".py" for path in directory.rglob("*.py"))
-    )
+def _python_package_directories(
+    context: ArchitectureContext,
+    *,
+    root: Path,
+) -> tuple[Path, ...]:
+    directories: set[Path] = set()
+    for path in context.ast_project.files:
+        if not path.is_relative_to(root):
+            continue
+        parent = path.parent
+        while parent.is_relative_to(root):
+            directories.add(parent)
+            if parent == root:
+                break
+            parent = parent.parent
+    return tuple(sorted(directories))
 
 
 def _is_use_case_class(
@@ -2348,9 +2420,19 @@ def _class_can_inject_container(
     class_base_name_index: dict[str, set[str]],
 ) -> bool:
     return (
-        relative == Path("delivery/fastapi/lifecycle.py")
-        and class_node.name == "FastAPILifecycle"
+        len(relative.parts) == 3
+        and relative.parts[0] == "delivery"
+        and relative.name == "lifecycle.py"
+        and class_node.name.endswith("Lifecycle")
         and class_has_foundation_base(class_node.name, "BaseLifecycle", class_base_name_index)
+    )
+
+
+def _is_delivery_composition_module(relative: Path) -> bool:
+    return (
+        len(relative.parts) == 3
+        and relative.parts[0] == "delivery"
+        and relative.name in {"__main__.py", "factory.py", "lifecycle.py"}
     )
 
 
@@ -2404,6 +2486,16 @@ def _project_uses_alembic(context: ArchitectureContext) -> bool:
     return (context.project_root / "alembic.ini").exists() or (
         context.project_root / "migrations"
     ).exists()
+
+
+def _project_uses_foundation_base(
+    class_base_names: dict[str, set[str]],
+    foundation_base: str,
+) -> bool:
+    return any(
+        class_has_foundation_base(class_name, foundation_base, class_base_names)
+        for class_name in class_base_names
+    )
 
 
 def _mirrored_test_paths(
@@ -2974,6 +3066,7 @@ BUILT_IN_RULES: tuple[type[ArchitectureRuleBase], ...] = (
     PublicRoutesUseFullAPIV1PathsRule,
     NoSchemaBootstrapCallsInSourceOrTestsRule,
     RootAgentsMDDocumentsProjectCommandsAndBoundariesRule,
+    FastAPIRootAgentsMDDocumentsDeliveryRule,
     TestsMirrorSourceStructureRule,
     TestFixturesDoNotBundleMocksRule,
     IntegrationTestsDoNotMockInternalCollaboratorsRule,

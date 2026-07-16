@@ -43,6 +43,9 @@ Homepage = "https://github.com/maksimzayats/specx"
 Source = "https://github.com/maksimzayats/specx"
 Issues = "https://github.com/maksimzayats/specx/issues"
 
+[project.scripts]
+specx = "specx.cli:main"
+
 [dependency-groups]
 dev = [
     "mypy>=2.1.0",
@@ -63,7 +66,6 @@ module-name = "specx"
 [tool.pytest.ini_options]
 minversion = "9.0"
 addopts = "-vv --strict-config --strict-markers --import-mode=importlib"
-pythonpath = ["src"]
 testpaths = ["tests"]
 xfail_strict = true
 

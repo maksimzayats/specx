@@ -1,0 +1,16 @@
+.PHONY: check format lint test
+
+check: lint test
+
+format:
+	uv run --locked ruff check --fix .
+	uv run --locked ruff format .
+
+lint:
+	uv run --locked ruff check .
+	uv run --locked ruff format --check .
+	uv run --locked mypy .
+	uv run --locked specx check
+
+test:
+	uv run --locked pytest

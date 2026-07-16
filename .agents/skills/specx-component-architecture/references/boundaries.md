@@ -3,6 +3,19 @@
 Specx uses scoped core packages, a top-level delivery layer, and packaged
 foundation bases from scoped Specx foundation packages.
 
+## Contents
+
+- [Component Layout](#component-layout)
+- [Import Direction](#import-direction)
+- [Foundation Bases](#foundation-bases)
+- [Use Cases, Services, And Capabilities](#use-cases-services-and-capabilities)
+- [Gateways](#gateways)
+- [Commands, Queries, DTOs, Schemas, Entities](#commands-queries-dtos-schemas-entities)
+- [Ports And Adapters](#ports-and-adapters)
+- [Unit Of Work Lifecycle](#unit-of-work-lifecycle)
+- [Shared Code](#shared-code)
+- [Packaged Architecture Guardrails](#packaged-architecture-guardrails)
+
 ## Component Layout
 
 ```text
@@ -35,6 +48,8 @@ delivery/
 ioc/
 infrastructure/
   sqlalchemy/
+  http/          # app-owned pooled HTTP clients/factories
+  <sdk>/         # app-owned pooled provider SDK clients/factories
   logging/
   telemetry/
 shared/
@@ -42,9 +57,10 @@ shared/
 
 Use only the folders needed by real code. Import bases from the matching scoped
 Specx foundation package by default. Do not create an empty local
-`foundation/` package. Add `src/<package>/foundation/` only when a real project-local base
-category is missing or a stateful framework base must own project-local state,
-such as SQLAlchemy `MetaData`. Add
+`foundation/` package. Add `src/<package>/foundation/` only when a real
+project-local base category is missing or a stateful framework base must own
+project-local state, such as SQLAlchemy `MetaData`. Local foundation contains
+base definitions, not reusable concrete primitives or behavior. Add
 `delivery/<framework>/services/` only for delivery-only helpers such as auth,
 rate limiting, request context, or controller-specific policies.
 
@@ -81,7 +97,7 @@ rate limiting, request context, or controller-specific policies.
 
 ## Foundation Bases
 
-Every project class should inherit an explicit base class. Prefer packaged
+Every project source class must inherit an explicit base class. Prefer packaged
 scoped Specx foundation bases:
 
 - `BaseDTO`
@@ -125,10 +141,9 @@ Use a use case for externally meaningful actions:
 
 Use a core service for focused reusable application behavior:
 
-- `PasswordHashingService`
 - `OrderPricingService`
 - `AccessPolicyService`
-- `TokenIssuingService`
+- `TaskCompletionService`
 - `LivenessProbeService`
 - `ReadinessProbeService`
 
@@ -136,8 +151,10 @@ Use a capability for small replaceable abilities that are narrower than a
 service:
 
 - `SlugGeneratingCapability`
+- `PasswordHashingCapability`
 - `PasswordPepperCapability`
 - `RequestSigningCapability`
+- `TokenEncodingCapability`
 
 A capability:
 
@@ -166,7 +183,8 @@ abilities.
 Choose the core service base by effect:
 
 - `BasePureService` for deterministic helpers. Allowed: primitives, entities
-  passed as arguments, value objects, DTOs if needed, and other pure services.
+  passed as arguments, immutable application values, DTOs if needed, and other
+  pure services.
   Forbidden: `UnitOfWorkManager`, `UnitOfWork`, repositories, gateways,
   clients, settings, clocks, UUID generators, random/time, HTTP, SQLAlchemy,
   Redis, OpenAI SDK, and other external IO.
@@ -196,22 +214,28 @@ context manager, and closes resources during shutdown. It does not contain
 business rules, route mapping, schema serialization, migrations, or request
 handling.
 
-Reusable operational health/readiness behavior may live under `core/health`
-when more than one delivery could use it. Keep the liveness/readiness DTOs,
-services, use cases, and gateway ports in core. Put technical dependency checks
-such as SQLAlchemy `SELECT 1`, Redis ping, or queue checks under
-`core/health/infrastructure/<technology>/`, and let delivery only map those
-use cases to framework-specific routes, headers, status codes, and schemas.
+Operational readiness behavior belongs under `core/health` when it checks any
+required external dependency or when probe policy is reused across deliveries.
+Keep a simple framework-specific liveness probe in delivery; do not add DTOs,
+services, and use cases merely to make the probe cross a core boundary.
+
+When `core/health` is justified, keep its DTOs, services, use cases, and gateway
+ports in core. Put technical dependency checks such as SQLAlchemy `SELECT 1`,
+Redis ping, or queue checks under `core/health/infrastructure/<technology>/`,
+and let delivery only map those use cases to framework-specific routes,
+headers, status codes, and schemas. Bound each external check with a short
+timeout so a stalled dependency cannot accumulate probe requests.
 
 Do not split classes because there are many nouns. Split only when behavior or
 boundary pressure differs.
 
 Every service class under a `services/` package must end with `Service`.
 
-Every major concrete class should include a docstring that states the class
-scope and includes a concrete `Example:` block. This applies to use cases,
-services, ports, adapters, controllers, factories, settings, DTOs, entities,
-schemas, unit-of-work classes, and unit-of-work managers.
+Every project source class should include a docstring that states the class
+scope and includes a concrete `Example:` block. The packaged rule applies to
+abstract ports and local bases as well as use cases, services, adapters,
+controllers, factories, settings, DTOs, entities, schemas, enums, errors, and
+unit-of-work classes.
 
 ## Gateways
 
@@ -229,8 +253,8 @@ Gateway ports:
 - use business language, not SDK, HTTP, queue, or provider details;
 - declare external effects in the class docstring with an `External effect:`
   or `External effects:` line;
-- return DTOs, primitives, value objects, or explicit result objects, not
-  entities or SDK responses.
+- return DTOs, primitives, enums, or explicit result objects, not entities or
+  SDK responses.
 
 Concrete gateway implementations:
 
@@ -365,7 +389,8 @@ Use top-level `infrastructure/` for app-wide technical resources:
 
 - SQLAlchemy engine/session factories;
 - logging and telemetry configurators;
-- external SDK/client factories shared across scopes.
+- application-owned pooled SDK/client factories, even when currently consumed
+  by only one scope.
 
 Runtime logging should be configured once through a top-level
 `LoggingConfigurator` that inherits `BaseConfigurator` and calls
@@ -402,14 +427,16 @@ resources inside one core scope.
 
 ## Packaged Architecture Guardrails
 
-Use `specx.testing.architecture` as the default guardrail mechanism instead of
-hand-writing local architecture tests for Specx boundaries. The packaged rule
-set is exposed through stable `SpecxRuleId` values and covers:
+Use `uv run specx check` as the default guardrail command instead of
+hand-writing local architecture tests for Specx boundaries. The same engine is
+available through `specx.testing.architecture` for programmatic checks and
+custom rules. The packaged rule set is exposed through stable `SpecxRuleId`
+values and covers:
 
 - core import direction, including no delivery, ioc, top-level infrastructure,
-  FastAPI, SQLAlchemy, Redis, or HTTP clients from core inner packages;
-- project-local foundation import direction, when local foundation modules
-  exist;
+  FastAPI, SQLAlchemy, Redis, `httpx`, or `httpx2` from core inner packages;
+- scoped Specx foundation imports, including rejection of the removed
+  `specx.foundation` namespace;
 - explicit source-class bases, scoped example docstrings, foundation-category
   suffixes, and avoidance of raw common bases such as `BaseModel`,
   `BaseSettings`, `ABC`, `Exception`, `ValueError`, `DeclarativeBase`,
@@ -417,12 +444,12 @@ set is exposed through stable `SpecxRuleId` values and covers:
 - capability placement, suffixes, and avoidance of helper/manager/repository/
   gateway/service roles;
 - no `core/<scope>/delivery/` packages;
-- delivery controllers avoiding infrastructure imports and infrastructure
-  avoiding delivery imports;
+- delivery controllers avoiding infrastructure imports and scope
+  infrastructure avoiding delivery imports;
 - no `metadata.create_all` or `drop_all` calls in source or tests;
-- `diwire.Container` access limited to `ioc`, top-level delivery app entry
-  points/factories/lifecycles, and tests, with `Injected[Container]` allowed
-  only in the FastAPI lifecycle;
+- `diwire.Container` access limited to `ioc`, framework delivery
+  `{__main__,factory,lifecycle}.py` composition modules, and tests, with
+  `Injected[Container]` allowed only in a delivery lifecycle;
 - no injected `logging.Logger` dependencies or logger registrations in the DI
   container;
 - full `/api/v1/...` public business HTTP route paths, with only `/healthz`
@@ -436,7 +463,25 @@ set is exposed through stable `SpecxRuleId` values and covers:
 - core service suffixes and use of `BasePureService`, `BaseReadService`, or
   `BaseEffectService`;
 - pure/read/effect service effect boundaries and UoW lifecycle constraints;
-- root `AGENTS.md` project-command and Specx-boundary guidance.
+- framework-neutral root `AGENTS.md` project-command and Specx-boundary
+  guidance;
+- opt-in FastAPI route and root `AGENTS.md` delivery guidance.
 
-Add custom `extra_rules` only for project-specific policies that the packaged
-`SpecxRuleId` set does not cover.
+The built-ins do not currently validate project-local foundation import
+direction. Keep that policy in review guidance or add a focused `extra_rules`
+check when a project creates local foundation modules.
+
+The core IO-library check is intentionally not an exhaustive SDK blacklist. It
+recognizes FastAPI, SQLAlchemy, Redis, `httpx`, and `httpx2`; review new SDK
+imports explicitly or add a project rule for other forbidden technical
+libraries such as provider clients.
+
+Framework-neutral rules run by default when `select` is omitted. New generated
+projects set `select = ["ALL"]`, enabling every rule with a matching project
+surface. Technology-specific families remain explicit when a project uses a
+narrower base selection; FastAPI projects can add
+`extend-select = ["fastapi"]`. Explicitly selecting a family with no matching
+delivery surface emits a non-failing warning, while the `ALL` umbrella silently
+skips absent surfaces. Use `ignore` with exact semantic IDs for deliberate
+exceptions, and use the Python API's `extra_rules` for project policy not
+covered by a packaged `SpecxRuleId`.

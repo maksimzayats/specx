@@ -7,10 +7,11 @@ from specx.testing.architecture.models import (
     SpecxArchitectureConfig,
     SpecxArchitectureReport,
     SpecxArchitectureViolation,
+    SpecxArchitectureWarning,
     SpecxConfigurationError,
 )
 from specx.testing.architecture.registry import SpecxRuleRegistryError
-from specx.testing.architecture.rule import BaseRule
+from specx.testing.architecture.rule import BaseRule, SpecxRuleMetadata
 from specx.testing.architecture.rule_id import SpecxRuleId
 
 __all__ = [
@@ -20,8 +21,10 @@ __all__ = [
     "SpecxArchitectureConfig",
     "SpecxArchitectureReport",
     "SpecxArchitectureViolation",
+    "SpecxArchitectureWarning",
     "SpecxConfigurationError",
     "SpecxRuleId",
+    "SpecxRuleMetadata",
     "SpecxRuleRegistryError",
     "assert_specx_architecture",
     "check_specx_architecture",

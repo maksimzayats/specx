@@ -1,0 +1,21 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+from specx.core.foundation.dto import BaseDTO
+
+if TYPE_CHECKING:
+    from __SPECX_PACKAGE_NAME__.core.health.enums.health_status_enum import HealthStatusEnum
+
+
+@dataclass(frozen=True, kw_only=True, slots=True)
+class HealthStatusDTO(BaseDTO):
+    """Core result describing the process health state.
+
+    Example:
+        HealthStatusDTO(status=HealthStatusEnum.OK)
+
+    """
+
+    status: HealthStatusEnum

@@ -58,6 +58,7 @@ class SpecxRuleId(StrEnum):
     ROOT_AGENTS_MD_DOCUMENTS_PROJECT_COMMANDS_AND_BOUNDARIES = (
         "agents-md.documents-commands-and-boundaries"
     )
+    FASTAPI_ROOT_AGENTS_MD_DOCUMENTS_DELIVERY = "fastapi.agents-md-documents-delivery"
     TESTS_MIRROR_SOURCE_STRUCTURE = "tests.mirror-source-structure"
     TEST_FIXTURES_DO_NOT_BUNDLE_MOCKS = "tests.fixtures-do-not-bundle-mocks"
     INTEGRATION_TESTS_DO_NOT_MOCK_INTERNAL_COLLABORATORS = (

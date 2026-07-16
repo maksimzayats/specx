@@ -5,12 +5,23 @@ graphs through native pytest fixtures. Core test bodies receive `container`,
 register scenario-specific overrides directly, resolve the target class, then
 exercise behavior.
 
+## Contents
+
+- [Layout](#layout)
+- [Unit tests](#unit-tests)
+- [Async backends](#async-backends)
+- [Integration tests](#integration-tests)
+- [Database isolation](#database-isolation)
+- [Architecture guardrails](#architecture-guardrails)
+- [Avoid](#avoid)
+
 ## Layout
 
 Mirror source paths under the test layer that owns the behavior:
 
 ```text
 tests/
+  conftest.py
   _support/
     clients/
     db/
@@ -59,29 +70,38 @@ only to prove FastAPI's own lifespan implementation.
 
 ## Unit Tests
 
-Unit tests use a fresh test container. The default fixture is a bare container:
+Unit tests use a fresh application container from the real composition root:
 
 ```python
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import pytest
-from diwire import Container, DependencyRegistrationPolicy, MissingPolicy
+
+from order_service.ioc.container import get_container
+
+if TYPE_CHECKING:
+    from diwire import Container
 
 
 @pytest.fixture
 def container() -> Container:
-    return Container(
-        missing_policy=MissingPolicy.REGISTER_RECURSIVE,
-        dependency_registration_policy=DependencyRegistrationPolicy.REGISTER_RECURSIVE,
-    )
+    return get_container()
 ```
 
-Resolve project classes from the container. Register overrides before resolving
-the target:
+Put project-wide test overrides in this fixture. Resolve project classes from
+the container, registering scenario-specific overrides before resolving the
+target:
 
 ```python
 from dataclasses import dataclass
+from decimal import Decimal
 
-import pytest
 from diwire import Container
+
+from order_service.core.orders.capabilities.tax_rate_capability import TaxRateCapability
+from order_service.core.orders.services.order_pricing_service import OrderPricingService
 
 
 @dataclass(kw_only=True, slots=True)
@@ -103,21 +123,27 @@ def test_order_pricer_adds_tax(container: Container) -> None:
     container.add_instance(capability, provides=TaxRateCapability)
     service = container.resolve(OrderPricingService)
 
-    result = service.price(items=(OrderItem(price=Money("10.00")),))
+    result = service.price(subtotal=Decimal("10.00"))
 
-    assert result == Money("12.00")
+    assert result == Decimal("12.0000")
 ```
 
-Use inline mocks when a scenario only needs one collaborator behavior changed:
+Use inline mocks when a scenario only needs one collaborator behavior changed.
+Prefer `create_autospec(..., instance=True, spec_set=True)` so the mock enforces
+the collaborator API and creates `AsyncMock` methods for async functions:
 
 ```python
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import create_autospec
 
 
 @pytest.mark.anyio
 async def test_execute_rolls_back_when_creation_fails(container: Container) -> None:
-    creation_service = MagicMock(spec=ShortUrlCreationService)
-    creation_service.create = AsyncMock(side_effect=ShortCodeCollisionError(max_attempts=5))
+    creation_service = create_autospec(
+        ShortUrlCreationService,
+        instance=True,
+        spec_set=True,
+    )
+    creation_service.create.side_effect = ShortCodeCollisionError(max_attempts=5)
     unit_of_work_manager = TrackingShortUrlUnitOfWorkManager()
 
     container.add_instance(creation_service, provides=ShortUrlCreationService)
@@ -127,6 +153,7 @@ async def test_execute_rolls_back_when_creation_fails(container: Container) -> N
     with pytest.raises(ShortCodeCollisionError):
         await use_case.execute(command=CreateShortUrlCommand(target_url="https://example.com"))
 
+    creation_service.create.assert_awaited_once()
     assert unit_of_work_manager.rolled_back_count == 1
 ```
 
@@ -174,16 +201,42 @@ module-local `container` fixture that depends on the parent container and
 registers the replacement before returning it. Do not put double classes in
 `conftest.py`.
 
-Parameterize aggressively. When a case has more than one meaningful field, use
-a small dataclass and inline the case list directly in `pytest.mark.parametrize`
-unless the same case set is reused by multiple tests.
+Parameterize cases that exercise the same behavior and assertion shape; keep
+materially different scenarios as separately named tests. When a case has more
+than one meaningful field, use a small dataclass and readable `pytest.param`
+IDs. Remember that pytest passes mutable parameter values as-is rather than
+copying them between cases.
+
+## Async Backends
+
+`@pytest.mark.anyio` uses AnyIO's built-in pytest plugin. Its default
+`anyio_backend` fixture runs each async test on every installed supported
+backend. Generated FastAPI and async-SQLAlchemy graphs are normally
+asyncio-specific, so pin that fact explicitly in top-level
+`tests/conftest.py`:
+
+```python
+import pytest
+
+
+@pytest.fixture
+def anyio_backend() -> str:
+    return "asyncio"
+```
+
+Do not pin the fixture when the project intentionally promises both asyncio
+and Trio support; in that case keep every dependency backend-neutral and let
+the default matrix run. Give a custom backend fixture scope at least as broad
+as the widest async fixture that depends on it.
 
 ## Integration Tests
 
 Integration tests use the real internal application graph: delivery, DI, use
 cases, services, UoWs, repositories, and the database. Stub only external
 systems. For SQLAlchemy projects, `tests/integration/conftest.py` owns the
-transactional DB-backed `container` fixture:
+transactional DB-backed `container` fixture. Prefer the production database
+family whenever dialect behavior, constraints, locking, or query semantics
+matter; do not silently substitute SQLite for PostgreSQL or MySQL:
 
 ```text
 create migrated test database
@@ -192,8 +245,14 @@ bind SQLAlchemySessionFactory to that transaction
 create real app container
 register the transactional session factory
 yield container
+close container-owned resources
 roll back transaction
 ```
+
+Fixture teardown closes the container before rolling back and closing the
+connection it depends on. This matters for direct core integration tests,
+which do not enter FastAPI lifespan and therefore cannot rely on app shutdown
+to call `container.aclose()`.
 
 Core use-case integration tests call resolved use cases directly:
 
@@ -213,25 +272,35 @@ async def test_execute_normalizes_and_persists_task(container: Container) -> Non
 ```
 
 FastAPI route tests use a generic support helper so app construction happens
-after any test-specific external-boundary override:
+after any test-specific external-boundary override. Generated projects use the
+maintained `httpx2>=2.5.0` package rather than legacy `httpx`:
 
 ```python
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from asgi_lifespan import LifespanManager
+from diwire import Container
+from httpx2 import ASGITransport, AsyncClient
+
+from order_service.delivery.fastapi.factory import FastAPIFactory
 
 
 @asynccontextmanager
 async def open_test_async_client(container: Container) -> AsyncIterator[AsyncClient]:
     app_factory = container.resolve(FastAPIFactory)
     app = app_factory()
-    transport = ASGITransport(app=app)
 
-    async with LifespanManager(app):
+    async with LifespanManager(app) as manager:
+        transport = ASGITransport(app=manager.app)
+
         async with AsyncClient(transport=transport, base_url="http://testserver") as client:
             yield client
 ```
 
-Use `asgi-lifespan` in this helper because HTTPX ASGI transports do not trigger
-application lifespan by themselves.
+Use `asgi-lifespan` in this helper because HTTPX2 ASGI transports do not trigger
+application lifespan by themselves. Pass `manager.app`, not the original app,
+so lifespan-provided state is present in request scopes.
 
 Route test bodies receive `container` and open the client:
 
@@ -265,22 +334,60 @@ covered through a use case or route.
 
 For SQLAlchemy projects:
 
-- Run Alembic once for a session-scoped migrated SQLite database.
+- Provision an isolated migrated test database with Alembic. A session-scoped
+  database must be unique per parallel test worker.
 - For each data integration test, open one connection and an outer
   transaction.
 - Bind sessions with `join_transaction_mode="create_savepoint"`.
 - Roll back the outer transaction in teardown.
-- For SQLite/aiosqlite, create the test engine with
-  `connect_args={"autocommit": False}` so SAVEPOINT work stays inside the
-  outer transaction.
-- Migration tests still use fresh temp database files because DDL is the
-  behavior under test.
+- Use this savepoint recipe only when the database and driver have correct
+  SAVEPOINT support.
+- Tests for commit visibility, transaction isolation, locks, concurrency, or
+  after-commit behavior use a separately isolated database and real commits;
+  an enclosing rollback transaction would hide the behavior under test.
+- Migration tests use a fresh isolated database or schema because DDL is the
+  behavior under test. A fresh temp file is appropriate when SQLite is the
+  target database.
+
+SQLite's legacy transaction mode does not correctly enclose every SAVEPOINT.
+On Python 3.12+, set `connect_args={"autocommit": False}` for both `sqlite3`
+and `aiosqlite`. For Python 3.11 compatibility, or one setup that spans Python
+versions, follow SQLAlchemy's event-hook recipe: disable the driver's implicit
+`BEGIN` with `isolation_level = None` on connect and emit `BEGIN` from the
+SQLAlchemy `begin` event (attach async-engine listeners to
+`engine.sync_engine`). Do not pass the `autocommit` connection argument on
+Python 3.11, where `sqlite3.Connection.autocommit` does not exist.
 
 Do not call `metadata.create_all()` or `drop_all()` in source or tests.
 
 ## Architecture Guardrails
 
-Use the packaged architecture wrapper:
+Run packaged framework-neutral architecture rules from the project root:
+
+```bash
+uv run --locked specx check
+```
+
+Generated projects explicitly select every applicable built-in rule:
+
+```toml
+[tool.specx]
+select = ["ALL"]
+```
+
+The `ALL` selector skips rule families whose required project surface is
+absent. Projects that use a narrower `select` add technology families with
+`extend-select`.
+
+Projects with a narrower base selection opt into FastAPI rules explicitly:
+
+```toml
+[tool.specx]
+select = ["neutral"]
+extend-select = ["fastapi"]
+```
+
+Use the typed wrapper only when a project needs programmatic custom rules:
 
 ```python
 from pathlib import Path
@@ -296,12 +403,17 @@ def test_specx_architecture() -> None:
         SpecxArchitectureConfig(
             project_root=Path(__file__).resolve().parents[3],
             package_name="order_service",
+            extend_select=frozenset({"fastapi"}),
         )
     )
 ```
 
 `SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE` is enabled by default. Disable it
-only for deliberate legacy migrations.
+only for deliberate legacy migrations, and put a concise reason beside its
+exact semantic ID in `[tool.specx].ignore`. Prefer `[tool.specx].exclude` for
+generated or vendored trees that are outside the project's ownership. The
+programmatic `disabled_rules` and `path_exclusions` fields remain available to
+wrapper-based custom checks.
 
 ## Avoid
 
@@ -330,6 +442,11 @@ only for deliberate legacy migrations.
 - No SQLAlchemy sessions, FastAPI apps, or real IO in unit tests, except a
   minimal `FastAPI()` instance in lifecycle unit tests.
 - No route integration tests that bypass FastAPI lifespan.
+- No legacy `httpx` imports in generated projects; use `httpx2`.
+- No use of the original ASGI app when a `LifespanManager` supplies
+  `manager.app`.
+- No accidental AnyIO backend matrix for an asyncio-only application graph.
+- No SQLite substitute when production-dialect behavior is part of the test.
 - No broad autouse fixtures that hide DB, settings, or container state.
 - No global shared containers across tests.
 - No placeholder tests for empty folders or future structure.

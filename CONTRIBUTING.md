@@ -1,9 +1,8 @@
 # Contributing
 
 Specx is an agent skill catalog plus a typed Python guardrail package. Changes
-usually touch the package, the skills, and the generated sample service so
-future agents learn the intended architecture and the sample proves it still
-works.
+usually touch the package and the skills together so future agents learn the
+same architecture that the guardrails enforce.
 
 ## Repository Layout
 
@@ -11,16 +10,13 @@ works.
 skills/                         # published agent skills
   specx-*/SKILL.md              # trigger metadata and workflow
   specx-*/references/*.md       # detailed generation guidance
+.agents/skills/                 # tracked local-discovery mirror
 src/specx/                      # reusable architecture guardrail package
-tests/                          # package and sample integration tests
-samples/url-shortener-service/  # generated reference service
+tests/                          # package and skill-helper tests
 scripts/validate_skills.py      # skill metadata validator
 AGENTS.md                       # instructions for agents editing this repo
 README.md                       # user-facing catalog overview
 ```
-
-The sample service is part of the validation surface. When architecture rules
-change, update the relevant skills and the sample together.
 
 ## Prerequisites
 
@@ -51,29 +47,17 @@ Validate skill metadata only:
 make validate-skills
 ```
 
+Synchronize the tracked local-discovery mirror after editing canonical skills:
+
+```sh
+make sync-skills
+```
+
 List local skills:
 
 ```sh
 make list-skills
 ```
-
-## Sample Commands
-
-Run these from `samples/url-shortener-service/`:
-
-```sh
-uv sync --all-groups
-make check
-make lint
-make test
-make migration-check
-make makemigrations message="describe change"
-make migrate
-```
-
-Use sample checks when changing generated-project code, generated-project
-instructions, architecture guardrails, migrations, DI, delivery, or core
-patterns.
 
 ## Skill Authoring
 
@@ -86,17 +70,18 @@ Each skill has:
 
 Keep `SKILL.md` concise and trigger-oriented. Put reusable patterns, examples,
 and guardrail details in `references/`. Do not add README-style files inside
-individual skill folders.
+individual skill folders. Add a compact linked `## Contents` section to
+Markdown references over 100 lines. Edit only canonical `skills/`, then run
+`make sync-skills`; `make validate-skills` rejects mirror drift.
 
 When changing a rule:
 
 1. Update the skill that teaches the rule.
 2. Update cross-cutting references that repeat the rule.
 3. Update `AGENTS.md` if agents need the rule before loading a skill.
-4. Update `samples/url-shortener-service/AGENTS.md` if generated projects should
-   carry the rule.
-5. Update the sample implementation when the rule changes generated code.
-6. Run the relevant sample checks and root `make check`.
+4. Update the package rule and focused tests when enforcement changes.
+5. Run root `make check` and forward-test substantial generation changes in a
+   disposable project when practical.
 
 ## Architecture Contract
 
@@ -213,11 +198,11 @@ The compatibility renderer writes that wrapper for existing workflows:
 ```sh
 python3 skills/specx-tests/references/render_architecture_guardrails.py \
   --package url_shortener_service \
-  --output samples/url-shortener-service/tests/guardrails/architecture/test_boundaries.py
+  --output /path/to/service/tests/guardrails/architecture/test_boundaries.py
 ```
 
 When changing guardrail behavior, update the package rule, its focused tests,
-the sample wrapper if needed, and any skill docs that teach the rule.
+the compatibility renderer if needed, and any skill docs that teach the rule.
 
 ## Migrations
 
@@ -231,8 +216,8 @@ against complete metadata.
 ## Pull Request Checklist
 
 - Root `make check` passes.
-- Sample `make check` passes when sample or generated-project rules changed.
-- Skill references and sample `AGENTS.md` agree on architecture rules.
+- Substantial generated-project changes were forward-tested when practical.
+- Skill references and package guardrails agree on architecture rules.
 - Package architecture rules and the compatibility wrapper renderer agree.
 - No placeholder folders, local copies of packaged bases, or speculative
   foundation bases were added.

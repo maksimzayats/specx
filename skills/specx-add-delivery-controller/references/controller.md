@@ -3,6 +3,16 @@
 Delivery controllers adapt framework requests to core use cases. Keep them under
 top-level `delivery/`, not under `core/<scope>/`.
 
+## Contents
+
+- [FastAPI scope controller](#fastapi-scope-controller)
+- [Delivery services](#delivery-services)
+- [Schemas](#schemas)
+- [App factory registration](#app-factory-registration)
+- [FastAPI lifecycle](#fastapi-lifecycle)
+- [Integration test](#integration-test)
+- [Route rules](#route-rules)
+
 ## FastAPI Scope Controller
 
 ```python
@@ -42,6 +52,7 @@ class UsersController(BaseController[APIRouter]):
             endpoint=self.register_user,
             methods=["POST"],
             response_model=RegisterUserResponseSchema,
+            status_code=HTTPStatus.CREATED,
         )
 
     async def register_user(
@@ -51,8 +62,8 @@ class UsersController(BaseController[APIRouter]):
         try:
             result = await self._register_user_use_case.execute(
                 command=RegisterUserCommand(
-                    email=request.email,
-                    password=request.password,
+                    email=str(request.email),
+                    password=request.password.get_secret_value(),
                 ),
             )
         except UserAlreadyExistsError as exception:
@@ -74,6 +85,7 @@ Controller-only logic lives in `delivery/<framework>/services/`:
 
 ```python
 from dataclasses import dataclass
+from uuid import UUID
 
 from fastapi import Request
 
@@ -81,15 +93,22 @@ from specx.delivery.foundation.service import BaseDeliveryService
 
 
 @dataclass(kw_only=True, slots=True)
-class RequestPrincipalResolvingService(BaseDeliveryService):
-    """Delivery service that reads the current principal from a request.
+class RequestIdReadingService(BaseDeliveryService):
+    """Delivery service that reads a validated request correlation ID.
 
     Example:
-        user_id = service.resolve_user_id(request=request)
+        request_id = service.read(request=request)
     """
 
-    def resolve_user_id(self, *, request: Request) -> str:
-        return str(request.headers["x-user-id"])
+    def read(self, *, request: Request) -> UUID | None:
+        value = request.headers.get("x-request-id")
+        if value is None:
+            return None
+
+        try:
+            return UUID(value)
+        except ValueError:
+            return None
 ```
 
 Use delivery services for auth dependencies, rate limiting, request context,
@@ -97,15 +116,21 @@ framework-specific validation, or response metadata. Do not move those helpers
 into core unless they become framework-independent application behavior.
 Delivery service class names must end with `Service`.
 
-Reusable operational health/readiness behavior is framework-independent enough
-to live under `core/health`. FastAPI probe controllers should call
-`CheckLivenessUseCase` and `CheckReadinessUseCase`, then map their DTOs to
-delivery schemas and HTTP status codes.
+Never treat a client-supplied identity header as an authenticated principal.
+Authentication delivery services must verify credentials through the selected
+security mechanism and pass only the resulting identity into the command or
+query.
+
+A simple process-only `/healthz` response can stay in delivery without a core
+workflow. Put operational behavior under `core/health` when readiness checks
+any required external dependency or probe policy is reused by multiple
+deliveries. In that case, FastAPI probe controllers call the relevant use
+cases and map their DTOs to delivery schemas and HTTP status codes.
 
 ## Schemas
 
 ```python
-from pydantic import EmailStr
+from pydantic import EmailStr, SecretStr
 
 from specx.delivery.foundation.fastapi.schema import BaseFastAPISchema
 
@@ -118,7 +143,7 @@ class RegisterUserRequestSchema(BaseFastAPISchema):
     """
 
     email: EmailStr
-    password: str
+    password: SecretStr
 
 
 class RegisterUserResponseSchema(BaseFastAPISchema):
@@ -134,11 +159,22 @@ class RegisterUserResponseSchema(BaseFastAPISchema):
 Schemas live in delivery. Result DTOs live in the core `dtos/` package.
 Commands and queries live in the same file as their use case.
 
+`EmailStr` requires the optional `email-validator` runtime dependency. Add it
+only when a schema actually uses email validation. Use secret-aware Pydantic
+types for incoming credentials so schema representations do not expose them;
+unwrap a secret only when mapping it to the core input that needs the value.
+
 ## App Factory Registration
 
 ```python
-from specx.core.foundation.factory import BaseFactory
+from dataclasses import dataclass
+
+from diwire import Injected
+from fastapi import APIRouter, FastAPI
+
+from order_service.delivery.fastapi.controllers.users import UsersController
 from order_service.delivery.fastapi.lifecycle import FastAPILifecycle
+from specx.core.foundation.factory import BaseFactory
 
 
 @dataclass(kw_only=True, slots=True)
@@ -178,6 +214,8 @@ from dataclasses import dataclass
 
 from diwire import Container, Injected
 from fastapi import FastAPI
+
+from order_service.infrastructure.sqlalchemy.session import SQLAlchemySessionFactory
 from specx.delivery.foundation.lifecycle import BaseLifecycle
 
 
@@ -186,7 +224,10 @@ class FastAPILifecycle(BaseLifecycle[FastAPI]):
     """FastAPI lifespan manager for application-owned resources.
 
     Example:
-        app = FastAPI(lifespan=FastAPILifecycle(...))
+        lifecycle = FastAPILifecycle(
+            _container=container,
+            _session_factory=session_factory,
+        )
     """
 
     _container: Injected[Container]
@@ -211,7 +252,8 @@ class FastAPILifecycle(BaseLifecycle[FastAPI]):
 The lifecycle is the only generated class allowed to inject
 `diwire.Container`, and only so it can close the container on shutdown. Do not
 run migrations, schema creation, business workflows, or request handling in
-lifespan.
+lifespan. Keep the nested `finally` blocks: closing one resource must not prevent
+later cleanup, and the container must close last.
 
 ## Integration Test
 
@@ -233,7 +275,7 @@ async def test_register_user_returns_created_user(
             json={"email": "ada@example.com", "password": "secret"},
         )
 
-    assert response.status_code == status.HTTP_200_OK
+    assert response.status_code == status.HTTP_201_CREATED
     assert response.json() == {"user_id": 123}
 ```
 
@@ -242,7 +284,9 @@ database. Do not mock use cases or services here; keep those checks in unit
 tests.
 
 The generic FastAPI test client helper must run ASGI lifespan explicitly before
-opening `AsyncClient`; HTTPX transports do not trigger lifespan by themselves.
+opening `AsyncClient`; HTTPX2 transports do not trigger lifespan by themselves.
+Inside `LifespanManager`, pass `manager.app` rather than the original app to
+`ASGITransport` so request handlers receive any lifespan state.
 
 Use `fastapi.status` constants for response status assertions instead of raw
 integer literals.
@@ -258,10 +302,13 @@ integer literals.
   external SDKs.
 - `/readyz` checks required infrastructure and returns `503` when the instance
   should not receive traffic.
-- Implement reusable health/readiness behavior under `core/health`; keep
-  framework response headers, status codes, and OpenAPI exclusion in delivery.
+- Implement any required-dependency readiness or cross-delivery probe policy
+  under `core/health`; keep a simple process liveness response and all framework
+  headers, status codes, and OpenAPI exclusion in delivery.
 - Do not set `APIRouter(prefix="/api/v1")`.
 - Do not split path fragments between router and endpoint.
 - Keep controller methods thin.
 - Do not import infrastructure in controllers.
+- Map known application failures to stable delivery messages; never return raw
+  exception text, credentials, or infrastructure details.
 - Do not use bare controllers, schemas, factories, or delivery services.
