@@ -1,4 +1,22 @@
+<base href="/" />
 <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+
+<script>
+  (() => {
+    const restoreStorybookRoute = () => {
+      const match = window.location.pathname.match(/^\/docs\/([^/]+)\/([^/]+)\/?$/)
+      if (!match) return
+
+      const url = new URL(window.location.href)
+      url.pathname = "/"
+      url.searchParams.set("path", `/docs/${match[1]}-${match[2]}--docs`)
+      window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`)
+    }
+
+    restoreStorybookRoute()
+    window.addEventListener("popstate", restoreStorybookRoute)
+  })()
+</script>
 
 <style>
   :root {

@@ -1,16 +1,14 @@
 import { readFile, readdir } from "node:fs/promises"
 import path from "node:path"
 
+import { readNavigationPages, storyPathToRoute } from "./docs-navigation.mjs"
+
 const root = process.cwd()
 const navigationSource = await readFile(
   path.join(root, ".storybook", "docsNavigation.ts"),
   "utf8",
 )
-const pagePattern = /\{\s*title:\s*"([^"]+)",\s*path:\s*"([^"]+)",?\s*\}/g
-const navigationPages = [...navigationSource.matchAll(pagePattern)].map((match) => ({
-  path: match[2],
-  title: match[1],
-}))
+const navigationPages = await readNavigationPages(root)
 const navigationPaths = new Set(navigationPages.map((page) => page.path))
 const failures = []
 
@@ -63,9 +61,14 @@ for (const file of docsFiles) {
     failures.push(`${file}: NextPrev current path does not match ${storyPath}.`)
   }
 
-  for (const linkMatch of source.matchAll(/\?path=\/docs\/([^"#)\s]+)--docs/g)) {
-    if (!navigationPaths.has(linkMatch[1])) {
-      failures.push(`${file}: internal documentation link targets unknown path ${linkMatch[1]}.`)
+  if (source.includes("?path=/docs/")) {
+    failures.push(`${file}: internal documentation links must use canonical /docs/ routes.`)
+  }
+
+  for (const linkMatch of source.matchAll(/\/docs\/([a-z0-9-]+)\/([a-z0-9-]+)\//g)) {
+    const storyPath = `${linkMatch[1]}-${linkMatch[2]}`
+    if (!navigationPaths.has(storyPath)) {
+      failures.push(`${file}: internal documentation link targets unknown path ${storyPath}.`)
     }
   }
 }
@@ -92,6 +95,13 @@ if (process.argv.includes("--built")) {
     const storyId = `${page.path}--docs`
     if (!builtIds.has(storyId)) {
       failures.push(`Built Storybook index is missing ${storyId}.`)
+    }
+
+    const routeEntry = path.join(root, "storybook-static", storyPathToRoute(page.path), "index.html")
+    try {
+      await readFile(routeEntry, "utf8")
+    } catch {
+      failures.push(`Built documentation route is missing ${storyPathToRoute(page.path)}.`)
     }
   }
 }

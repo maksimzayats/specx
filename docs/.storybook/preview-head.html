@@ -1,0 +1,13 @@
+<script>
+  (() => {
+    if (window.top !== window) return
+
+    const storyPath = new URLSearchParams(window.location.search)
+      .get("path")
+      ?.match(/^\/docs\/([a-z0-9]+)-([a-z0-9-]+)--docs$/)
+
+    if (storyPath) {
+      window.location.replace(`/docs/${storyPath[1]}/${storyPath[2]}/`)
+    }
+  })()
+</script>
