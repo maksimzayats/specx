@@ -10,6 +10,7 @@ and architecture tests.
 
 [Install](#install) ·
 [Skills](#skills) ·
+[Documentation](#documentation) ·
 [Generated Architecture](#generated-architecture) ·
 [Contribute](CONTRIBUTING.md)
 
@@ -147,6 +148,19 @@ def test_specx_architecture() -> None:
         )
     )
 ```
+
+## Documentation
+
+The documentation site follows the same Storybook, React/Vite, MDX, and GitHub
+Pages approach used by OpenAI's Apps SDK UI documentation. Run it locally with:
+
+```sh
+npm --prefix docs ci
+make docs
+```
+
+Create the static production build with `make docs-build`. Pushes to `main`
+publish that build through the repository's configured GitHub Pages domain.
 
 ## What You Get
 

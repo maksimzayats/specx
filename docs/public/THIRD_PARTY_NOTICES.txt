@@ -1,0 +1,8 @@
+OpenAI Apps SDK UI
+Copyright OpenAI
+
+This documentation site's Storybook visual treatment is adapted from OpenAI
+Apps SDK UI, licensed under the MIT License. The complete notice is available
+in THIRD_PARTY_NOTICES.md in the Specx repository:
+
+https://github.com/maksimzayats/specx/blob/main/THIRD_PARTY_NOTICES.md

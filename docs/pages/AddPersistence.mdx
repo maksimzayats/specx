@@ -1,0 +1,109 @@
+import { Meta, Subtitle, Title } from "@storybook/blocks"
+import { NextPrev } from "@storybookComponents/NextPrev"
+
+<Meta title="Guides/Add persistence" />
+
+<Title>Add persistence</Title>
+<Subtitle>Guide an agent through a repository, unit of work, SQLAlchemy adapter, migration, and tests.</Subtitle>
+
+## Prerequisites
+
+Start from a command use case with a real persistence need and a clean `make check`. Choose the
+production database family before generating configuration or tests; do not substitute SQLite when
+dialect behavior matters.
+
+Install the Specx skills before following this procedure.
+
+## 1. Give the agent the complete boundary
+
+Name the related skills and state the transaction outcome:
+
+```text
+Use $specx-add-infrastructure-adapter, $specx-sqlalchemy-migrations,
+$specx-diwire-composition, and $specx-tests.
+
+Persist CreateOrderUseCase with async SQLAlchemy and PostgreSQL. The use case must open one
+OrderUnitOfWorkManager scope and return CreateOrderDTO only after successful commit. Add the
+repository and unit-of-work ports, project-local SQLAlchemy base, model and adapter, app-owned
+session factory, Alembic migration, DI binding, core integration test, and migration drift tests.
+Do not add or change HTTP delivery.
+```
+
+Replace the action and database family with the project decision. If the command also calls an
+external provider, state the ordering, idempotency, outbox, or compensation policy separately; the
+database transaction cannot roll back a remote effect.
+
+## 2. Define the core contracts
+
+For this example, the core-side boundary comprises:
+
+```text
+core/orders/
+  entities/order_entity.py
+  repositories/order_repository.py
+  repositories/order_unit_of_work.py
+  use_cases/create_order.py
+```
+
+The repository models owned persistence. The active `OrderUnitOfWork` exposes repositories. The
+`OrderUnitOfWorkManager` opens active objects. `CreateOrderUseCase` injects the manager—not a
+repository, session, engine, provider, or concrete adapter—and opens at most one scope.
+
+## 3. Verify technical ownership
+
+The implementation should separate scope-owned persistence from app-wide resources:
+
+```text
+foundation/sqlalchemy_model.py
+core/orders/infrastructure/sqlalchemy/
+  models/order_model.py
+  order_repository.py
+  order_unit_of_work.py
+infrastructure/sqlalchemy/
+  model_discovery.py
+  session.py
+  settings.py
+ioc/container.py
+```
+
+The local declarative base owns this project's metadata. The session factory owns the engine and
+closes it from application lifecycle. IOC binds the concrete manager to the core manager port; it
+does not register an active unit of work.
+
+## 4. Review and apply the migration
+
+The first SQLAlchemy model should arrive with `alembic.ini`, async `migrations/env.py`,
+`script.py.mako`, a reviewed revision, and Make targets.
+
+Generate subsequent revisions with a descriptive message:
+
+```sh
+make makemigrations message="add orders"
+git diff -- migrations
+make migration-check
+make migrate
+```
+
+Run `migration-check` only against a fresh isolated database or schema. Never use application startup
+or `metadata.create_all()` as schema management.
+
+## 5. Verify behavior and boundaries
+
+The core integration test resolves `CreateOrderUseCase` from the real transactional container and
+proves persisted state through the repository graph. Migration tests upgrade an empty database,
+compare metadata for drift, and prove every scope model file is discovered by the same function used
+by Alembic.
+
+```sh
+uv run pytest tests/integration/core/orders/use_cases/test_create_order.py
+uv run pytest tests/integration/migrations
+make check
+```
+
+Review the generated migration and transaction failure paths even when every command passes.
+
+Related: [Transactions and units of work](?path=/docs/concepts-transactions-and-units-of-work--docs),
+[Ports and adapters](?path=/docs/concepts-ports-and-adapters--docs), and
+[Configuration](?path=/docs/reference-configuration--docs).
+
+<NextPrev current="guides-add-persistence" />

@@ -1,0 +1,72 @@
+import { Meta, Subtitle, Title } from "@storybook/blocks"
+import { NextPrev } from "@storybookComponents/NextPrev"
+
+<Meta title="Concepts/Architecture boundaries" />
+
+<Title>Architecture boundaries</Title>
+<Subtitle>Organize ownership so application decisions point inward and technical details stay replaceable.</Subtitle>
+
+## The project shape
+
+```text
+src/<package>/
+  foundation/                 optional project-local bases
+  core/<scope>/
+    capabilities/
+    dtos/
+    entities/
+    exceptions/
+    gateways/
+    repositories/
+    services/
+    use_cases/
+    infrastructure/<technology>/
+  delivery/<framework>/
+  infrastructure/<technology>/
+  ioc/
+  shared/
+```
+
+Only create directories used by real code. The shape is a set of ownership rules, not a requirement
+to fill every box.
+
+## Core scopes own application behavior
+
+Each scope groups an application area such as orders, billing, or identity. Inner core packages hold
+use cases, decisions, data contracts, entities, and ports. They may depend on the standard library,
+pure domain libraries, same-scope core modules, small shared primitives, and core foundation bases.
+
+They do not import FastAPI, Pydantic delivery schemas, DIWire's container, SQLAlchemy, Redis, HTTP
+clients, provider SDKs, top-level infrastructure, or concrete scope infrastructure.
+
+## Scope infrastructure implements core ports
+
+`core/<scope>/infrastructure/` contains adapters whose ownership belongs to that scope: repositories,
+external-provider gateways, Redis stores, file adapters, and queue publishers. Adapters can import the
+core contracts they implement and app-wide technical factories they consume. They do not import
+delivery.
+
+## Top-level layers own cross-cutting technology
+
+- `delivery/` owns transport contracts, request parsing, response serialization, auth, error mapping,
+  route registration, app factories, and framework lifecycle.
+- `infrastructure/` owns shared technical resources such as session factories, pooled HTTP or SDK
+  clients, logging, and telemetry.
+- `ioc/` owns dependency bindings and can see every concrete type needed for composition.
+- `shared/` is for small stable cross-scope application primitives, not miscellaneous helpers.
+
+## Foundation is a category system
+
+Import stateless bases from Specx's scoped foundation modules. Add a local `foundation/` only for a
+real project category missing from the package or a stateful framework base that must own project
+state, such as SQLAlchemy metadata. Do not copy the packaged bases or create the directory in advance.
+
+Local module names omit a `base_` prefix: `foundation/clock.py` defines `BaseClock`.
+
+## Direction matters more than distance
+
+A controller may call a use case directly; adding mediator layers does not improve the boundary. A
+use case may coordinate a gateway port; hiding the port behind a generic manager weakens the model.
+Keep each dependency visible and make the technical implementation point toward its core contract.
+
+<NextPrev current="concepts-architecture-boundaries" />

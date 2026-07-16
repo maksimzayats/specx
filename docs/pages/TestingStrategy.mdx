@@ -1,0 +1,46 @@
+import { Meta, Subtitle, Title } from "@storybook/blocks"
+import { NextPrev } from "@storybookComponents/NextPrev"
+
+<Meta title="Concepts/Testing strategy" />
+
+<Title>Testing strategy</Title>
+<Subtitle>Test decisions close to core and prove each technical boundary once at the right level.</Subtitle>
+
+## Unit tests use the real composition root
+
+Specx unit tests resolve the target from a fresh application container. This catches constructor and
+binding drift without turning the test into a container smoke test. The test replaces only the
+external or nondeterministic collaborator needed for its scenario, then asserts behavior.
+
+Mirror source paths so target tests and reusable doubles have predictable locations.
+
+## Integration tests keep the internal graph intact
+
+A core integration test for a persisted use case exercises the real manager, active unit of work,
+repositories, services, and mapping. Keep the real internal use case in delivery integration tests;
+replace only external ports so the test covers controller, schema, use-case, and lifecycle
+integration.
+
+External systems may be replaced at their ports. Persistence should use the production database
+family whenever dialect behavior affects the feature.
+
+## Migration tests protect a separate contract
+
+Repository tests do not prove that a deployed database can reach the current schema. Migration tests
+upgrade an isolated database, verify model discovery, and check for pending autogenerate changes.
+Concurrency, lock, isolation, and after-commit behavior need commit-visible tests rather than a
+rollback-only harness.
+
+## Architecture checks cover shape, not behavior
+
+`specx check` answers questions such as “does this use case return a DTO?” and “did this service open a
+unit of work?” It does not prove the quote amount, HTTP error mapping, migration contents, or provider
+timeout. Keep behavioral tests even when the architecture report is clean.
+
+## Test support stays generic
+
+`tests/_support/` may contain HTTP clients, database helpers, and shared integration machinery. It
+does not own project-specific fakes or scenario builders. One-off doubles remain in the test module;
+reused unit doubles live only in mirrored capability, gateway, or repository test packages.
+
+<NextPrev current="concepts-testing-strategy" />

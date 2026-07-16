@@ -1,0 +1,75 @@
+import { Meta, Subtitle, Title } from "@storybook/blocks"
+import { NextPrev } from "@storybookComponents/NextPrev"
+
+<Meta title="Reference/Configuration" />
+
+<Title>Configuration</Title>
+<Subtitle>All supported `[tool.specx]` keys and rule-selection behavior.</Subtitle>
+
+## Complete example
+
+```toml
+[tool.specx]
+package = "order_service"
+select = ["ALL"]
+extend-select = []
+ignore = [
+  "packages.init-files-are-empty",
+]
+exclude = [
+  "src/order_service/generated/**",
+]
+```
+
+Unknown keys and values of the wrong type are configuration errors.
+
+## Keys
+
+| Key | Type | Meaning |
+| --- | --- | --- |
+| `package` | string | Import package below `src/` to check. |
+| `select` | array of strings | Replace the default rule selection. |
+| `extend-select` | array of strings | Add rules to the current selection. |
+| `ignore` | array of exact rule IDs | Disable selected rules. |
+| `exclude` | array of globs | Skip matching Python paths. |
+
+Without `package`, Specx requires exactly one importable directory below `src/` that contains Python
+files. Set the key for repositories with multiple packages. One invocation still checks one package;
+run separate invocations for separate services.
+
+## Selectors
+
+`select` and `extend-select` accept:
+
+- `ALL` for every built-in rule;
+- a rule family such as `neutral` or `fastapi`;
+- an exact semantic ID such as `use-cases.return-dtos`.
+
+When `select` is absent, default-enabled rules run. `select = []` is valid and selects nothing unless
+`extend-select` adds rules. `ignore` accepts exact IDs only and is applied after selection. Unknown
+selectors or ignored IDs are errors.
+
+Under `select = ["ALL"]`, a technology rule silently skips when its required surface does not exist.
+When the technology family or exact rule is selected explicitly, the missing surface produces one
+non-failing family warning. The two current FastAPI rules require Python files below
+`delivery/fastapi`.
+
+## Exclusions
+
+Exclusions are project-relative Python `fnmatch` patterns applied while scanning `src/` and `tests/`.
+Use them for generated code that the project cannot reshape. Prefer a narrow path to disabling a rule
+for handwritten code.
+
+## Python API names
+
+The equivalent `SpecxArchitectureConfig` fields are named differently in two places:
+
+| TOML | Python API |
+| --- | --- |
+| `ignore` | `disabled_rules` |
+| `exclude` | `path_exclusions` |
+| `extend-select` | `extend_select` |
+
+`extra_rules` is available only in Python configuration. TOML does not import project rule classes.
+
+<NextPrev current="reference-configuration" />

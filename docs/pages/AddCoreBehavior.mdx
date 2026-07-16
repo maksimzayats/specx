@@ -1,0 +1,83 @@
+import { Meta, Subtitle, Title } from "@storybook/blocks"
+import { NextPrev } from "@storybookComponents/NextPrev"
+
+<Meta title="Guides/Add core behavior" />
+
+<Title>Add core behavior</Title>
+<Subtitle>Turn one application action into a tested use case; extract behavior only when it has its own contract or is reused.</Subtitle>
+
+## Prerequisites
+
+Choose one application action and write down its input, result, known failures, and whether it reads,
+writes, or calls an external system. Work inside one existing `core/<scope>/` package. Install the
+Specx skills before asking an agent to make the change.
+
+## 1. Describe the application action
+
+```text
+Use $specx-add-core-use-case, $specx-add-core-service, and $specx-tests.
+
+Add QuoteOrderUseCase to the orders scope. It accepts one QuoteOrderQuery with subtotal_pence,
+uses an OrderPricingService to apply the deterministic pricing policy, and returns OrderQuoteDTO.
+Reject a negative subtotal with a named application value error. Add focused unit tests for the
+service and use case. Run the architecture checker and the relevant tests.
+```
+
+Specify the business inputs, result, named failures, and effects. Name a class category only when it
+is part of the requested design; otherwise let the selected skills derive placement and test layout.
+
+## 2. Verify the core files
+
+A framework-neutral calculation normally changes a small set of files:
+
+```text
+src/order_service/core/orders/
+  dtos/order_quote_dto.py
+  exceptions/invalid_order_subtotal_value_error.py
+  services/order_pricing_service.py
+  use_cases/quote_order.py
+tests/unit/core/orders/
+  services/test_order_pricing_service.py
+  use_cases/test_quote_order.py
+```
+
+The use-case module defines exactly one same-file `QuoteOrderQuery`. `execute` accepts that one
+keyword-only query and returns the DTO. The query, DTO, and exception use domain names; no
+FastAPI, Pydantic, SQLAlchemy, or provider SDK type enters the core contract.
+
+Every project class inherits the narrowest suitable Specx foundation base and has a concrete
+`Example:` in its docstring. Secret-bearing dataclass fields use `field(repr=False)`.
+
+## 3. Check whether extraction helps
+
+Keep short, action-specific decisions in the use case. Extract behavior only when it has its own
+contract or is reused:
+
+| Category | Use it for |
+| --- | --- |
+| Pure service | Deterministic reusable decisions with no time, randomness, settings, repository, or IO access |
+| Read service | Reusable read orchestration that does not write or own a transaction |
+| Effect service | Reusable behavior that performs effects inside a transaction owned by the caller |
+| Capability | One narrow replaceable ability, such as hashing or ID generation |
+
+A service can accept an active unit of work; it cannot inject a manager and open the scope itself.
+Direct `BaseCapability` subclasses end in `Capability`. A stable capability family can use a local
+base such as `BaseClock`, with implementations such as `SystemClock`.
+
+## 4. Verify behavior and boundaries
+
+Tests mirror the source module and resolve the use case from the native pytest `container` fixture.
+Register one-off mocks or local doubles before resolution when the action has a replaceable
+collaborator, then assert the returned DTO, relevant calls, and each named failure.
+
+```sh
+uv run pytest tests/unit/core/orders/services/test_order_pricing_service.py
+uv run pytest tests/unit/core/orders/use_cases/test_quote_order.py
+uv run specx check
+make check
+```
+
+If the action needs persistence, continue with [Add persistence](?path=/docs/guides-add-persistence--docs).
+For a complete worked feature, see [Build your first core feature](?path=/docs/tutorial-build-your-first-core-feature--docs).
+
+<NextPrev current="guides-add-core-behavior" />

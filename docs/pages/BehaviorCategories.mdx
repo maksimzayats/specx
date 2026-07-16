@@ -1,0 +1,62 @@
+import { Meta, Subtitle, Title } from "@storybook/blocks"
+import { NextPrev } from "@storybookComponents/NextPrev"
+
+<Meta title="Concepts/Use cases, services, and capabilities" />
+
+<Title>Use cases, services, and capabilities</Title>
+<Subtitle>Class categories describe ownership and effects, not importance or file size.</Subtitle>
+
+## Use cases are application actions
+
+A use case is something an external caller can ask the application to do: create an order, quote a
+parcel, issue a token, or import customers. Its `execute` method accepts one explicit same-file command
+or query and returns DTOs.
+
+The single input makes the boundary searchable and gives agents a reliable place to add fields. The
+DTO output prevents persistence entities and framework schemas from becoming an accidental public
+contract.
+
+Commands may change state. Queries are read-only. The checker detects common repository mutations in
+query use cases, but review must also catch write-effect gateways and indirect mutation that static
+name matching cannot prove.
+
+## Services hold reusable core behavior
+
+Services hold reusable business or application behavior used by application actions. Choose the base
+from the effects:
+
+- `BasePureService` is deterministic and independent of IO, settings, time, random values, gateways,
+  repositories, and units of work.
+- `BaseReadService` may coordinate reads and map entities to DTOs. It does not write or own a
+  transaction.
+- `BaseEffectService` may perform external effects or mutate through an active unit of work supplied
+  by the use case. It does not open that unit of work.
+
+There is no generic `BaseService`. The effect category is useful information for both reviewers and
+rules.
+
+## Capabilities are narrow replaceable abilities
+
+A capability does one small thing that may be injected, replaced, or faked: hash a password, sign a
+request, or generate a slug. It does not coordinate a workflow or impersonate a repository, gateway,
+service, helper collection, or manager.
+
+Direct `BaseCapability` subclasses end in `Capability`. When a narrower family deserves its own
+contract, a project-local base can supply a better suffix: `BaseClock` leads to `SystemClock`, not
+`SystemClockCapability`.
+
+## A practical decision test
+
+Ask these questions in order:
+
+1. Is this an externally meaningful application action? Use a use case.
+2. Is it reusable business or application behavior? Use the appropriate service.
+3. Is it one narrow replaceable ability? Use a capability or narrower local foundation base.
+4. Is it access to owned persistence? Use a repository port.
+5. Is it an outbound business capability supplied by another system? Use a gateway port.
+6. Is it only transport behavior? Keep it in delivery.
+
+Plain local functions remain appropriate for implementation details that do not need injection or a
+project class category.
+
+<NextPrev current="concepts-use-cases-services-and-capabilities" />

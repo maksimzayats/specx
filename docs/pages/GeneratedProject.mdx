@@ -1,0 +1,81 @@
+import { Meta, Subtitle, Title } from "@storybook/blocks"
+import { NextPrev } from "@storybookComponents/NextPrev"
+
+<Meta title="Reference/Generated project" />
+
+<Title>Generated project</Title>
+<Subtitle>Baseline structure rendered by `specx init` before optional dependency synchronization.</Subtitle>
+
+For `specx init order-service`, the import package is `order_service`:
+
+```text
+order-service/
+  .gitignore
+  .python-version
+  AGENTS.md
+  Makefile
+  README.md
+  pyproject.toml
+  src/order_service/
+    core/
+      health/
+        dtos/
+          health_status_dto.py
+        enums/
+          health_status_enum.py
+        services/
+          health_status_service.py
+        use_cases/
+          check_health.py
+    ioc/
+      container.py
+  tests/
+    unit/
+      conftest.py
+      core/health/
+        services/test_health_status_service.py
+        use_cases/test_check_health.py
+```
+
+## Baseline behavior
+
+- `HealthStatusEnum.OK` is the one status.
+- `HealthStatusDTO` is the core result.
+- `HealthStatusService` is a pure service returning that result.
+- `CheckHealthQuery` and `CheckHealthUseCase` form the read-only application action.
+- `get_container()` configures recursive DIWire project-class resolution.
+- Unit tests resolve the service and use case through a native pytest container fixture.
+
+This is framework-neutral process health, not a FastAPI route or external-dependency readiness check.
+
+## Tooling
+
+The generated project uses uv-build, strict mypy, strict pytest, Ruff with `select = ["ALL"]`, and
+Specx with `select = ["ALL"]`. Ruff exceptions cover formatter conflicts and deliberate file-category
+conventions, with a plain-language comment beside every ignored code.
+
+The Makefile exposes `check`, `format`, `lint`, and `test`. Validation commands use the lockfile. A
+`--no-sync` render has no declared dependencies, so add them before running the Make targets:
+
+```sh
+uv add specx diwire
+uv add --dev mypy pytest ruff
+```
+
+## Naming behavior
+
+Project names normalize to lowercase ASCII kebab-case. Import packages replace hyphens with
+underscores, prefix a leading digit with `_`, and suffix Python keywords with `_package`. An explicit
+`--package` must already be a lowercase ASCII identifier and not a keyword.
+
+`--python` accepts the syntactic shape `major.minor`; Specx does not maintain a release allowlist.
+The chosen uv, Ruff, mypy, build backend, and dependencies must still support that version. For
+example, a future-looking value can render successfully but be rejected later by current Ruff.
+
+## Deliberate omissions
+
+The initializer does not add FastAPI, delivery packages, databases, SQLAlchemy, Alembic, external
+clients, Docker, CI, a license, git initialization, a local foundation package, or feature-specific
+generators. Add a boundary only when the project has behavior that needs it.
+
+<NextPrev current="reference-generated-project" />

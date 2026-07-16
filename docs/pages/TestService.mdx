@@ -1,0 +1,95 @@
+import { Meta, Subtitle, Title } from "@storybook/blocks"
+import { NextPrev } from "@storybookComponents/NextPrev"
+
+<Meta title="Guides/Test a service" />
+
+<Title>Test a service</Title>
+<Subtitle>Resolve one core service from the application container and replace only the collaborator relevant to the scenario.</Subtitle>
+
+This guide assumes `OrderPricingService` injects `TaxRateCapability` and exposes
+`price(subtotal: Decimal) -> Decimal`.
+
+## 1. Mirror the source path
+
+For this service:
+
+```text
+src/order_service/core/orders/services/order_pricing_service.py
+```
+
+Mirror it with:
+
+```text
+tests/unit/core/orders/services/test_order_pricing_service.py
+```
+
+## 2. Keep the one-off double in the test
+
+```python
+from __future__ import annotations
+
+from dataclasses import dataclass
+from decimal import Decimal
+from typing import TYPE_CHECKING
+
+from order_service.core.orders.capabilities.tax_rate_capability import TaxRateCapability
+from order_service.core.orders.services.order_pricing_service import OrderPricingService
+
+if TYPE_CHECKING:
+    from diwire import Container
+
+
+@dataclass(kw_only=True, slots=True)
+class FixedTaxRateCapability(TaxRateCapability):
+    """Fixed tax-rate capability for order-pricing tests.
+
+    Example:
+        FixedTaxRateCapability(rate=Decimal("0.20"))
+
+    """
+
+    rate: Decimal
+
+    def current_rate(self) -> Decimal:
+        return self.rate
+
+
+def test_order_pricer_adds_tax(container: Container) -> None:
+    capability = FixedTaxRateCapability(rate=Decimal("0.20"))
+    container.add_instance(capability, provides=TaxRateCapability)
+    service = container.resolve(OrderPricingService)
+
+    result = service.price(subtotal=Decimal("10.00"))
+
+    assert result == Decimal("12.0000")
+```
+
+The generated `container` fixture is fresh per test; register overrides before resolving the target.
+
+## 3. Choose another double only when reuse demands it
+
+Use inline `MagicMock`, `AsyncMock`, or `create_autospec` when one behavior changes. Keep a one-off
+class double in its test module. If several unit modules reuse the same capability, gateway, or
+repository double, move it to the mirrored `fake_<source_module>.py` package for that port category.
+
+Do not put project doubles in `conftest.py`, `tests/_support/fakes`, grouped dictionaries, harnesses,
+or target factories.
+
+## 4. Run the focused test, then the project checks
+
+```sh
+uv run pytest tests/unit/core/orders/services/test_order_pricing_service.py
+make check
+```
+
+## 5. Add integration coverage when the boundary changes
+
+A pure service needs no database integration test. A persistence use case needs a core integration
+test against the real unit-of-work graph. A FastAPI controller needs an HTTP integration test with
+ASGI lifespan. Those tests keep internal use cases and services real and replace only external
+systems.
+
+Related: [Testing strategy](?path=/docs/concepts-testing-strategy--docs) and
+[Architecture rules](?path=/docs/reference-architecture-rules--docs).
+
+<NextPrev current="guides-test-a-service" />

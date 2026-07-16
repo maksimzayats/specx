@@ -1,0 +1,118 @@
+import { Meta, Subtitle, Title } from "@storybook/blocks"
+import { NextPrev } from "@storybookComponents/NextPrev"
+
+<Meta title="Reference/Architecture Python API" />
+
+<Title>Architecture Python API</Title>
+<Subtitle>Run checks programmatically, inspect reports, and register project-specific rules.</Subtitle>
+
+## Common imports
+
+`specx.testing.architecture` exports configuration, execution, report, rule-authoring, and error
+types. Unlike the foundation packages, this package has deliberate re-exports.
+
+```python
+from specx.testing.architecture import (
+    ArchitectureContext,
+    BaseRule,
+    SpecxArchitectureConfig,
+    SpecxArchitectureViolation,
+    assert_specx_architecture,
+    check_specx_architecture,
+)
+```
+
+## Configure and run
+
+```python
+from pathlib import Path
+
+from specx.testing.architecture import SpecxArchitectureConfig, check_specx_architecture
+
+
+config = SpecxArchitectureConfig(
+    project_root=Path(__file__).resolve().parents[3],
+    package_name="order_service",
+    select=frozenset({"ALL"}),
+    path_exclusions=("src/order_service/generated/**",),
+)
+
+report = check_specx_architecture(config)
+```
+
+`check_specx_architecture` returns `SpecxArchitectureReport`. Its `violations` and `warnings` are
+tuples; `has_violations` is true only for violations. `report.format()` groups human-readable output
+by rule and differs from the CLI's flat text formatter.
+
+`assert_specx_architecture(config)` raises `AssertionError` only when violations exist. Warnings do
+not fail the assertion.
+
+## Public result and registry types
+
+| Type | Purpose |
+| --- | --- |
+| `RuleIdentifier` | Accepted identifier type alias: a built-in ID, string enum, or string. |
+| `SpecxArchitectureReport` | Immutable violations and warnings returned by a check. |
+| `SpecxArchitectureViolation` | Error diagnostic with rule, path, message, location, and optional symbol. |
+| `SpecxArchitectureWarning` | Non-failing diagnostic with rule, path, message, and location. |
+| `SpecxArchitectureConfig` | Programmatic checker configuration. |
+| `SpecxConfigurationError` | Invalid architecture or project configuration. |
+| `SpecxRuleId` | Built-in rule identifiers exposed as an enum. |
+| `SpecxRuleMetadata` | Registry metadata used by rule listing and explanation. |
+| `SpecxRuleRegistryError` | Duplicate or invalid rule registration and unknown-selector error. |
+
+## Configuration fields
+
+| Field | Type and purpose |
+| --- | --- |
+| `project_root` | Root containing `src/` and `tests/`. |
+| `package_name` | One non-keyword Python identifier. |
+| `select` | Replacement selector set or `None` for defaults. |
+| `extend_select` | Additional selector set. |
+| `disabled_rules` | Exact built-in or custom identifiers to suppress. |
+| `extra_rules` | Tuple of custom rule classes. |
+| `path_exclusions` | Project-relative exclusion patterns. |
+
+## Define a custom rule
+
+```python
+from specx.testing.architecture import (
+    ArchitectureContext,
+    BaseRule,
+    SpecxArchitectureViolation,
+)
+
+
+class RequireLicenseRule(
+    BaseRule[str, ArchitectureContext, SpecxArchitectureViolation],
+):
+    """Require every checked service repository to contain its license file."""
+
+    id = "project.require-license"
+
+    def check(
+        self,
+        context: ArchitectureContext,
+    ) -> tuple[SpecxArchitectureViolation, ...]:
+        license_path = context.project_root / "LICENSE.md"
+        if license_path.is_file():
+            return ()
+
+        return (
+            SpecxArchitectureViolation(
+                rule_id=self.id,
+                path=context.project_root,
+                message="LICENSE.md is required",
+            ),
+        )
+```
+
+Pass the class through `extra_rules=(RequireLicenseRule,)`. Rule IDs must be unique. A rule needs a
+useful class docstring of at least eight words, an identifier-safe family, and any
+`required_project_surface` must be relative without `..` traversal.
+
+`ArchitectureContext` exposes `project_root`, `src_root`, source/core/service path lists, parsed ASTs,
+imports, aliases, and Makefile targets. Custom rules are Python-only; the CLI's TOML loader does not
+discover plugins or import classes.
+
+<NextPrev current="reference-architecture-python-api" />

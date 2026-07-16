@@ -1,0 +1,67 @@
+import { Meta, Subtitle, Title } from "@storybook/blocks"
+import { NextPrev } from "@storybookComponents/NextPrev"
+
+<Meta title="Overview/How Specx works" />
+
+<Title>How Specx works</Title>
+<Subtitle>Four surfaces share one architecture vocabulary but solve different parts of the job.</Subtitle>
+
+## Agent skill catalog
+
+Specx skills tell coding agents where a change belongs, which class shape to use, what to verify, and
+which mistakes to avoid.
+
+Install them with `npx skills add`. Their canonical source is the repository's `skills/` directory.
+
+## Project initializer
+
+`specx init` renders one small framework-neutral Python project. The starter proves the package
+layout, strict tooling, a core health action, DIWire composition, and mirrored unit tests. It does not
+select FastAPI, SQLAlchemy, a database, or a deployment model.
+
+The initializer is intentionally narrow. Later changes are ordinary source changes guided by skills,
+not additional `specx add ...` generators.
+
+## Foundation library
+
+The `specx.core.foundation`, `specx.delivery.foundation`, and
+`specx.infrastructure.foundation` modules provide explicit base categories. A project class declares
+what kind of work it owns by inheriting the relevant base: use case, pure service, gateway,
+controller, settings, and so on.
+
+Import bases from their defining modules; foundation package roots do not re-export them:
+
+```python
+from specx.core.foundation.dto import BaseDTO
+from specx.delivery.foundation.controller import BaseController
+```
+
+## Architecture checker
+
+`specx check` scans Python files under `src/` and `tests/`, applies the selected static rules, and
+reports violations with semantic IDs. The same engine is available through
+`specx.testing.architecture` for Python tests and project-specific rules.
+
+The checker is a guardrail, not a Python interpreter or type checker. It recognizes imports, class
+ancestry, calls, names, paths, and specific documentation patterns. Ruff, mypy, tests, migration
+checks, security review, and human design judgment still cover different failure modes.
+
+## How the surfaces meet
+
+```text
+developer request
+      │
+      ▼
+agent applies one or more Specx skills
+      │
+      ▼
+project code inherits Specx foundation categories
+      │
+      ▼
+Ruff + typing + tests + specx check validate the change
+```
+
+Adopt the surfaces independently: an existing service can start with the checker, teams can use the
+bases and CLI without skills, and skills can precede enforcement.
+
+<NextPrev current="overview-how-specx-works" />

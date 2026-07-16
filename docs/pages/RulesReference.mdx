@@ -1,0 +1,94 @@
+import { Meta, Subtitle, Title } from "@storybook/blocks"
+import { NextPrev } from "@storybookComponents/NextPrev"
+
+<Meta title="Reference/Architecture rules" />
+
+<Title>Architecture rules</Title>
+<Subtitle>The 40 built-in static checks grouped by the boundary they protect.</Subtitle>
+
+All rules are in the `neutral` family and enabled by default unless marked **FastAPI opt-in**. Run
+`specx rule explain RULE_ID` for the current rule documentation.
+
+## Layers and packages
+
+| Rule ID | What it checks |
+| --- | --- |
+| `core.inner-packages-no-outer-layers-or-io-libraries` | Inner core avoids delivery, infrastructure, IOC, and known IO imports. |
+| `core.scope-infrastructure-does-not-import-delivery` | Scope adapters do not depend on delivery code. |
+| `delivery.controllers-do-not-import-infrastructure` | Controllers reach core use cases rather than concrete adapters. |
+| `core.no-scope-delivery-packages` | Delivery does not live below a core scope. |
+| `foundation.imports-use-scoped-packages` | Removed `specx.foundation` imports are rejected. |
+| `packages.init-files-are-empty` | Every project `__init__.py` is byte-empty, including no comments or re-exports. |
+
+## Use cases and DTOs
+
+| Rule ID | What it checks |
+| --- | --- |
+| `use-cases.no-entity-imports-or-returns` | Use cases do not expose persistence entities. |
+| `use-cases.return-dtos` | Use-case results are DTO types. |
+| `dtos.result-dtos-live-under-dtos` | Result DTO classes live in the scope `dtos` package. |
+| `use-cases.inputs-are-local-commands-or-queries` | `execute` accepts one same-file command or query. |
+| `use-cases.commands-and-queries-live-local` | Command/query classes stay in use-case modules. |
+| `use-cases.queries-do-not-mutate` | Queries avoid recognized repository mutator calls. |
+
+## Capabilities and gateways
+
+| Rule ID | What it checks |
+| --- | --- |
+| `capabilities.placement-and-suffix` | Capability classes use the package and suffix implied by their base. |
+| `capabilities.no-workflows-or-port-roles` | Capabilities do not use workflow, service, manager, repository, or gateway roles. |
+| `gateways.ports-and-implementations-placement` | Gateway ports and concrete adapters stay in distinct packages. |
+| `gateways.external-effects-and-no-entity-returns` | Gateway docstrings declare effects and methods avoid entity results. |
+
+## Classes and services
+
+| Rule ID | What it checks |
+| --- | --- |
+| `classes.require-explicit-bases` | Non-foundation source classes declare an explicit base. |
+| `classes.require-example-docstrings` | Project classes state their scope and include a real `Example:` block. |
+| `classes.suffix-from-foundation-category` | Class names follow the most specific foundation category. |
+| `classes.no-raw-common-bases` | Common raw bases are wrapped by scoped foundation bases. |
+| `services.require-service-suffix` | Classes under service packages end in `Service`. |
+| `services.require-effect-specific-bases` | Core services choose pure, read, or effect. |
+| `services.no-generic-base-service` | A generic `BaseService` is rejected. |
+| `services.pure-no-io-or-runtime-state` | Pure services avoid known IO and nondeterministic dependencies. |
+| `services.read-no-writes-or-transactions` | Read services avoid recognized writes and transaction ownership. |
+| `services.effect-no-owned-transactions-or-delivery` | Effect services do not open transactions or import delivery. |
+
+## Composition, runtime, and delivery
+
+| Rule ID | Status | What it checks |
+| --- | --- | --- |
+| `diwire.container-import-boundary` | Default | Container imports stay in composition, outer app modules, and tests. |
+| `logging.no-injected-loggers` | Default | Loggers are not injected or registered in DIWire. |
+| `sqlalchemy.no-schema-bootstrap-calls` | Default | Source and tests avoid `metadata.create_all` and `drop_all`. |
+| `agents-md.documents-commands-and-boundaries` | Default | `AGENTS.md` agrees with project commands and core boundaries. |
+| `delivery.routes-use-full-api-v1-paths` | **FastAPI opt-in** | Business routes use full `/api/v1/...` paths; probes are exceptions. |
+| `fastapi.agents-md-documents-delivery` | **FastAPI opt-in** | FastAPI projects document entrypoint and lifecycle ownership. |
+
+## Tests
+
+| Rule ID | What it checks |
+| --- | --- |
+| `tests.mirror-source-structure` | Meaningful tests mirror source modules with flat `test_<module>.py` files. |
+| `tests.fixtures-do-not-bundle-mocks` | Fixtures do not return grouped dictionaries or class-keyed mock bundles. |
+| `tests.integration-does-not-mock-internal-collaborators` | Integration tests do not replace internal use cases, services, or capabilities. |
+
+## Units of work
+
+| Rule ID | What it checks |
+| --- | --- |
+| `uow.services-do-not-open-scopes` | Services do not enter unit-of-work contexts. |
+| `uow.use-cases-open-at-most-one-scope` | One execution opens at most one manager scope. |
+| `uow.use-cases-inject-managers` | Persistence use cases inject managers rather than active units or providers. |
+| `uow.use-cases-no-direct-repositories-or-infrastructure` | Use cases reach persistence through the active unit of work. |
+| `uow.ioc-does-not-register-active-uow` | IOC does not register active units of work. |
+
+## Enforcement boundary
+
+These are AST heuristics, not proofs. They recognize particular paths, imports, names, calls,
+annotations, and docstring markers. For example, query mutation checks known repository mutator names;
+review still owns write-effect gateways and indirect mutation. See [Limitations](?path=/docs/reference-limitations--docs)
+for the full boundary between enforced and review-only policy.
+
+<NextPrev current="reference-architecture-rules" />

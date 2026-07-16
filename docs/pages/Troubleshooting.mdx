@@ -1,0 +1,86 @@
+import { Meta, Subtitle, Title } from "@storybook/blocks"
+import { NextPrev } from "@storybookComponents/NextPrev"
+
+<Meta title="Reference/Troubleshooting" />
+
+<Title>Troubleshooting</Title>
+<Subtitle>Common initializer, configuration, and architecture-check failures.</Subtitle>
+
+## Specx cannot discover the package
+
+`specx check` expects `src/` and exactly one importable directory containing Python files. Add the
+package when the repository has more than one candidate:
+
+```toml
+[tool.specx]
+package = "order_service"
+```
+
+One check invocation governs one package. Run separate commands for separate services.
+
+## The project root is rejected
+
+Pass the directory containing `pyproject.toml`:
+
+```sh
+uv run specx check /workspace/order-service
+```
+
+Missing or invalid TOML, unknown `[tool.specx]` keys, empty strings, and non-array selector fields are
+configuration errors with status 2.
+
+## A selector or ignored rule is unknown
+
+List the current built-ins and copy the exact semantic ID:
+
+```sh
+uv run specx rule list
+uv run specx rule explain use-cases.return-dtos
+```
+
+`ignore` accepts exact IDs, not families. `select` and `extend-select` also accept families and `ALL`.
+
+## Explicit FastAPI selection reports a warning
+
+An explicitly selected FastAPI rule needs Python files below `src/<package>/delivery/fastapi`. Remove
+the selector if the service is framework-neutral. If FastAPI is planned but not implemented, do not
+create empty packages to silence the warning; enable the family with the real delivery slice.
+
+Under `select = ["ALL"]`, absent technology surfaces skip silently.
+
+## A package initializer violation remains
+
+`packages.init-files-are-empty` means byte-empty. Remove comments, docstrings, `__all__`, and re-export
+imports. Import project classes from their defining modules.
+
+## A syntax error stops the scan
+
+Specx parses Python files before applying rules. Fix syntax errors or exclude generated source that
+cannot be parsed. A parse failure is an execution error with status 2, not an architecture violation.
+
+## `specx init` refuses the target
+
+The target may be new, empty, or contain only a `.git` directory. It cannot be a symlink, file, or
+partially populated project. Choose a new directory; the initializer never overlays an existing
+service.
+
+## Dependency synchronization fails after initialization
+
+The rendered files stay in place. From the target, rerun the command named in the error:
+
+```sh
+uv add specx diwire
+uv add --dev mypy pytest ruff
+make check
+```
+
+If uv was missing before initialization, Specx does not write project files unless `--no-sync` was
+explicitly selected.
+
+## Ruff rejects the generated Python target
+
+`--python` validates `major.minor` syntax, not support across the selected toolchain. Choose a Python
+version supported by the current Ruff, mypy, build backend, dependencies, and interpreter, then
+regenerate in a new target or update the rendered tooling consistently.
+
+<NextPrev current="reference-troubleshooting" />

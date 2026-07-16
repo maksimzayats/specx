@@ -1,0 +1,62 @@
+import { Meta, Subtitle, Title } from "@storybook/blocks"
+import { NextPrev } from "@storybookComponents/NextPrev"
+
+<Meta title="Concepts/Ports and adapters" />
+
+<Title>Ports and adapters</Title>
+<Subtitle>Let core name the external capability and let infrastructure translate the technology.</Subtitle>
+
+## Repository or gateway
+
+Use a repository for persistence the service owns. Its methods use domain language and may return
+entities for internal work.
+
+Use a gateway for an outbound capability supplied by another system: payment capture, email delivery,
+shipment booking, or text generation. A gateway uses business language, documents its external
+effects, and returns DTOs, primitives, enums, or explicit result objects—not entities, SDK responses,
+or HTTP objects.
+
+```python
+class TaskSummaryGateway(BaseGateway):
+    """Generate summaries through an external provider.
+
+    External effect: calls the configured text-generation provider.
+
+    Example:
+        summary = await gateway.generate(description="Ship the release")
+
+    """
+
+    @abstractmethod
+    async def generate(self, *, description: str) -> TaskSummaryDTO:
+        raise NotImplementedError
+```
+
+`BaseGateway`, `BaseRepository`, and `BaseUnitOfWork` derive from `ABC`, but project methods become
+abstract only when you mark them with `@abstractmethod`.
+
+## Adapters translate technology
+
+A concrete adapter lives under `core/<scope>/infrastructure/<technology>/` and implements the port.
+It owns SQL, SDK calls, HTTP payloads, queue records, cache keys, and provider error translation.
+
+Inject clients and factories rather than constructing them inside business methods. Short-lived
+clients may have a bounded factory beside the adapter. App-owned pooled clients live under top-level
+infrastructure and close from delivery lifecycle.
+
+## Keep failures meaningful and safe
+
+Translate a low-level exception only when a caller has a useful application response. Catch the
+narrow driver or SDK error, preserve the cause, and avoid leaking provider text, SQL, parameters,
+request bodies, credentials, or full URLs.
+
+Not every technical error needs a new core exception. Unhandled operational failures can propagate to
+the top-level error policy when no core decision depends on their category.
+
+## Do not create ports for testing alone
+
+Use a port when IO, framework coupling, or multiple real implementations create a boundary. A single
+deterministic concrete collaborator can be injected and replaced in a unit test without an interface.
+Ports are part of the application language and should earn that permanence.
+
+<NextPrev current="concepts-ports-and-adapters" />

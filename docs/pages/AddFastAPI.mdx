@@ -1,0 +1,94 @@
+import { Meta, Subtitle, Title } from "@storybook/blocks"
+import { NextPrev } from "@storybookComponents/NextPrev"
+
+<Meta title="Guides/Add FastAPI delivery" />
+
+<Title>Add FastAPI delivery</Title>
+<Subtitle>Expose existing use cases through schemas, a controller, an app factory, and lifecycle tests.</Subtitle>
+
+## Prerequisites
+
+Start with a tested core use case. Decide the public path, success status, request/response fields,
+known application errors, and any long-lived resources the app must close. Install the Specx skills.
+
+## 1. Describe the HTTP contract
+
+```text
+Use $specx-add-delivery-controller, $specx-diwire-composition,
+$specx-project-tooling, and $specx-tests.
+
+Expose CreateOrderUseCase as POST /api/v1/orders. Add strict request and response schemas,
+an OrdersController, FastAPIFactory, FastAPILifecycle, the runtime entrypoint, dependencies,
+Makefile dev command, and HTTP integration tests. Return 201 on success and translate
+OrderAlreadyExistsError to a non-sensitive 409 response. Run ASGI lifespan in tests.
+```
+
+Name every error contract explicitly. The controller should never return a raw exception message or
+import a concrete repository, ORM model, session, or scope adapter.
+
+## 2. Verify the delivery files
+
+The first slice normally adds:
+
+```text
+src/order_service/delivery/fastapi/
+  __main__.py
+  factory.py
+  lifecycle.py
+  controllers/orders.py
+  schemas/orders_schema.py
+tests/integration/delivery/fastapi/controllers/test_orders.py
+```
+
+Schemas inherit `BaseFastAPISchema`. The controller inherits
+`BaseController[APIRouter]`, maps request data into `CreateOrderCommand`, calls the use case, and maps
+its DTO into the response schema.
+
+The controller registers the full `/api/v1/orders` path and declares 201. Delivery-only auth, rate
+limiting, request context, or response metadata belongs under `delivery/fastapi/services/`.
+
+## 3. Verify app composition and shutdown
+
+`FastAPIFactory` inherits `BaseFactory`, receives controllers and `FastAPILifecycle` through
+`Injected[...]`, registers routers, and returns the app. The runtime entrypoint configures logging,
+resolves the factory, and calls it.
+
+`FastAPILifecycle` inherits `BaseLifecycle[FastAPI]`. It closes each app-owned pooled resource and
+then calls `container.aclose()` in nested `finally` blocks. It is the only project class that injects
+`diwire.Container`, solely for shutdown. It does not run migrations, create schemas, or execute use
+cases.
+
+## 4. Run the delivery
+
+Use the Make target generated for the project, then call the exact path:
+
+```sh
+make dev
+curl -i \
+  -X POST http://127.0.0.1:8000/api/v1/orders \
+  -H 'content-type: application/json' \
+  -d '{"sku":"SKU-1"}'
+```
+
+Confirm the response is 201 and matches the response schema. Do not put real credentials in shell
+history or documentation examples.
+
+## 5. Verify the HTTP boundary
+
+Integration tests enter `LifespanManager`, pass `manager.app` into HTTPX2's `ASGITransport`, and
+exercise the container's production bindings. Cover the success response, request validation, and
+every translated application error. Compare status codes with `fastapi.status` constants.
+
+```sh
+uv run pytest tests/integration/delivery/fastapi/controllers/test_orders.py
+uv run specx check
+make check
+```
+
+If the service exposes probes, keep process liveness at `/healthz`; use `/readyz` with bounded core
+gateway checks for required dependencies. Both are unversioned and excluded from OpenAPI.
+
+Related: [Architecture boundaries](?path=/docs/concepts-architecture-boundaries--docs) and
+[Testing strategy](?path=/docs/concepts-testing-strategy--docs).
+
+<NextPrev current="guides-add-fastapi-delivery" />
