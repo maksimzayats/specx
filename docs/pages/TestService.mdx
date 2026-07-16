@@ -17,16 +17,13 @@ For this service:
 src/order_service/core/orders/services/order_pricing_service.py
 ```
 
-create this test module and empty package initializers along the path:
+Mirror it with:
 
 ```text
 tests/unit/core/orders/services/test_order_pricing_service.py
 ```
 
 ## 2. Keep the one-off double in the test
-
-The complete test file defines one fixed capability, registers it before resolution, and tests the
-real service:
 
 ```python
 from __future__ import annotations
@@ -67,9 +64,7 @@ def test_order_pricer_adds_tax(container: Container) -> None:
     assert result == Decimal("12.0000")
 ```
 
-The generated `tests/unit/conftest.py` supplies a fresh application container. The test changes the
-one scenario dependency before `container.resolve(...)`; it does not construct a second application
-graph.
+The generated `container` fixture is fresh per test; register overrides before resolving the target.
 
 ## 3. Choose another double only when reuse demands it
 
@@ -86,9 +81,6 @@ or target factories.
 uv run pytest tests/unit/core/orders/services/test_order_pricing_service.py
 make check
 ```
-
-The first command gives a short edit loop. The second catches formatting, typing, the full suite, and
-architecture drift.
 
 ## 5. Add integration coverage when the boundary changes
 

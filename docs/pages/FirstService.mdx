@@ -25,31 +25,20 @@ make check
 
 ## 2. Add the package files
 
-Create empty `__init__.py` files in each new package. Specx keeps package initializers empty so imports
-point to the module that owns a class.
-
 ```text
 src/parcel_service/core/parcels/
-  __init__.py
   dtos/
-    __init__.py
     parcel_quote_dto.py
   exceptions/
-    __init__.py
     invalid_parcel_weight_value_error.py
   services/
-    __init__.py
     parcel_quote_service.py
   use_cases/
-    __init__.py
     quote_parcel.py
 tests/unit/core/parcels/
-  __init__.py
   services/
-    __init__.py
     test_parcel_quote_service.py
   use_cases/
-    __init__.py
     test_quote_parcel.py
 ```
 

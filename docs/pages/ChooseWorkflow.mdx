@@ -56,11 +56,10 @@ Use `specx-component-architecture` to map the current structure before moving fi
 package, configure a small selector set, fix violations by boundary, then broaden selection. See
 [Adopt Specx in an existing service](?path=/docs/guides-adopt-specx-in-an-existing-service--docs).
 
-## When not to add another abstraction
+## Choose the narrowest abstraction
 
-Do not create an interface only to make a concrete collaborator mockable. Use a port for external IO
-or for multiple real implementations. Do not turn every helper into a service; a narrow replaceable
-ability may be a capability, while a local pure function may need no class at all unless project
-policy requires one.
+Use repository ports for owned persistence and gateway ports for outbound business effects. Model a
+narrow replaceable non-IO ability as a capability; keep a local pure implementation detail as a
+function when it needs no project class category.
 
 <NextPrev current="overview-choose-a-workflow" />

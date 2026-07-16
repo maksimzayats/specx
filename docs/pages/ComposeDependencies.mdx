@@ -8,9 +8,9 @@ import { NextPrev } from "@storybookComponents/NextPrev"
 
 ## Prerequisites
 
-Finish the core port and its concrete adapter first. Know which resources are process-owned and need
-shutdown. The initializer must already have created `ioc/container.py` and the native pytest
-`container` fixture.
+Finish the core port and concrete adapter first, identify process-owned resources that need shutdown,
+and add or update `ioc/container.py` plus the native pytest `container` fixture as part of the
+composition change.
 
 ## 1. Describe the edge bindings
 

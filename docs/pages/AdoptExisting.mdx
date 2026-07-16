@@ -8,9 +8,10 @@ import { NextPrev } from "@storybookComponents/NextPrev"
 
 ## 1. Map the current service
 
-Identify the import package, runtime entrypoints, application actions, delivery frameworks, database
-ownership, external clients, composition mechanism, migration system, and test layers. Do this before
-moving files: a repository named `services/` may contain several different responsibilities.
+Identify the source package and map application actions, external IO, transaction ownership, schema
+migration ownership, delivery entrypoints, and composition to Specx's `core`, scope infrastructure,
+`delivery`, top-level `infrastructure`, and `ioc` boundaries. Identify the corresponding test layers
+before moving files.
 
 ## 2. Add the package
 

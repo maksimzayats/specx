@@ -40,7 +40,7 @@ src/order_service/delivery/fastapi/
 tests/integration/delivery/fastapi/controllers/test_orders.py
 ```
 
-Every package initializer is empty. Schemas inherit `BaseFastAPISchema`. The controller inherits
+Schemas inherit `BaseFastAPISchema`. The controller inherits
 `BaseController[APIRouter]`, maps request data into `CreateOrderCommand`, calls the use case, and maps
 its DTO into the response schema.
 

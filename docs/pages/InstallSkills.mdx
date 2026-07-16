@@ -38,9 +38,6 @@ Replace `'*'` with a skill name when the agent only needs a narrow workflow:
 npx skills add maksimzayats/specx --skill specx-add-core-use-case --agent codex -y
 ```
 
-Most backend projects benefit from the full catalog because a feature often crosses core, delivery,
-composition, infrastructure, and tests.
-
 ## Use a skill
 
 Name a skill in the request when you want its workflow applied explicitly:
@@ -55,8 +52,7 @@ that lets the agent choose it from the task.
 
 ## Update the catalog
 
-Run the install command again to pick up the current repository version. Review skill changes in the
-same way you review dependency or toolchain changes: they can alter the shape of future generated
-code even though they do not mutate an existing service by themselves.
+Run the install command again to update. Review skill diffs because they can change future agent
+decisions and code structure.
 
 <NextPrev current="guides-install-agent-skills" />

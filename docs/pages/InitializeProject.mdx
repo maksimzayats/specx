@@ -22,8 +22,8 @@ uv add specx diwire
 uv add --dev mypy pytest ruff
 ```
 
-uv selects compatible versions and writes the environment and lockfile. Specx does not render stale
-dependency floors into a new project.
+uv resolves compatible versions during initialization and writes the environment and lockfile; the
+rendered template does not declare fixed dependency floors.
 
 ## Set names or Python explicitly
 
@@ -47,8 +47,8 @@ shape-checked rather than restricted to a release list.
 
 ## Render without dependency changes
 
-Use `--no-sync` for an offline review, a workspace with centralized dependency management, or a test
-of generated output:
+Use `--no-sync` when a workspace manages dependencies centrally or when you only need to inspect or
+test the rendered files:
 
 ```sh
 uvx specx init billing-service --no-sync
