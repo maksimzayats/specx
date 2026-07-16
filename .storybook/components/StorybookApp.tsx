@@ -1,9 +1,11 @@
 import { DocsContainer, type DocsContainerProps } from "@storybook/blocks"
+import { MDXProvider } from "@mdx-js/react"
 import type { Decorator } from "@storybook/react"
 import React, { type PropsWithChildren, useLayoutEffect } from "react"
 
 import { DEFAULT_THEME, type Theme } from "../addon-theme/constants"
 import { THEMES } from "../addon-theme/themes"
+import { CodeBlock } from "./CodeBlock"
 
 type DocsContextWithGlobals = DocsContainerProps & {
   context: DocsContainerProps["context"] & {
@@ -31,8 +33,10 @@ export const CustomDocsContainer = ({
 
   useLayoutEffect(() => applyDocumentTheme(theme), [theme])
   return (
-    <DocsContainer context={context} theme={THEMES[theme]}>
-      {children}
-    </DocsContainer>
+    <MDXProvider components={{ pre: (props) => <CodeBlock {...props} theme={theme} /> }}>
+      <DocsContainer context={context} theme={THEMES[theme]}>
+        {children}
+      </DocsContainer>
+    </MDXProvider>
   )
 }

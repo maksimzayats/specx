@@ -132,14 +132,11 @@ body {
   margin-bottom: 28px !important;
 }
 
-.sbdocs-content code {
+.sbdocs-content :not(pre) > code {
   border: 1px solid var(--alpha-12) !important;
   border-radius: 4px !important;
   background: light-dark(var(--gray-25), var(--alpha-08)) !important;
   color: var(--text) !important;
-}
-
-.sbdocs-content :not(pre) > code {
   white-space: normal !important;
   overflow-wrap: anywhere;
 }
@@ -277,6 +274,50 @@ body {
   border-radius: var(--radius-md) !important;
   background: light-dark(var(--gray-25), #181818) !important;
   box-shadow: none !important;
+}
+
+.specx-code-block {
+  position: relative;
+  margin: 25px 0 40px !important;
+}
+
+.specx-code-block > pre {
+  overflow-x: auto !important;
+  margin: 0 !important;
+  background: transparent !important;
+  font-size: 14px !important;
+  line-height: 20px !important;
+}
+
+.specx-code-block > pre code {
+  border: 0 !important;
+  background: transparent !important;
+  font-family:
+    ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Monaco, Consolas, monospace !important;
+}
+
+.specx-code-copy {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  padding: 8px 16px;
+  border: 1px solid var(--alpha-12);
+  border-radius: 8px 0 0;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.specx-code-copy:hover {
+  background: var(--gray-50);
+}
+
+.specx-code-copy:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -3px;
 }
 
 .specx-card-grid {
