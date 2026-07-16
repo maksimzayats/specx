@@ -17,6 +17,9 @@
   --text-secondary: light-dark(#5d5d5d, #afafaf);
   --surface: light-dark(#ffffff, #212121);
   --focus-ring: light-dark(#3a10e5, #9f8cff);
+  --font-code:
+    "JetBrains Mono", ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Monaco, Consolas,
+    monospace;
   --radius-md: 8px;
 }
 
@@ -137,6 +140,7 @@ body {
   border-radius: 4px !important;
   background: light-dark(var(--gray-25), var(--alpha-08)) !important;
   color: var(--text) !important;
+  font-family: var(--font-code) !important;
   white-space: normal !important;
   overflow-wrap: anywhere;
 }
@@ -285,6 +289,7 @@ body {
   overflow-x: auto !important;
   margin: 0 !important;
   background: transparent !important;
+  font-family: var(--font-code) !important;
   font-size: 14px !important;
   line-height: 20px !important;
 }
@@ -292,8 +297,7 @@ body {
 .specx-code-block > pre code {
   border: 0 !important;
   background: transparent !important;
-  font-family:
-    ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Monaco, Consolas, monospace !important;
+  font-family: var(--font-code) !important;
 }
 
 .specx-code-copy {
@@ -474,7 +478,7 @@ body {
   margin: 18px 0 28px;
   background: light-dark(var(--gray-25), var(--alpha-04));
   color: var(--text);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-code);
   font-size: 14px;
   line-height: 22px;
   white-space: pre;

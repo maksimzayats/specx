@@ -5,7 +5,7 @@ import type { Theme } from "./constants"
 const fontBase =
   'ui-sans-serif, -apple-system, system-ui, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif'
 const fontCode =
-  'ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Monaco, Consolas, monospace'
+  '"JetBrains Mono", ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Monaco, Consolas, monospace'
 
 const light = create({
   base: "light",

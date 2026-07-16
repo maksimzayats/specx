@@ -16,6 +16,7 @@
     "uuid": "^11.1.1"
   },
   "devDependencies": {
+    "@fontsource/jetbrains-mono": "^5.2.8",
     "@mdx-js/react": "^3.1.0",
     "@storybook/addon-docs": "^8.6.18",
     "@storybook/addon-essentials": "8.6.18",

@@ -1,4 +1,6 @@
 import type { Preview } from "@storybook/react"
+import "@fontsource/jetbrains-mono/latin-400.css"
+import "@fontsource/jetbrains-mono/latin-600.css"
 
 import { getThemeStore } from "./addon-theme/themeStore"
 import { CustomDocsContainer, WithTheme } from "./components/StorybookApp"
