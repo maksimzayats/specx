@@ -31,8 +31,22 @@ for (const page of pages) {
 console.log(`Generated ${pages.length} canonical documentation routes.`)
 
 function findOutputDirectory(args) {
+  const inlineOption = args.find((argument) => argument.startsWith("--output-dir="))
+  if (inlineOption) {
+    return inlineOption.slice("--output-dir=".length)
+  }
+
   const optionIndex = args.findIndex((argument) => argument === "--output-dir" || argument === "-o")
-  return optionIndex === -1 ? "storybook-static" : args[optionIndex + 1]
+  if (optionIndex === -1) {
+    return "storybook-static"
+  }
+
+  const outputDirectory = args[optionIndex + 1]
+  if (!outputDirectory || outputDirectory.startsWith("-")) {
+    throw new Error("--output-dir requires a directory path")
+  }
+
+  return outputDirectory
 }
 
 function run(command, args) {

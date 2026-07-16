@@ -10,6 +10,7 @@ const navigationSource = await readFile(
 )
 const navigationPages = await readNavigationPages(root)
 const navigationPaths = new Set(navigationPages.map((page) => page.path))
+const navigationRoutes = new Set(navigationPages.map((page) => storyPathToRoute(page.path)))
 const failures = []
 
 const previewSource = await readFile(path.join(root, ".storybook", "preview.ts"), "utf8")
@@ -65,10 +66,10 @@ for (const file of docsFiles) {
     failures.push(`${file}: internal documentation links must use canonical /docs/ routes.`)
   }
 
-  for (const linkMatch of source.matchAll(/\/docs\/([a-z0-9-]+)\/([a-z0-9-]+)\//g)) {
-    const storyPath = `${linkMatch[1]}-${linkMatch[2]}`
-    if (!navigationPaths.has(storyPath)) {
-      failures.push(`${file}: internal documentation link targets unknown path ${storyPath}.`)
+  const linkedRoutes = new Set([...source.matchAll(/\/docs\/[a-z0-9][a-z0-9/-]*/g)].map((match) => match[0]))
+  for (const route of linkedRoutes) {
+    if (!navigationRoutes.has(route)) {
+      failures.push(`${file}: internal documentation link is not a canonical route: ${route}.`)
     }
   }
 }
@@ -99,7 +100,16 @@ if (process.argv.includes("--built")) {
 
     const routeEntry = path.join(root, "storybook-static", storyPathToRoute(page.path), "index.html")
     try {
-      await readFile(routeEntry, "utf8")
+      const routeHtml = await readFile(routeEntry, "utf8")
+      const baseIndex = routeHtml.indexOf('<base href="/" />')
+      const firstRelativeAssetIndex = routeHtml.search(/(?:href|src)="\.\//)
+
+      if (baseIndex === -1 || (firstRelativeAssetIndex !== -1 && baseIndex > firstRelativeAssetIndex)) {
+        failures.push(`Built documentation route loads relative assets before its base URL: ${storyPathToRoute(page.path)}.`)
+      }
+      if (!routeHtml.includes("restoreStorybookRoute")) {
+        failures.push(`Built documentation route is missing its Storybook bootstrap: ${storyPathToRoute(page.path)}.`)
+      }
     } catch {
       failures.push(`Built documentation route is missing ${storyPathToRoute(page.path)}.`)
     }
