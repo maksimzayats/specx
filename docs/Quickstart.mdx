@@ -40,7 +40,8 @@ only want the files and will manage dependencies yourself.
 
 The result includes a small health slice:
 
-<pre className="specx-path"><code>{`src/order_service/
+```text
+src/order_service/
   core/health/
     dtos/health_status_dto.py
     enums/health_status_enum.py
@@ -50,7 +51,8 @@ The result includes a small health slice:
 tests/unit/core/health/
 AGENTS.md
 Makefile
-pyproject.toml`}</code></pre>
+pyproject.toml
+```
 
 There is no FastAPI app, database, migration directory, or empty placeholder layer. Add those only
 when the service needs them.
