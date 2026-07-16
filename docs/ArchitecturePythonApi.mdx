@@ -6,7 +6,7 @@ import { NextPrev } from "@storybookComponents/NextPrev"
 <Title>Architecture Python API</Title>
 <Subtitle>Run checks programmatically, inspect reports, and register project-specific rules.</Subtitle>
 
-## Public imports
+## Common imports
 
 `specx.testing.architecture` exports configuration, execution, report, rule-authoring, and error
 types. Unlike the foundation packages, this package has deliberate re-exports.
@@ -51,15 +51,15 @@ not fail the assertion.
 
 | Type | Purpose |
 | --- | --- |
-| `RuleIdentifier` | Validated semantic rule identifier used by rules and registry lookups. |
+| `RuleIdentifier` | Accepted identifier type alias: a built-in ID, string enum, or string. |
 | `SpecxArchitectureReport` | Immutable violations and warnings returned by a check. |
 | `SpecxArchitectureViolation` | Error diagnostic with rule, path, message, location, and optional symbol. |
 | `SpecxArchitectureWarning` | Non-failing diagnostic with rule, path, message, and location. |
 | `SpecxArchitectureConfig` | Programmatic checker configuration. |
-| `SpecxConfigurationError` | Invalid project configuration or selector error. |
+| `SpecxConfigurationError` | Invalid architecture or project configuration. |
 | `SpecxRuleId` | Built-in rule identifiers exposed as an enum. |
 | `SpecxRuleMetadata` | Registry metadata used by rule listing and explanation. |
-| `SpecxRuleRegistryError` | Duplicate or invalid rule registration error. |
+| `SpecxRuleRegistryError` | Duplicate or invalid rule registration and unknown-selector error. |
 
 ## Configuration fields
 

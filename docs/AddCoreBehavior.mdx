@@ -4,7 +4,7 @@ import { NextPrev } from "@storybookComponents/NextPrev"
 <Meta title="Guides/Add core behavior" />
 
 <Title>Add core behavior</Title>
-<Subtitle>Turn one application action into a tested use case, then extract only the behavior that is genuinely shared.</Subtitle>
+<Subtitle>Turn one application action into a tested use case; extract behavior only when it has its own contract or is reused.</Subtitle>
 
 ## Prerequisites
 
@@ -12,35 +12,37 @@ Choose one application action and write down its input, result, known failures, 
 writes, or calls an external system. Work inside one existing `core/<scope>/` package. Install the
 Specx skills before asking an agent to make the change.
 
-## 1. Ask for one vertical slice
+## 1. Describe the application action
 
 ```text
 Use $specx-add-core-use-case, $specx-add-core-service, and $specx-tests.
 
-Add CancelOrderUseCase to the orders scope. It accepts one CancelOrderCommand with order_id,
-loads the order inside a unit of work, rejects an order that has already shipped, records the
-cancellation, and returns CancelOrderDTO. Add the smallest service or capability only if behavior
-is reused. Add focused unit tests for success, missing order, and already-shipped order. Run the
-architecture checker and the relevant tests.
+Add QuoteOrderUseCase to the orders scope. It accepts one QuoteOrderQuery with subtotal_pence,
+uses an OrderPricingService to apply the deterministic pricing policy, and returns OrderQuoteDTO.
+Reject a negative subtotal with a named application value error. Add focused unit tests for the
+service and use case. Run the architecture checker and the relevant tests.
 ```
 
 State the business outcomes rather than prescribing every class. The selected skills supply the
 repository's class categories, naming rules, injection style, and test layout.
 
-## 2. Inspect the core files
+## 2. Verify the core files
 
-A persistence-backed action normally changes a small set of files:
+A framework-neutral calculation normally changes a small set of files:
 
 ```text
 src/order_service/core/orders/
-  dtos/cancel_order_dto.py
-  exceptions/order_already_shipped_error.py
-  use_cases/cancel_order.py
-tests/unit/core/orders/use_cases/test_cancel_order.py
+  dtos/order_quote_dto.py
+  exceptions/invalid_order_subtotal_value_error.py
+  services/order_pricing_service.py
+  use_cases/quote_order.py
+tests/unit/core/orders/
+  services/test_order_pricing_service.py
+  use_cases/test_quote_order.py
 ```
 
-The use-case module defines exactly one same-file `CancelOrderCommand`. `execute` accepts that one
-keyword-only command and returns the DTO. The command, DTO, and exception use domain names; no
+The use-case module defines exactly one same-file `QuoteOrderQuery`. `execute` accepts that one
+keyword-only query and returns the DTO. The query, DTO, and exception use domain names; no
 FastAPI, Pydantic, SQLAlchemy, or provider SDK type enters the core contract.
 
 Every project class inherits the narrowest suitable Specx foundation base and has a concrete
@@ -65,11 +67,12 @@ base such as `BaseClock`, with implementations such as `SystemClock`.
 ## 4. Verify behavior and boundaries
 
 Tests mirror the source module and resolve the use case from the native pytest `container` fixture.
-Register one-off mocks or local doubles before resolution, then assert the returned DTO, relevant
-collaborator calls, and each named failure.
+Register one-off mocks or local doubles before resolution when the action has a replaceable
+collaborator, then assert the returned DTO, relevant calls, and each named failure.
 
 ```sh
-uv run pytest tests/unit/core/orders/use_cases/test_cancel_order.py
+uv run pytest tests/unit/core/orders/services/test_order_pricing_service.py
+uv run pytest tests/unit/core/orders/use_cases/test_quote_order.py
 uv run specx check
 make check
 ```

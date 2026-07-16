@@ -204,11 +204,15 @@ def test_quote_rounds_weight_up_to_a_kilogram(container: Container) -> None:
     assert result.amount_pence == 725
 
 
-def test_quote_rejects_non_positive_weight(container: Container) -> None:
+@pytest.mark.parametrize("weight_grams", [0, -1])
+def test_quote_rejects_non_positive_weight(
+    container: Container,
+    weight_grams: int,
+) -> None:
     service = container.resolve(ParcelQuoteService)
 
     with pytest.raises(InvalidParcelWeightValueError):
-        service.quote(weight_grams=0)
+        service.quote(weight_grams=weight_grams)
 ```
 
 ```python

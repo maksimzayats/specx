@@ -12,7 +12,7 @@ List each runtime value, its owning adapter or process concern, its safe default
 secret. Keep business policy out of environment variables unless composition maps it into a typed
 core collaborator.
 
-## 1. Ask for one configuration slice
+## 1. Define runtime configuration
 
 ```text
 Use $specx-settings, $specx-diwire-composition, and $specx-tests.
@@ -20,11 +20,11 @@ Use $specx-settings, $specx-diwire-composition, and $specx-tests.
 Configure the user-directory HTTP adapter with USER_DIRECTORY_BASE_URL,
 USER_DIRECTORY_TIMEOUT_SECONDS, and USER_DIRECTORY_API_KEY. Put its settings beside the adapter,
 document non-secret values in .env.example, use SecretStr for the key, and keep settings out of
-core. Add top-level stdlib logging configuration with LOG_LEVEL. Add isolated environment-source
+core. Add top-level stdlib logging configuration with LOGGING_LEVEL. Add isolated environment-source
 and logging-configuration tests, then run all checks.
 ```
 
-## 2. Inspect adapter settings
+## 2. Verify adapter settings
 
 Settings inherit `BaseRuntimeSettings` and live next to their technical consumer:
 
@@ -76,7 +76,7 @@ ports.
 USER_DIRECTORY_BASE_URL=https://example.invalid
 USER_DIRECTORY_TIMEOUT_SECONDS=5.0
 # USER_DIRECTORY_API_KEY=replace-at-runtime
-LOG_LEVEL=INFO
+LOGGING_LEVEL=INFO
 ```
 
 Avoid direct `os.environ` reads outside settings and composition code. Do not put working

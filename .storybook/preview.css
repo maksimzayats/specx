@@ -139,6 +139,16 @@ body {
   color: var(--text) !important;
 }
 
+.sbdocs-content :not(pre) > code {
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+}
+
+.sbdocs-content table code {
+  white-space: nowrap !important;
+  overflow-wrap: normal;
+}
+
 .sbdocs-content > h1,
 .sbdocs-content > h2,
 .sbdocs-content > h3,

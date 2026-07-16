@@ -25,8 +25,9 @@ Specx requires a `src/` layout for CLI discovery. If more than one importable pa
 [tool.specx]
 package = "order_service"
 select = [
-  "core",
-  "use-cases",
+  "core.inner-packages-no-outer-layers-or-io-libraries",
+  "use-cases.inputs-are-local-commands-or-queries",
+  "use-cases.return-dtos",
 ]
 ```
 

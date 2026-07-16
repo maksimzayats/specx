@@ -11,7 +11,7 @@ import { NextPrev } from "@storybookComponents/NextPrev"
 Start with a tested core use case. Decide the public path, success status, request/response fields,
 known application errors, and any long-lived resources the app must close. Install the Specx skills.
 
-## 1. Ask for one complete delivery slice
+## 1. Describe the HTTP contract
 
 ```text
 Use $specx-add-delivery-controller, $specx-diwire-composition,
@@ -26,7 +26,7 @@ OrderAlreadyExistsError to a non-sensitive 409 response. Run ASGI lifespan in te
 Name every error contract explicitly. The controller should never return a raw exception message or
 import a concrete repository, ORM model, session, or scope adapter.
 
-## 2. Inspect the delivery files
+## 2. Verify the delivery files
 
 The first slice normally adds:
 
@@ -47,7 +47,7 @@ its DTO into the response schema.
 The controller registers the full `/api/v1/orders` path and declares 201. Delivery-only auth, rate
 limiting, request context, or response metadata belongs under `delivery/fastapi/services/`.
 
-## 3. Inspect app composition and shutdown
+## 3. Verify app composition and shutdown
 
 `FastAPIFactory` inherits `BaseFactory`, receives controllers and `FastAPILifecycle` through
 `Injected[...]`, registers routers, and returns the app. The runtime entrypoint configures logging,
@@ -76,8 +76,8 @@ history or documentation examples.
 ## 5. Verify the HTTP boundary
 
 Integration tests enter `LifespanManager`, pass `manager.app` into HTTPX2's `ASGITransport`, and
-exercise the real internal graph. Cover the success response, request validation, and every translated
-application error. Compare status codes with `fastapi.status` constants.
+exercise the container's production bindings. Cover the success response, request validation, and
+every translated application error. Compare status codes with `fastapi.status` constants.
 
 ```sh
 uv run pytest tests/integration/delivery/fastapi/controllers/test_orders.py

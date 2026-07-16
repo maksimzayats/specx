@@ -33,7 +33,7 @@ Replace the action and database family with the project decision. If the command
 external provider, state the ordering, idempotency, outbox, or compensation policy separately; the
 database transaction cannot roll back a remote effect.
 
-## 2. Inspect the core contracts
+## 2. Define the core contracts
 
 The change should introduce only the contracts required by the action:
 
@@ -49,7 +49,7 @@ The repository models owned persistence. The active `OrderUnitOfWork` exposes re
 `OrderUnitOfWorkManager` opens active objects. `CreateOrderUseCase` injects the manager—not a
 repository, session, engine, provider, or concrete adapter—and opens at most one scope.
 
-## 3. Inspect technical ownership
+## 3. Verify technical ownership
 
 The implementation should separate scope-owned persistence from app-wide resources:
 

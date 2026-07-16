@@ -4,7 +4,7 @@ import { NextPrev } from "@storybookComponents/NextPrev"
 <Meta title="Guides/Compose dependencies" />
 
 <Title>Compose dependencies</Title>
-<Subtitle>Bind ports at the application edge, let DIWire assemble project classes, and verify the real graph.</Subtitle>
+<Subtitle>Bind ports at the application edge, let DIWire assemble project classes, and verify production bindings.</Subtitle>
 
 ## Prerequisites
 
@@ -12,7 +12,7 @@ Finish the core port and its concrete adapter first. Know which resources are pr
 shutdown. The initializer must already have created `ioc/container.py` and the native pytest
 `container` fixture.
 
-## 1. Ask for explicit edge bindings
+## 1. Describe the edge bindings
 
 ```text
 Use $specx-diwire-composition and $specx-tests.
@@ -21,10 +21,10 @@ Bind SQLAlchemyOrderUnitOfWorkManager to OrderUnitOfWorkManager and OpenAITaskSu
 to TaskSummaryGateway. Register the shared HTTP client and SQLAlchemy engine once, preserve
 recursive registration for project classes, and update the lifecycle to close app-owned resources
 before container shutdown. Add a composition test that resolves CreateOrderUseCase through the
-real graph. Do not introduce container lookups in core, delivery controllers, or adapters.
+production bindings. Do not introduce container lookups in core, delivery controllers, or adapters.
 ```
 
-## 2. Inspect the composition root
+## 2. Verify the composition root
 
 The container keeps recursive project-class wiring and a short private binding function:
 
@@ -57,13 +57,13 @@ a prebuilt instance.
 Core classes, controllers, and adapters declare dependencies in fields rather than resolving them.
 
 If a FastAPI lifecycle owns shutdown, register the container instance so that lifecycle can inject
-it. `FastAPILifecycle` is the only ordinary generated project class allowed to receive the container,
+it. `FastAPILifecycle` is the only generated class allowed to receive the container,
 and only to call `container.aclose()` after other app-owned resources are closed.
 
-## 4. Resolve and test the real graph
+## 4. Resolve and test production bindings
 
 Runtime code configures logging, resolves the outer factory, and calls it. A focused composition test
-should resolve at least one use case that crosses every new binding. Unit tests can replace one edge
+should resolve at least one use case through every new binding. Unit tests can replace one edge
 before resolving the target:
 
 ```python
