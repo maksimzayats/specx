@@ -35,8 +35,14 @@ jobs:
       - name: Type-check Storybook
         run: npm run types
 
+      - name: Check documentation sources
+        run: npm run docs:check
+
       - name: Build Storybook
         run: npm run build-storybook -- --output-dir storybook-static
+
+      - name: Check built documentation links
+        run: npm run docs:check-built
 
       - name: Upload Pages artifact
         if: github.event_name != 'pull_request'
