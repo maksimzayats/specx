@@ -1,0 +1,49 @@
+import { Meta, Subtitle, Title, Unstyled } from "@storybook/blocks"
+import { DocsCard } from "@storybookComponents/DocsCard"
+import { HideTableOfContents } from "@storybookComponents/HideTableOfContents"
+import { CliIcon, FoundationIcon, GuardrailsIcon, SkillsIcon } from "@storybookComponents/Icons"
+
+<HideTableOfContents />
+
+<Meta title="Overview/Introduction" />
+
+<Title>Specx</Title>
+<Subtitle>Agent skills and typed architecture guardrails for Python services.</Subtitle>
+
+Hello, world. This is the initial home for Specx documentation. The publishing structure and visual
+system are ready; detailed guides, reference material, and examples will follow.
+
+## Start here
+
+<Unstyled>
+  <div className="specx-card-grid">
+    <DocsCard
+      href="https://github.com/maksimzayats/specx/tree/main/skills"
+      icon={<SkillsIcon />}
+      title="Agent skills"
+      subtitle="Explore reusable workflows for building explicit Python service boundaries."
+    />
+    <DocsCard
+      href="https://github.com/maksimzayats/specx/tree/main/src/specx"
+      icon={<FoundationIcon />}
+      title="Foundation bases"
+      subtitle="See the typed building blocks for core, delivery, and infrastructure code."
+    />
+    <DocsCard
+      href="https://github.com/maksimzayats/specx/tree/main/src/specx/testing"
+      icon={<GuardrailsIcon />}
+      title="Architecture guardrails"
+      subtitle="Keep generated services clear with executable, rule-based checks."
+    />
+    <DocsCard
+      href="https://github.com/maksimzayats/specx#install"
+      icon={<CliIcon />}
+      title="Get started"
+      subtitle="Install the skills, initialize a project, and run the Specx CLI."
+    />
+  </div>
+</Unstyled>
+
+## Next
+
+For now, see the [project README](https://github.com/maksimzayats/specx#readme) for installation and usage.

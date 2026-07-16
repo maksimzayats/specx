@@ -1,0 +1,92 @@
+<style>
+  :root {
+    --specx-gray-100: #ededed;
+    --specx-gray-400: #8f8f8f;
+    --specx-gray-500: #5d5d5d;
+    --specx-gray-750: #292929;
+    --specx-input-border: rgb(0 0 0 / 8%);
+    --specx-input-border-hover: rgb(0 0 0 / 15%);
+  }
+
+  * {
+    scrollbar-color: rgb(13 13 13 / 30%) transparent;
+    scrollbar-width: thin;
+  }
+
+  .sidebar-header {
+    margin-top: -6px !important;
+  }
+
+  .sidebar-header a:focus {
+    outline: 0;
+  }
+
+  .sidebar-header > div:last-child,
+  .search-field + div,
+  [data-nodetype="root"] .sidebar-subheading-action {
+    display: none !important;
+  }
+
+  .search-field {
+    height: 36px !important;
+    margin-top: -6px !important;
+    box-shadow: 0 0 0 1px var(--specx-input-border) !important;
+    transition: box-shadow 0.15s ease;
+  }
+
+  .search-field:hover {
+    box-shadow: 0 0 0 1px var(--specx-input-border-hover) !important;
+  }
+
+  #storybook-explorer-searchfield {
+    font-size: 14px !important;
+  }
+
+  #storybook-explorer-menu {
+    padding: 20px 12px 10px;
+  }
+
+  [data-nodetype="root"] {
+    margin: 0 0 4px !important;
+    color: var(--specx-gray-400) !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    letter-spacing: 0 !important;
+    pointer-events: none !important;
+    text-transform: none !important;
+  }
+
+  [data-nodetype="root"] button:first-child {
+    padding-left: 10px !important;
+  }
+
+  [data-nodetype="root"] button:first-child > div:first-child,
+  .sidebar-item > a:first-child > div {
+    display: none !important;
+  }
+
+  .sidebar-item {
+    min-height: auto !important;
+    margin-bottom: 2px !important;
+    border-radius: 6px !important;
+    font-weight: 500 !important;
+  }
+
+  .sidebar-item > a:first-child {
+    min-height: 36px !important;
+    align-items: center !important;
+    padding-left: 10px !important;
+    color: var(--specx-gray-750) !important;
+    font-weight: inherit !important;
+  }
+
+  .sidebar-item:not([data-selected="true"]):hover,
+  .sidebar-item[data-selected="true"] {
+    background: var(--specx-gray-100) !important;
+  }
+
+  .sidebar-item[data-selected="true"] {
+    color: var(--specx-gray-750) !important;
+    font-weight: 600 !important;
+  }
+</style>

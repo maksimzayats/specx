@@ -1,4 +1,4 @@
-.PHONY: build check format lint list-skills sync-skills test type validate-skills verifytypes
+.PHONY: build check docs docs-build format lint list-skills sync-skills test type validate-skills verifytypes
 
 check: lint type test build verifytypes validate-skills list-skills
 
@@ -19,6 +19,12 @@ test:
 
 build:
 	uv build --no-sources
+
+docs:
+	npm run storybook
+
+docs-build:
+	npm run build-storybook
 
 verifytypes: build
 	@wheel="$$(ls -t dist/specx-*.whl | head -n 1)"; \

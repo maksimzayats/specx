@@ -1,0 +1,209 @@
+:root {
+  --specx-gray-0: #ffffff;
+  --specx-gray-25: #fcfcfc;
+  --specx-gray-50: #f9f9f9;
+  --specx-gray-100: #ededed;
+  --specx-gray-150: #dfdfdf;
+  --specx-gray-500: #5d5d5d;
+  --specx-gray-750: #292929;
+  --specx-alpha-02: rgb(13 13 13 / 2%);
+  --specx-alpha-08: rgb(13 13 13 / 8%);
+  --specx-alpha-12: rgb(13 13 13 / 12%);
+  --specx-text: var(--specx-gray-750);
+  --specx-text-secondary: var(--specx-gray-500);
+  --specx-surface: var(--specx-gray-0);
+  --specx-radius: 8px;
+}
+
+html,
+body {
+  background: var(--specx-surface);
+}
+
+.sbdocs-wrapper {
+  display: block !important;
+  padding-top: 20px !important;
+  background: var(--specx-surface) !important;
+}
+
+.sbdocs-content {
+  flex: 1 !important;
+  min-width: 200px !important;
+  max-width: 780px !important;
+  margin-right: auto !important;
+  margin-left: auto !important;
+  background: var(--specx-surface) !important;
+  color: var(--specx-text) !important;
+}
+
+[data-docs-toc="hidden"] .sbdocs-content {
+  max-width: 1000px !important;
+}
+
+.sbdocs-wrapper > div:not(.sbdocs-content) {
+  position: absolute !important;
+  top: 0 !important;
+  right: 40px !important;
+  width: 182px !important;
+}
+
+.sbdocs-wrapper > div:not(.sbdocs-content) > div {
+  top: 4px;
+  width: 182px !important;
+}
+
+.toc-wrapper > .toc-list {
+  border-left: 2px solid var(--specx-gray-100) !important;
+}
+
+.toc-list-item {
+  padding: 0 !important;
+  margin: 0 0 8px !important;
+}
+
+.toc-list-item > a {
+  display: inline-block !important;
+  padding-left: 14px !important;
+  color: var(--specx-text-secondary) !important;
+  font-size: 14px !important;
+  line-height: 22px !important;
+  text-decoration: none !important;
+}
+
+.toc-list-item.is-active-li > a {
+  color: var(--specx-text) !important;
+  font-weight: 600 !important;
+}
+
+.sbdocs-content > p,
+.sbdocs-content > ul li,
+.sbdocs-content > ol li {
+  color: var(--specx-text) !important;
+  font-size: 16px !important;
+  line-height: 1.6 !important;
+}
+
+.sbdocs-content > h1,
+.sbdocs-content > h2,
+.sbdocs-content > h3 {
+  color: var(--specx-text) !important;
+}
+
+.sbdocs-content > h2:not(.sbdocs-subtitle) {
+  padding: 0 !important;
+  border: 0 !important;
+  margin-top: 40px !important;
+  margin-bottom: 10px !important;
+  font-weight: 600 !important;
+}
+
+.sbdocs-content > h3 {
+  margin: 26px 0 10px !important;
+  font-size: 18px !important;
+  font-weight: 600 !important;
+}
+
+.sbdocs-content h1.sbdocs-title {
+  margin-bottom: 10px !important;
+  color: var(--specx-text) !important;
+  font-size: 32px !important;
+  line-height: 36px !important;
+  letter-spacing: -0.02em !important;
+}
+
+.sbdocs-content h2.sbdocs-subtitle {
+  margin-bottom: 30px !important;
+  color: var(--specx-text-secondary) !important;
+  font-size: 18px !important;
+  line-height: 1.5 !important;
+}
+
+.sbdocs-content .sbdocs-a {
+  color: var(--specx-text) !important;
+  text-decoration: underline !important;
+  text-decoration-color: rgb(41 41 41 / 80%) !important;
+  text-underline-offset: 1px !important;
+}
+
+.specx-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  margin: 24px 0 48px;
+}
+
+.specx-card {
+  position: relative;
+  display: block;
+  padding: 20px;
+  border: 1px solid var(--specx-alpha-12);
+  border-radius: var(--specx-radius);
+  color: var(--specx-text) !important;
+  font-family:
+    ui-sans-serif, -apple-system, system-ui, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+  text-decoration: none !important;
+  transition:
+    background-color 0.15s ease,
+    transform 0.15s ease;
+  user-select: none;
+}
+
+.specx-card:hover {
+  background: var(--specx-alpha-02);
+}
+
+.specx-card:active {
+  transform: scale(0.98);
+}
+
+.specx-card-icon {
+  display: block;
+  width: 24px;
+  height: 24px;
+  margin-bottom: 8px;
+  color: var(--specx-text);
+}
+
+.specx-card-title {
+  padding: 0;
+  margin: 0 0 1px;
+  color: var(--specx-text);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.specx-card-subtitle {
+  padding: 0;
+  margin: 0;
+  color: var(--specx-text-secondary);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+@media (width >= 769px) {
+  .sbdocs-wrapper {
+    padding-top: 58px !important;
+    padding-right: 260px !important;
+    padding-left: 40px !important;
+  }
+
+  [data-docs-toc="hidden"] .sbdocs-wrapper {
+    padding-right: 40px !important;
+  }
+
+  .sbdocs-content h1.sbdocs-title {
+    font-size: 36px !important;
+    line-height: 42px !important;
+  }
+
+  .sbdocs-content h2.sbdocs-subtitle {
+    font-size: 20px !important;
+  }
+}
+
+@media (width <= 760px) {
+  .specx-card-grid {
+    grid-template-columns: 1fr;
+  }
+}

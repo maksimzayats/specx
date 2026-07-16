@@ -11,6 +11,8 @@ __pycache__/
 build/
 develop-eggs/
 dist/
+node_modules/
+storybook-static/
 downloads/
 eggs/
 .eggs/

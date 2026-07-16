@@ -31,6 +31,8 @@ and clean `core` / `delivery` / `infrastructure` / `ioc` boundaries.
 - Type-check package code: `make type`
 - Run package tests: `make test`
 - Build package distributions: `make build`
+- Run the Storybook documentation locally: `npm ci && make docs`
+- Build the static Storybook documentation: `npm ci && make docs-build`
 - Verify installed package typing: `make verifytypes`
 - Validate skill metadata only: `make validate-skills`
 - Synchronize the local skill mirror: `make sync-skills`
