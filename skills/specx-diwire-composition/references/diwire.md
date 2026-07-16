@@ -152,18 +152,29 @@ Use native pytest fixtures that return explicit containers. Do not enable
 `diwire.integrations.pytest_plugin`, and do not use `Injected[...]` parameters
 in test functions.
 
-Unit tests start from a fresh bare container:
+Unit tests start from a fresh application container built by the real
+composition root:
 
 ```python
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+import pytest
+
+from order_service.ioc.container import get_container
+
+if TYPE_CHECKING:
+    from diwire import Container
+
+
 @pytest.fixture
 def container() -> Container:
-    return Container(
-        missing_policy=MissingPolicy.REGISTER_RECURSIVE,
-        dependency_registration_policy=DependencyRegistrationPolicy.REGISTER_RECURSIVE,
-    )
+    return get_container()
 ```
 
-Tests register overrides directly before resolving the target:
+Add an override to this fixture when it applies to the whole test suite. Tests
+register scenario-specific overrides directly before resolving the target:
 
 ```python
 @pytest.mark.anyio

@@ -27,6 +27,7 @@ def test_public_routes_rule_accepts_api_routes_and_operational_probes(
         SpecxArchitectureConfig(
             project_root=tmp_path,
             package_name="demo_service",
+            extend_select=frozenset({"fastapi"}),
             disabled_rules=_disable_all_except(SpecxRuleId.PUBLIC_ROUTES_USE_FULL_API_V1_PATHS),
         )
     )
@@ -49,6 +50,7 @@ def test_public_routes_rule_rejects_other_unversioned_routes(
         SpecxArchitectureConfig(
             project_root=tmp_path,
             package_name="demo_service",
+            extend_select=frozenset({"fastapi"}),
             disabled_rules=_disable_all_except(SpecxRuleId.PUBLIC_ROUTES_USE_FULL_API_V1_PATHS),
         )
     )
@@ -56,6 +58,10 @@ def test_public_routes_rule_rejects_other_unversioned_routes(
     assert [(violation.rule_id, violation.message) for violation in report.violations] == [
         (SpecxRuleId.PUBLIC_ROUTES_USE_FULL_API_V1_PATHS, "uses '/health'"),
         (SpecxRuleId.PUBLIC_ROUTES_USE_FULL_API_V1_PATHS, "uses '/metrics'"),
+    ]
+    assert [(violation.line, violation.column) for violation in report.violations] == [
+        (3, 37),
+        (4, 37),
     ]
 
 

@@ -60,6 +60,30 @@ def test_container_rule_allows_fastapi_lifecycle_to_inject_container(tmp_path: P
     assert report.violations == ()
 
 
+def test_container_rule_allows_framework_neutral_delivery_lifecycle(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "src" / "demo_service" / "delivery" / "starlette" / "lifecycle.py",
+        "from dataclasses import dataclass\n\n"
+        "from diwire import Container, Injected\n"
+        "from specx.delivery.foundation.lifecycle import BaseLifecycle\n\n"
+        "@dataclass(kw_only=True, slots=True)\n"
+        "class StarletteLifecycle(BaseLifecycle[object]):\n"
+        "    _container: Injected[Container]\n",
+    )
+
+    report = check_specx_architecture(
+        SpecxArchitectureConfig(
+            project_root=tmp_path,
+            package_name="demo_service",
+            disabled_rules=_disable_all_except(
+                SpecxRuleId.ONLY_IOC_DELIVERY_APP_AND_TESTS_IMPORT_CONTAINER
+            ),
+        )
+    )
+
+    assert report.violations == ()
+
+
 def test_container_rule_rejects_container_injection_outside_fastapi_lifecycle_class(
     tmp_path: Path,
 ) -> None:
@@ -132,7 +156,7 @@ def test_container_rule_rejects_container_injection_outside_fastapi_lifecycle_cl
     injection_violations = {
         violation.symbol
         for violation in report.violations
-        if violation.message == "injects diwire.Container outside FastAPI lifecycle"
+        if violation.message == "injects diwire.Container outside delivery lifecycle"
     }
 
     assert injection_violations == {

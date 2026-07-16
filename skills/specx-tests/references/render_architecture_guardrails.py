@@ -22,6 +22,7 @@ def test_specx_architecture() -> None:
         SpecxArchitectureConfig(
             project_root=Path(__file__).resolve().parents[{project_root_parent_index}],
             package_name="{package_name}",
+            extend_select=frozenset({{"fastapi"}}),
             disabled_rules=disabled_rules,
         )
     )

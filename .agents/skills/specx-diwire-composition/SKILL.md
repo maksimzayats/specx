@@ -42,8 +42,10 @@ overrides need `diwire`. Read `references/diwire.md` before writing DI code.
   inject the manager and open the active UoW inside `execute(...)`; they do not
   inject repositories, active UoWs, providers, SQLAlchemy sessions, engines,
   session factories, or concrete infrastructure adapters directly.
-- Unit tests receive a fresh native pytest `container` fixture. Register
-  scenario-specific overrides directly in the test before resolving the target.
+- Unit tests receive a fresh native pytest `container` fixture built by the
+  project's real `get_container()`. Put project-wide test overrides in that
+  fixture and register scenario-specific overrides directly in the test before
+  resolving the target.
 - Integration tests receive the transactional real-app `container` fixture.
   They must use the real internal graph; do not mock internal use cases,
   services, or capabilities.

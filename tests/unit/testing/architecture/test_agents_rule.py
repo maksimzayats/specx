@@ -129,6 +129,44 @@ def test_agents_md_rule_requires_guidance_for_used_class_category(tmp_path: Path
     assert "BaseCapability" in report.violations[0].message
 
 
+def test_fastapi_agents_rule_is_opt_in(tmp_path: Path) -> None:
+    _write_minimal_project_guidance(tmp_path)
+    agents_path = tmp_path / "AGENTS.md"
+    text = agents_path.read_text(encoding="utf-8").replace(
+        "- FastAPI entrypoint: `demo_service.delivery.fastapi.__main__:app`\n",
+        "",
+    )
+    agents_path.write_text(text, encoding="utf-8")
+    _write(
+        tmp_path / "src" / "demo_service" / "delivery" / "fastapi" / "__main__.py",
+        "app = object()\n",
+    )
+
+    default_report = check_specx_architecture(
+        SpecxArchitectureConfig(
+            project_root=tmp_path,
+            package_name="demo_service",
+            disabled_rules=_disable_all_except(
+                SpecxRuleId.FASTAPI_ROOT_AGENTS_MD_DOCUMENTS_DELIVERY
+            ),
+        )
+    )
+    selected_report = check_specx_architecture(
+        SpecxArchitectureConfig(
+            project_root=tmp_path,
+            package_name="demo_service",
+            extend_select=frozenset({"fastapi"}),
+            disabled_rules=_disable_all_except(
+                SpecxRuleId.FASTAPI_ROOT_AGENTS_MD_DOCUMENTS_DELIVERY
+            ),
+        )
+    )
+
+    assert default_report.violations == ()
+    assert len(selected_report.violations) == 1
+    assert "FastAPI entrypoint" in selected_report.violations[0].message
+
+
 def _write_minimal_project_guidance(project_root: Path) -> None:
     _write(
         project_root / "AGENTS.md",

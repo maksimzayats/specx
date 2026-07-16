@@ -21,6 +21,7 @@ def test_compatibility_renderer_outputs_tiny_wrapper(tmp_path: Path) -> None:
 
     assert "parents[3]" in text
     assert 'package_name="demo_service"' in text
+    assert 'extend_select=frozenset({"fastapi"})' in text
     assert "assert_specx_architecture" in text
     assert len(text.splitlines()) < 25
     assert (tmp_path / "tests" / "__init__.py").read_text(encoding="utf-8") == ""

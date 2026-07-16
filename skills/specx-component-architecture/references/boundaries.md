@@ -427,9 +427,11 @@ resources inside one core scope.
 
 ## Packaged Architecture Guardrails
 
-Use `specx.testing.architecture` as the default guardrail mechanism instead of
-hand-writing local architecture tests for Specx boundaries. The packaged rule
-set is exposed through stable `SpecxRuleId` values and covers:
+Use `uv run specx check` as the default guardrail command instead of
+hand-writing local architecture tests for Specx boundaries. The same engine is
+available through `specx.testing.architecture` for programmatic checks and
+custom rules. The packaged rule set is exposed through stable `SpecxRuleId`
+values and covers:
 
 - core import direction, including no delivery, ioc, top-level infrastructure,
   FastAPI, SQLAlchemy, Redis, `httpx`, or `httpx2` from core inner packages;
@@ -445,9 +447,9 @@ set is exposed through stable `SpecxRuleId` values and covers:
 - delivery controllers avoiding infrastructure imports and scope
   infrastructure avoiding delivery imports;
 - no `metadata.create_all` or `drop_all` calls in source or tests;
-- `diwire.Container` access limited to `ioc`, the exact
-  `delivery/fastapi/{__main__,factory,lifecycle}.py` composition modules, and
-  tests, with `Injected[Container]` allowed only in the FastAPI lifecycle;
+- `diwire.Container` access limited to `ioc`, framework delivery
+  `{__main__,factory,lifecycle}.py` composition modules, and tests, with
+  `Injected[Container]` allowed only in a delivery lifecycle;
 - no injected `logging.Logger` dependencies or logger registrations in the DI
   container;
 - full `/api/v1/...` public business HTTP route paths, with only `/healthz`
@@ -461,8 +463,9 @@ set is exposed through stable `SpecxRuleId` values and covers:
 - core service suffixes and use of `BasePureService`, `BaseReadService`, or
   `BaseEffectService`;
 - pure/read/effect service effect boundaries and UoW lifecycle constraints;
-- FastAPI-specific root `AGENTS.md` project-command and Specx-boundary
-  guidance.
+- framework-neutral root `AGENTS.md` project-command and Specx-boundary
+  guidance;
+- opt-in FastAPI route and root `AGENTS.md` delivery guidance.
 
 The built-ins do not currently validate project-local foundation import
 direction. Keep that policy in review guidance or add a focused `extra_rules`
@@ -473,12 +476,12 @@ recognizes FastAPI, SQLAlchemy, Redis, `httpx`, and `httpx2`; review new SDK
 imports explicitly or add a project rule for other forbidden technical
 libraries such as provider clients.
 
-The current delivery and root-`AGENTS.md` rules are a FastAPI baseline, not a
-framework-neutral contract. A worker, CLI, or another web framework must at
-least review
-`ROOT_AGENTS_MD_DOCUMENTS_PROJECT_COMMANDS_AND_BOUNDARIES`,
-`ONLY_IOC_DELIVERY_APP_AND_TESTS_IMPORT_CONTAINER`, and
-`PUBLIC_ROUTES_USE_FULL_API_V1_PATHS`. List incompatible IDs in
-`disabled_rules` and add equivalent framework-specific `extra_rules`; do not
-create fake FastAPI paths merely to make the defaults pass. Use custom rules
-for any other project policy not covered by a packaged `SpecxRuleId`.
+Framework-neutral rules run by default when `select` is omitted. New generated
+projects set `select = ["ALL"]`, enabling every rule with a matching project
+surface. Technology-specific families remain explicit when a project uses a
+narrower base selection; FastAPI projects can add
+`extend-select = ["fastapi"]`. Explicitly selecting a family with no matching
+delivery surface emits a non-failing warning, while the `ALL` umbrella silently
+skips absent surfaces. Use `ignore` with exact semantic IDs for deliberate
+exceptions, and use the Python API's `extra_rules` for project policy not
+covered by a packaged `SpecxRuleId`.

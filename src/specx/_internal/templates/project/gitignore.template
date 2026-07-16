@@ -1,0 +1,141 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+# Usually these files are written by a Python script from a template before
+# PyInstaller builds the executable, so as to inject date or other information.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Translations
+*.mo
+*.pot
+
+# Local database files
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+test_db.sqlite3
+test_db.sqlite3-journal
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+.pybuilder/
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+# For a library or package, you might want to ignore this file because the code
+# is intended to run in multiple environments; otherwise, check it in:
+# .python-version
+
+# pipenv
+# According to pypa/pipenv#598, Pipfile.lock should be checked into version
+# control. Platform-specific dependencies can still make lockfiles unsuitable
+# for some collaboration workflows.
+# Pipfile.lock
+
+# PEP 582; used by tools such as github.com/David-OConnor/pyflow
+__pypackages__/
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.env.test
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Ruff
+.ruff_cache/
+
+# Cython debug symbols
+cython_debug/
+
+# PyCharm
+.idea/
+
+# macOS
+.DS_Store
+
+# Local project state
+.local/

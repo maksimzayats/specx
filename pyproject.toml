@@ -43,6 +43,9 @@ Homepage = "https://github.com/maksimzayats/specx"
 Source = "https://github.com/maksimzayats/specx"
 Issues = "https://github.com/maksimzayats/specx/issues"
 
+[project.scripts]
+specx = "specx.cli:main"
+
 [dependency-groups]
 dev = [
     "mypy>=2.1.0",

@@ -1,0 +1,38 @@
+from dataclasses import dataclass
+
+from diwire import Injected
+from specx.core.foundation.query import BaseQuery
+from specx.core.foundation.use_case import BaseUseCase
+
+from __SPECX_PACKAGE_NAME__.core.health.dtos.health_status_dto import HealthStatusDTO
+from __SPECX_PACKAGE_NAME__.core.health.services.health_status_service import (
+    HealthStatusService,
+)
+
+
+@dataclass(frozen=True, kw_only=True, slots=True)
+class CheckHealthQuery(BaseQuery):
+    """Read-only input for checking the process health state.
+
+    Example:
+        CheckHealthQuery()
+
+    """
+
+
+@dataclass(kw_only=True, slots=True)
+class CheckHealthUseCase(BaseUseCase):
+    """Core health action that reports process liveness without external IO.
+
+    Example:
+        result = use_case.execute(query=CheckHealthQuery())
+
+    """
+
+    _health_status_service: Injected[HealthStatusService]
+
+    def execute(self, *, query: CheckHealthQuery) -> HealthStatusDTO:
+        """Return process health for the supplied query."""
+        del query
+
+        return self._health_status_service.check()

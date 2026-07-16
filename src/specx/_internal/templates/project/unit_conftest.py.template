@@ -1,0 +1,15 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+import pytest
+
+from __SPECX_PACKAGE_NAME__.ioc.container import get_container
+
+if TYPE_CHECKING:
+    from diwire import Container
+
+
+@pytest.fixture
+def container() -> Container:
+    return get_container()

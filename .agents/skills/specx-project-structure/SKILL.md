@@ -10,46 +10,52 @@ details, read `references/blueprint.md`.
 
 ## Workflow
 
-1. Preserve an existing import package declared by the repo. For a new repo,
+1. For a fresh framework-neutral repo, start with `specx init <path>`. It creates
+   packaging, strict tooling, root `AGENTS.md`, a small `core/health` use case
+   and pure service, `ioc/container.py`, and mirrored unit tests. It
+   intentionally omits delivery and infrastructure; add those packages only
+   with real technology-specific behavior.
+2. Preserve an existing import package declared by the repo. For a new repo,
    derive a lowercase underscore name, normalize every non-identifier
    character, and verify `name.isidentifier()` and
    `not keyword.iskeyword(name)`; distribution names and import packages need
    not be identical. If normalization still yields a keyword or leading digit,
    choose an explicit valid package name rather than emitting it unchanged.
-2. Create `src/<package>/` and `tests/` packages with empty `__init__.py` files only.
-3. Add `specx` as a runtime dependency and import base classes from
+3. Create `src/<package>/` and `tests/` packages with empty `__init__.py` files only.
+4. Add `specx` as a runtime dependency and import base classes from
    `specx.core.foundation`, `specx.delivery.foundation`, or
    `specx.infrastructure.foundation`.
-4. Use `core/<scope>/` as the main boundary. Put application packages at the
+5. Use `core/<scope>/` as the main boundary. Put application packages at the
    scope root: `capabilities/`, `dtos/`, `entities/`, `exceptions/`,
    `gateways/`, `repositories/`, `services/`, and `use_cases/`. Put
    scope-owned technical adapters under `infrastructure/` only when real IO
    exists.
-5. Add top-level `delivery/` for runnable framework apps, lifecycles,
+6. Add top-level `delivery/` for runnable framework apps, lifecycles,
    controllers, request/response schemas, and delivery-only services.
-6. Add top-level `infrastructure/` for shared technical resources such as
+7. Add top-level `infrastructure/` for shared technical resources such as
    SQLAlchemy session factories, logging, telemetry, and external client
    factories. App-owned pooled clients live here even when only one scope
    currently consumes them; bounded short-lived clients may stay with the
    scope adapter.
-7. Add `infrastructure/logging/` with a stdlib `LoggingConfigurator` and
+8. Add `infrastructure/logging/` with a stdlib `LoggingConfigurator` and
    `LoggingSettings` for every new API repo.
-8. Add `ioc/` for `diwire.Container` creation and explicit bindings.
-9. Add `shared/` only for stable cross-scope application primitives such as
+9. Add `ioc/` for `diwire.Container` creation and explicit bindings.
+10. Add `shared/` only for stable cross-scope application primitives such as
    unit-of-work contracts, clocks, ids, or errors.
-10. Add `migrations/` with Alembic when SQLAlchemy models exist.
-11. Build the first user-requested business vertical slice. If no domain slice
-   is specified, add only the smallest runnable delivery liveness endpoint.
-   Add `core/health` behavior and `/readyz` when readiness checks any required
-   external dependency or probe policy is shared across deliveries.
-12. Create root `AGENTS.md` for every new repo. Include runnable project
+11. Add `migrations/` with Alembic when SQLAlchemy models exist.
+12. Build the first user-requested business vertical slice. The initializer's
+   process-health slice is a framework-neutral composition example, not a
+   readiness check. With a delivery framework, map or replace it deliberately:
+   keep simple liveness at delivery, and use `core/health` for `/readyz` when
+   readiness checks a required dependency or policy is shared across deliveries.
+13. Create root `AGENTS.md` for every new repo. Include runnable project
    commands from `$specx-project-tooling` and Specx boundaries from
    `$specx-component-architecture`.
-13. Do not create an empty local `foundation/` package. Create
+14. Do not create an empty local `foundation/` package. Create
    `src/<package>/foundation/` only for a real project-local base category or a
    stateful framework base that must not be shared globally, such as a
    SQLAlchemy declarative base.
-14. Add tests only where there is real code to test. Do not create empty folders
+15. Add tests only where there is real code to test. Do not create empty folders
    just to satisfy the diagram.
 
 ## Non-Negotiable Boundaries
@@ -85,9 +91,9 @@ details, read `references/blueprint.md`.
   shared doubles or support helpers.
 - Keep root `AGENTS.md` commands aligned with the Makefile and include only
   guidance that matches files and features present in the project.
-- This skill and the current packaged delivery guardrails target FastAPI. For a
-  worker, CLI, or another web framework, use `$specx-component-architecture`
-  and explicitly replace the incompatible FastAPI-specific rules.
+- This skill targets FastAPI and must enable the opt-in `fastapi` rule family
+  in `[tool.specx]`. Framework-neutral Specx rules remain the default for
+  workers, CLIs, and other delivery technologies.
 
 ## References
 

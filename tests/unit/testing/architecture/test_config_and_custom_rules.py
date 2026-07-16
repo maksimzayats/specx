@@ -91,6 +91,51 @@ def test_extra_rules_are_executed_and_can_be_disabled(tmp_path: Path) -> None:
     assert disabled_report.violations == ()
 
 
+def test_fastapi_rules_are_opt_in_and_warn_when_surface_is_missing(tmp_path: Path) -> None:
+    _write_minimal_project(tmp_path)
+    disabled_rules = frozenset(
+        rule_id
+        for rule_id in SpecxRuleId
+        if rule_id
+        not in {
+            SpecxRuleId.FASTAPI_ROOT_AGENTS_MD_DOCUMENTS_DELIVERY,
+            SpecxRuleId.PUBLIC_ROUTES_USE_FULL_API_V1_PATHS,
+        }
+    )
+
+    default_report = check_specx_architecture(
+        SpecxArchitectureConfig(
+            project_root=tmp_path,
+            package_name="demo_service",
+            disabled_rules=disabled_rules,
+        )
+    )
+    selected_report = check_specx_architecture(
+        SpecxArchitectureConfig(
+            project_root=tmp_path,
+            package_name="demo_service",
+            extend_select=frozenset({"fastapi"}),
+            disabled_rules=disabled_rules,
+        )
+    )
+    all_report = check_specx_architecture(
+        SpecxArchitectureConfig(
+            project_root=tmp_path,
+            package_name="demo_service",
+            select=frozenset({"ALL"}),
+            disabled_rules=disabled_rules,
+        )
+    )
+
+    assert default_report.violations == ()
+    assert default_report.warnings == ()
+    assert selected_report.violations == ()
+    assert len(selected_report.warnings) == 1
+    assert selected_report.warnings[0].rule_id == "fastapi"
+    assert all_report.violations == ()
+    assert all_report.warnings == ()
+
+
 def _write_minimal_project(project_root: Path) -> None:
     _write(
         project_root / "src" / "demo_service" / "core" / "tasks" / "services" / "title_service.py",

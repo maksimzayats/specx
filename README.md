@@ -15,10 +15,10 @@ and architecture tests.
 
 ## Key Features
 
-- **Skill-based service scaffolding.** Specx replaces a one-off code template
-  with composable skills for project structure, foundation usage, tooling,
-  DI, use cases, services, delivery controllers, infrastructure adapters,
-  settings, migrations, and tests.
+- **Neutral project initialization.** `specx init` creates a strict, immediately
+  checkable Python project with a small framework-neutral `core/health` use
+  case and service, DI composition, and mirrored unit tests. Composable skills
+  then add delivery, infrastructure, settings, migrations, and real scopes.
 - **Explicit class boundaries.** Generated services use class-based use cases,
   services, controllers, repositories, gateways, capabilities, DTOs, entities,
   units of work, and factories with packaged scoped foundation bases.
@@ -28,9 +28,10 @@ and architecture tests.
   may use an active UoW passed by the use case, but they do not own transaction
   lifecycle.
 - **Guardrails for agent work.** The `specx` Python package ships rule-based
-  architecture tests that reject layer leaks, entity returns from use cases,
+  architecture checks that reject layer leaks, entity returns from use cases,
   schema bootstrap calls, bare classes, wrong suffixes, and hidden transaction
-  ownership.
+  ownership. The `specx` CLI gives humans and coding agents the same fast,
+  deterministic feedback loop.
 - **Standard runtime logging.** Generated API services configure Python stdlib
   logging once through top-level infrastructure and keep logger creation local
   to classes that actually emit log records.
@@ -73,7 +74,63 @@ Validate the catalog:
 make check
 ```
 
-Use the architecture package from generated projects:
+Initialize a new framework-neutral project:
+
+```sh
+uvx specx init order-service
+cd order-service
+make check
+```
+
+`specx init [PATH]` derives a kebab-case distribution name and underscore import
+package from the target directory and targets Python 3.14. It runs
+`uv add specx diwire` followed by `uv add --dev mypy pytest ruff`, allowing uv to
+select and record every initial dependency version while creating the lockfile
+and environment. Use `--name`, `--package`, or `--python` to override the
+generated metadata, or `--no-sync` to render without adding dependencies.
+Initialization accepts only a new, empty, or `.git`-only target and never
+overwrites an existing project. `--python` accepts any `major.minor` value, so
+new Python releases do not require a Specx update to initialize a project.
+
+The generated baseline contains packaging, strict Ruff/mypy/pytest tooling,
+`AGENTS.md`, a health DTO/enum/service/use case, `ioc/container.py`, and mirrored
+unit tests. It does not create delivery,
+infrastructure, FastAPI, or empty future-facing
+directories. Both Specx and Ruff start with `select = ["ALL"]`; every Ruff
+formatter or file-category exception is documented inline in `pyproject.toml`.
+
+Add the Python package to existing projects, then run the guardrail CLI:
+
+```sh
+uv add specx
+uv run specx check
+uv run specx rule list
+uv run specx rule explain use-cases.return-dtos
+```
+
+`specx check` discovers the single importable package under `src/` and runs all
+framework-neutral rules by default. Configure overrides and opt-in technology
+families in `pyproject.toml`:
+
+```toml
+[tool.specx]
+select = ["ALL"]
+ignore = ["delivery.routes-use-full-api-v1-paths"]
+exclude = ["src/order_service/generated/**"]
+```
+
+`select` replaces the default framework-neutral selection and accepts `ALL`,
+semantic rule IDs, or rule families. `extend-select` adds selectors. With
+`ALL`, rules requiring a technology surface run when that surface exists;
+missing surfaces are skipped without warnings. Explicitly selecting a missing
+technology family still emits a warning.
+
+Use `--output-format json` for agent and CI integrations. Warnings do not fail
+the command; architecture violations exit with status 1, while configuration
+or execution errors exit with status 2.
+
+The typed Python API remains available for programmatic checks and custom
+rules:
 
 ```python
 from pathlib import Path
@@ -86,6 +143,7 @@ def test_specx_architecture() -> None:
         SpecxArchitectureConfig(
             project_root=Path(__file__).resolve().parents[3],
             package_name="order_service",
+            extend_select=frozenset({"fastapi"}),
         )
     )
 ```
@@ -94,8 +152,11 @@ def test_specx_architecture() -> None:
 
 - A reusable agent skill catalog under `skills/`.
 - A typed Python guardrail package under `src/specx/`.
+- A safe `specx init` command for fresh framework-neutral Python projects.
 - Rule-based architecture guardrails exposed through
   `specx.testing.architecture`.
+- A `specx check` CLI with semantic rule IDs, rule-family selection, and JSON
+  diagnostics.
 - A compatibility renderer that writes the tiny generated-project pytest
   wrapper with the correct package name.
 - Root `AGENTS.md` guidance for agents working on this catalog.

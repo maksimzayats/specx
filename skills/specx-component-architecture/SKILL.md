@@ -103,9 +103,12 @@ than one layer. Read `references/boundaries.md` for the full rules.
   secrets, credentials, request bodies, full external URLs, or infrastructure
   topology.
 - Do not create bare classes without explicit bases.
-- Treat the packaged delivery guardrails as a FastAPI baseline. For another
-  delivery framework, explicitly disable and replace the FastAPI-specific
-  built-ins instead of copying FastAPI paths or guidance into the project.
+- Packaged framework-neutral guardrails run by default when `select` is
+  omitted. New generated projects use `select = ["ALL"]`, which enables every
+  rule whose required project surface exists. Projects with a narrower base
+  selection enable technology families explicitly, for example
+  `extend-select = ["fastapi"]`. Do not copy FastAPI paths or guidance into a
+  project that uses another delivery technology.
 
 ## Code Style
 

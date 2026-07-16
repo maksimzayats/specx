@@ -1,9 +1,15 @@
 # Specx Project Blueprint
 
-Use this reference to create a new FastAPI backend repo from scratch. The
-current packaged delivery guardrails assume this FastAPI baseline; use
-`$specx-component-architecture` and framework-specific rules for workers, CLIs,
-or other delivery frameworks.
+Use this reference to create a new FastAPI backend repo from scratch. Packaged
+framework-neutral guardrails run by default; this blueprint additionally
+enables the opt-in `fastapi` rule family. Use `$specx-component-architecture`
+for workers, CLIs, or other delivery frameworks.
+
+For a completely new repository, `specx init <path>` creates the canonical
+framework-neutral baseline first. It contains project metadata, strict tooling,
+root `AGENTS.md`, a small `core/health` service and use case,
+`ioc/container.py`, and mirrored unit tests. It does not create delivery,
+infrastructure, or foundation packages.
 
 ## Contents
 
@@ -15,12 +21,48 @@ or other delivery frameworks.
 
 ## Target Package Shape
 
+The neutral initializer can be run directly:
+
+```bash
+specx init order-service
+cd order-service
+make check
+```
+
+It runs `uv add specx diwire` and `uv add --dev mypy pytest ruff` by default so uv
+records every selected dependency release, creates the lockfile, and
+synchronizes the environment. Use `--no-sync` only when the caller needs an
+offline or render-only workflow, then run both commands before the generated
+locked commands.
+
 Preserve an existing import package. For a new project named `order-service`,
 `order_service` is a suitable import package; normalize punctuation and spaces,
 then verify that the result satisfies `str.isidentifier()` and is not a Python
 keyword. Choose an explicit valid name if normalization leaves a keyword or
 leading digit. Do not assume the distribution name and import package must
 match.
+
+The neutral initializer renders this complete starter slice:
+
+```text
+src/order_service/
+  core/health/
+    dtos/health_status_dto.py
+    enums/health_status_enum.py
+    services/health_status_service.py
+    use_cases/check_health.py
+  ioc/container.py
+tests/
+  unit/
+    conftest.py
+    core/health/
+      services/test_health_status_service.py
+      use_cases/test_check_health.py
+```
+
+Every shown Python directory also gets an empty `__init__.py`. The health slice
+is deliberately pure and framework-neutral; it demonstrates service/use-case
+composition without creating a delivery or infrastructure layer.
 
 If no business slice was requested, the smallest FastAPI baseline contains only
 files with current behavior:
@@ -46,8 +88,6 @@ tests/
   __init__.py
   integration/
     delivery/fastapi/controllers/test_liveness.py
-  guardrails/
-    architecture/test_boundaries.py
 ```
 
 Every shown Python directory also gets an empty `__init__.py`; the diagram
@@ -131,13 +171,11 @@ whether the corresponding class category exists.
 - Install: `uv sync --locked --all-groups`
 - Dev server: `make dev`
 - Full check: `make check`
-- Verify lockfile: `make lock-check`
-- Lint/type/format check: `make lint`
+- Lint/type/format/architecture check: `make lint`
 - Format/fix: `make format`
 - Tests: `make test`
 - Targeted unit tests: `uv run --locked pytest tests/unit`
 - Targeted integration tests: `uv run --locked pytest tests/integration`
-- Targeted guardrail tests: `uv run --locked pytest tests/guardrails`
 
 ## Architecture Rules
 
@@ -204,12 +242,13 @@ whether the corresponding class category exists.
 
 - Tests mirror source module paths under `tests/unit` or `tests/integration`
   with flat `test_<module>.py` files.
-- When needed, `tests/unit/conftest.py` owns the fresh bare unit `container`
-  fixture.
+- When needed, `tests/unit/conftest.py` owns the fresh real-app unit `container`
+  fixture returned by `get_container()` and any project-wide test overrides.
 - When persistence integration exists, `tests/integration/conftest.py` owns the
   transactional DB-backed integration `container` fixture.
 - Private test helpers live under `tests/_support`; this is not a test suite.
-- Architecture policy wrappers live under `tests/guardrails`.
+- Run architecture policy with `make lint`. Add a wrapper under
+  `tests/guardrails` only when programmatic custom rules are required.
 - Every test directory has an empty `__init__.py`.
 - Required generated tests are currently scoped to core services, use cases,
   and capabilities.

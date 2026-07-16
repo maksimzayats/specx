@@ -70,23 +70,29 @@ only to prove FastAPI's own lifespan implementation.
 
 ## Unit Tests
 
-Unit tests use a fresh test container. The default fixture is a bare container:
+Unit tests use a fresh application container from the real composition root:
 
 ```python
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import pytest
-from diwire import Container, DependencyRegistrationPolicy, MissingPolicy
+
+from order_service.ioc.container import get_container
+
+if TYPE_CHECKING:
+    from diwire import Container
 
 
 @pytest.fixture
 def container() -> Container:
-    return Container(
-        missing_policy=MissingPolicy.REGISTER_RECURSIVE,
-        dependency_registration_policy=DependencyRegistrationPolicy.REGISTER_RECURSIVE,
-    )
+    return get_container()
 ```
 
-Resolve project classes from the container. Register overrides before resolving
-the target:
+Put project-wide test overrides in this fixture. Resolve project classes from
+the container, registering scenario-specific overrides before resolving the
+target:
 
 ```python
 from dataclasses import dataclass
@@ -356,7 +362,32 @@ Do not call `metadata.create_all()` or `drop_all()` in source or tests.
 
 ## Architecture Guardrails
 
-Use the packaged architecture wrapper:
+Run packaged framework-neutral architecture rules from the project root:
+
+```bash
+uv run --locked specx check
+```
+
+Generated projects explicitly select every applicable built-in rule:
+
+```toml
+[tool.specx]
+select = ["ALL"]
+```
+
+The `ALL` selector skips rule families whose required project surface is
+absent. Projects that use a narrower `select` add technology families with
+`extend-select`.
+
+Projects with a narrower base selection opt into FastAPI rules explicitly:
+
+```toml
+[tool.specx]
+select = ["neutral"]
+extend-select = ["fastapi"]
+```
+
+Use the typed wrapper only when a project needs programmatic custom rules:
 
 ```python
 from pathlib import Path
@@ -372,14 +403,17 @@ def test_specx_architecture() -> None:
         SpecxArchitectureConfig(
             project_root=Path(__file__).resolve().parents[3],
             package_name="order_service",
+            extend_select=frozenset({"fastapi"}),
         )
     )
 ```
 
 `SpecxRuleId.TESTS_MIRROR_SOURCE_STRUCTURE` is enabled by default. Disable it
-only for deliberate legacy migrations, and put a concise reason beside the
-specific `SpecxRuleId` in `disabled_rules`. Prefer `path_exclusions` for
-generated or vendored trees that are outside the project's ownership.
+only for deliberate legacy migrations, and put a concise reason beside its
+exact semantic ID in `[tool.specx].ignore`. Prefer `[tool.specx].exclude` for
+generated or vendored trees that are outside the project's ownership. The
+programmatic `disabled_rules` and `path_exclusions` fields remain available to
+wrapper-based custom checks.
 
 ## Avoid
 

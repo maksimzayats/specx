@@ -14,14 +14,15 @@ Read `references/testing.md` before creating test files.
   helpers only. This is not a test suite and does not hold project-specific
   doubles.
 - `tests/unit/`: core services, use cases, and capabilities resolved from a
-  fresh explicit `diwire.Container`.
+  fresh application container returned by the project's `get_container()`.
 - `tests/integration/`: real internal graph tests. Core use-case integration
   tests call resolved use cases against the transactional DB; delivery
   integration tests exercise HTTP mapping; migrations prove Alembic behavior.
 - `tests/e2e/`: optional whole-app smoke flows.
-- `tests/guardrails/`: the packaged
-  `specx.testing.architecture.assert_specx_architecture` wrapper plus any
-  genuinely project-specific extra rules.
+- `tests/guardrails/`: optional programmatic
+  `specx.testing.architecture.assert_specx_architecture` wrappers for genuinely
+  project-specific extra rules. Standard packaged rules run through
+  `uv run specx check`.
 
 ## Rules
 
@@ -32,9 +33,9 @@ Read `references/testing.md` before creating test files.
   `tests/unit/core/tasks/services/test_title_service.py`.
 - Do not create per-target test folders, `harness.py`, target factories, or
   target harnesses.
-- `tests/unit/conftest.py` owns the fresh bare `Container` fixture for unit
-  tests. `tests/integration/conftest.py` owns the transactional DB-backed
-  `container` fixture for integration tests.
+- `tests/unit/conftest.py` owns the fresh real-app `Container` fixture for unit
+  tests and any project-wide test overrides. `tests/integration/conftest.py`
+  owns the transactional DB-backed `container` fixture for integration tests.
 - Test functions receive `container`, register any scenario-specific overrides
   before resolution, then call `container.resolve(Target)`.
 - If a complete replacement is needed by every test in one module, a
@@ -102,16 +103,19 @@ Read `references/testing.md` before creating test files.
   before registration.
 - Keep unit tests free from FastAPI request objects and real external IO.
 - Every test directory must include an empty `__init__.py` file.
-- Use the packaged architecture wrapper as the default guardrail mechanism for
-  Specx boundaries such as docstrings, use-case inputs, UoW injection, route
-  paths, direct persistence dependency rejection in use cases, container
-  imports, and `AGENTS.md` command coverage.
-- Disable built-in guardrails only with explicit `SpecxRuleId` values and a
-  project reason recorded beside the disabled value.
+- Use `uv run specx check` as the default guardrail mechanism for Specx
+  boundaries such as docstrings, use-case inputs, UoW injection, route paths,
+  direct persistence dependency rejection in use cases, container imports,
+  and `AGENTS.md` command coverage.
+- Disable built-in guardrails only with exact semantic IDs under
+  `[tool.specx].ignore` and a project reason recorded beside the configuration.
+- Generated projects use `[tool.specx].select = ["ALL"]`. Narrower projects
+  enable technology-specific families explicitly with
+  `[tool.specx].extend-select`; FastAPI projects select `fastapi`.
 - Add `extra_rules` only for project-specific checks that are not covered by a
-  built-in `SpecxRuleId`.
-- Existing workflows may use `references/render_architecture_guardrails.py` to
-  render the tiny wrapper.
+  built-in `SpecxRuleId`; use the programmatic wrapper for those projects.
+- Existing workflows and projects with custom rules may use
+  `references/render_architecture_guardrails.py` to render the tiny wrapper.
 
 ## Code Style
 
