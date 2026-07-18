@@ -4,6 +4,7 @@ import ast
 import re
 from pathlib import Path
 
+from specx.testing.architecture.models import ArchitectureRuleType
 from specx.testing.architecture.rules import BUILT_IN_RULES
 
 REPOSITORY_ROOT = Path(__file__).parents[4]
@@ -37,6 +38,9 @@ def test_every_builtin_rule_has_one_complete_reference() -> None:
     expected_stems = [rule.__module__.rsplit(".", maxsplit=1)[1] for rule in BUILT_IN_RULES]
     assert [stem for _, stem in reference_imports] == expected_stems
     assert len({component for component, _ in reference_imports}) == len(reference_imports)
+    index_rows = [line for line in reference_source.splitlines() if line.startswith("| [`")]
+    expected_index_rows = [_index_row(rule) for rule in BUILT_IN_RULES]
+    assert index_rows == expected_index_rows
 
     for rule_id, rule in built_in_rules.items():
         metadata = rule.metadata()
@@ -70,11 +74,14 @@ def test_every_builtin_rule_has_one_complete_reference() -> None:
             ast.parse(example)
         assert reference_source.count(f"../rules/{expected_stem}.mdx") == 1
         assert reference_source.count(f"<{component} />") == 1
-        index_status = "Default" if metadata.default_enabled else f"Opt-in `{metadata.family}`"
-        assert (
-            f"| [`{rule_id}`](#{expected_stem}) | {index_status} | {metadata.summary} |"
-            in reference_source
-        )
+
+
+def _index_row(rule: ArchitectureRuleType) -> str:
+    metadata = rule.metadata()
+    rule_id = str(metadata.rule_id)
+    stem = rule.__module__.rsplit(".", maxsplit=1)[1]
+    status = "Default" if metadata.default_enabled else f"Opt-in `{metadata.family}`"
+    return f"| [`{rule_id}`](#{stem}) | {status} | {metadata.summary} |"
 
 
 def _string_export(source: str, name: str) -> str:

@@ -20,6 +20,8 @@ Transaction ownership belongs to the externally meaningful use case, not reusabl
 
 ```python
 class CheckoutService(BaseEffectService):
+    uow_manager: Injected[OrderUnitOfWorkManager]
+
     async def checkout(self) -> None:
         async with self.uow_manager as uow:
             ...

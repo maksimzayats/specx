@@ -19,19 +19,27 @@ A query promises read-only behavior. Repository mutation from that path makes th
 ### Failing example
 
 ```python
+class GetOrderQuery(BaseQuery):
+    order_id: UUID
+
 class GetOrderUseCase(BaseUseCase):
     async def execute(self, *, query: GetOrderQuery) -> OrderDTO:
-        await uow.orders.save(order)
-        ...
+        async with self.uow_manager as uow:
+            await uow.orders.save(order)
+            ...
 ```
 
 ### Passing example
 
 ```python
+class GetOrderQuery(BaseQuery):
+    order_id: UUID
+
 class GetOrderUseCase(BaseUseCase):
     async def execute(self, *, query: GetOrderQuery) -> OrderDTO:
-        order = await uow.orders.get(query.order_id)
-        ...
+        async with self.uow_manager as uow:
+            order = await uow.orders.get(query.order_id)
+            ...
 ```
 
 ### Detection notes
