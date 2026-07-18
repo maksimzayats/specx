@@ -45,6 +45,13 @@ def test_builtin_rule_ids_are_unique() -> None:
     assert len(rule_ids) == len(set(rule_ids))
 
 
+def test_every_builtin_rule_has_its_own_module() -> None:
+    rule_modules = [rule.__module__ for rule in BUILT_IN_RULES]
+
+    assert len(rule_modules) == len(set(rule_modules))
+    assert all(module.startswith("specx.testing.architecture.rules.") for module in rule_modules)
+
+
 def test_every_builtin_rule_has_selection_metadata() -> None:
     metadata = [rule.metadata() for rule in BUILT_IN_RULES]
 
