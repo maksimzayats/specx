@@ -1,0 +1,38 @@
+export const ruleId = 'classes.suffix-from-foundation-category'
+export const summary = 'Require class names to use the suffix implied by their foundation base.'
+export const family = 'neutral'
+export const defaultEnabled = true
+
+## `classes.suffix-from-foundation-category`
+
+Require class names to use the suffix implied by their foundation base.
+
+**Status:** Enabled by default.
+
+### Why this exists
+
+The most specific foundation category should be visible in the concrete class name.
+
+### Failing example
+
+```python
+class SystemTime(BaseClock):
+    ...
+
+class RuntimeConfig(BaseRuntimeSettings):
+    ...
+```
+
+### Passing example
+
+```python
+class SystemClock(BaseClock):
+    ...
+
+class RuntimeSettings(BaseRuntimeSettings):
+    ...
+```
+
+### Detection notes
+
+Infers the required suffix from the nearest foundation base, including overrides such as BasePureService to Service and BaseStrEnum to Enum.

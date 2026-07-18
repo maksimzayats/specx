@@ -1,0 +1,35 @@
+export const ruleId = 'tests.fixtures-do-not-bundle-mocks'
+export const summary = 'Reject grouped mock fixtures in generated-service tests.'
+export const family = 'neutral'
+export const defaultEnabled = true
+
+## `tests.fixtures-do-not-bundle-mocks`
+
+Reject grouped mock fixtures in generated-service tests.
+
+**Status:** Enabled by default.
+
+### Why this exists
+
+Each test should declare the collaborator behavior it needs instead of receiving an opaque bag of mocks.
+
+### Failing example
+
+```python
+@pytest.fixture
+def mocks() -> dict[type, MagicMock]:
+    return {Clock: MagicMock(), Gateway: AsyncMock()}
+```
+
+### Passing example
+
+```python
+def test_checkout(container) -> None:
+    gateway = AsyncMock(spec=PaymentGateway)
+    container.add_instance(PaymentGateway, gateway)
+    target = container.resolve(CheckoutUseCase)
+```
+
+### Detection notes
+
+Finds pytest fixtures that return grouped mock dictionaries, multiple literal mocks, or bundled container registrations. Single-purpose fixtures are allowed.

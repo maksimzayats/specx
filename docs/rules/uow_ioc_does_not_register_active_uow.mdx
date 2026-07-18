@@ -1,0 +1,33 @@
+export const ruleId = 'uow.ioc-does-not-register-active-uow'
+export const summary = 'Reject active unit-of-work registrations in the IOC container.'
+export const family = 'neutral'
+export const defaultEnabled = true
+
+## `uow.ioc-does-not-register-active-uow`
+
+Reject active unit-of-work registrations in the IOC container.
+
+**Status:** Enabled by default.
+
+### Why this exists
+
+An active unit of work is transaction-scoped state and must not be registered as a reusable container dependency.
+
+### Failing example
+
+```python
+container.add(OrderUnitOfWork, SQLAlchemyOrderUnitOfWork)
+```
+
+### Passing example
+
+```python
+container.add(
+    OrderUnitOfWorkManager,
+    SQLAlchemyOrderUnitOfWorkManager,
+)
+```
+
+### Detection notes
+
+Scans ioc Python modules for DI registrations whose registered or provided type names look like UnitOfWork but not UnitOfWorkManager.

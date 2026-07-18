@@ -1,0 +1,37 @@
+export const ruleId = 'tests.integration-does-not-mock-internal-collaborators'
+export const summary = 'Require integration tests to exercise the real internal application graph.'
+export const family = 'neutral'
+export const defaultEnabled = true
+
+## `tests.integration-does-not-mock-internal-collaborators`
+
+Require integration tests to exercise the real internal application graph.
+
+**Status:** Enabled by default.
+
+### Why this exists
+
+Integration tests should validate real wiring between internal use cases, services, and capabilities while replacing only external edges.
+
+### Failing example
+
+```python
+def test_checkout(monkeypatch):
+    monkeypatch.setattr(
+        "acme.core.orders.services.checkout.CheckoutService",
+        AsyncMock(),
+    )
+```
+
+### Passing example
+
+```python
+def test_checkout(container):
+    payment_gateway = AsyncMock(spec=PaymentGateway)
+    container.add_instance(PaymentGateway, payment_gateway)
+    use_case = container.resolve(CheckoutUseCase)
+```
+
+### Detection notes
+
+Recognizes unittest.mock patching, monkeypatch string targets, mock specs, and container registrations that name internal UseCase, Service, or Capability classes.

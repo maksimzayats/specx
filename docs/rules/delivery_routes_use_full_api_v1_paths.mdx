@@ -1,0 +1,36 @@
+export const ruleId = 'delivery.routes-use-full-api-v1-paths'
+export const summary = 'Require public business route registrations to use full `/api/v1/...` paths.'
+export const family = 'fastapi'
+export const defaultEnabled = false
+
+## `delivery.routes-use-full-api-v1-paths`
+
+Require public business route registrations to use full `/api/v1/...` paths.
+
+**Status:** Opt-in `fastapi` rule.
+
+### Why this exists
+
+Full versioned paths keep route ownership visible at registration sites and avoid hidden prefix composition.
+
+### Failing example
+
+```python
+router = APIRouter(prefix="/api/v1")
+router.add_api_route("/orders", create_order, methods=["POST"])
+```
+
+### Passing example
+
+```python
+router.add_api_route(
+    "/api/v1/orders",
+    create_order,
+    methods=["POST"],
+)
+router.add_api_route("/healthz", health, methods=["GET"])
+```
+
+### Detection notes
+
+FastAPI opt-in rule. Checks decorator and add_api_route paths in delivery/fastapi; /healthz and /readyz are allowed operational exceptions.

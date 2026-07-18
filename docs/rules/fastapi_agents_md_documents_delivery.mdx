@@ -1,0 +1,33 @@
+export const ruleId = 'fastapi.agents-md-documents-delivery'
+export const summary = 'Require FastAPI projects to document their delivery entrypoint and lifecycle.'
+export const family = 'fastapi'
+export const defaultEnabled = false
+
+## `fastapi.agents-md-documents-delivery`
+
+Require FastAPI projects to document their delivery entrypoint and lifecycle.
+
+**Status:** Opt-in `fastapi` rule.
+
+### Why this exists
+
+A FastAPI service needs explicit guidance for its entrypoint and for shutdown ownership of app-scoped resources.
+
+### Failing example
+
+```python
+# AGENTS.md
+The API starts somewhere under delivery/.
+```
+
+### Passing example
+
+```python
+# AGENTS.md
+FastAPI entrypoint: `delivery/fastapi/__main__.py`.
+`FastAPILifecycle` closes app-owned resources, then calls `container.aclose()`.
+```
+
+### Detection notes
+
+FastAPI opt-in rule. Requires exact delivery-entrypoint and lifecycle ownership guidance when delivery/fastapi is selected.

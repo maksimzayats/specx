@@ -1,0 +1,34 @@
+export const ruleId = 'use-cases.return-dtos'
+export const summary = 'Require use cases to return DTOs instead of entities or raw values.'
+export const family = 'neutral'
+export const defaultEnabled = true
+
+## `use-cases.return-dtos`
+
+Require use cases to return DTOs instead of entities or raw values.
+
+**Status:** Enabled by default.
+
+### Why this exists
+
+A stable DTO result keeps the application boundary independent from transport schemas and persistence entities.
+
+### Failing example
+
+```python
+class CountOrdersUseCase(BaseUseCase):
+    async def execute(self, query: CountOrdersQuery) -> int:
+        return 3
+```
+
+### Passing example
+
+```python
+class CountOrdersUseCase(BaseUseCase):
+    async def execute(self, query: CountOrdersQuery) -> OrderCountDTO:
+        return OrderCountDTO(count=3)
+```
+
+### Detection notes
+
+Finds BaseUseCase subclasses and requires execute to declare a return type whose name ends in DTO or inherits BaseDTO.

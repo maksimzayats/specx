@@ -1,0 +1,37 @@
+export const ruleId = 'diwire.container-import-boundary'
+export const summary = 'Restrict `diwire.Container` imports to composition and tests.'
+export const family = 'neutral'
+export const defaultEnabled = true
+
+## `diwire.container-import-boundary`
+
+Restrict `diwire.Container` imports to composition and tests.
+
+**Status:** Enabled by default.
+
+### Why this exists
+
+The DI container is a composition mechanism, not an application dependency.
+
+### Failing example
+
+```python
+# core/orders/use_cases/create_order.py
+from diwire import Container
+
+class CreateOrderUseCase(BaseUseCase):
+    container: Injected[Container]
+```
+
+### Passing example
+
+```python
+# ioc/container.py
+from diwire import Container
+
+container = Container()
+```
+
+### Detection notes
+
+Allows Container usage in ioc, tests, top-level delivery app/factory/lifecycle modules, and Injected[Container] only on FastAPILifecycle. Other source imports, annotations, and construction are reported.

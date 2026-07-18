@@ -1,0 +1,39 @@
+export const ruleId = 'core.inner-packages-no-outer-layers-or-io-libraries'
+export const summary = 'Keep inner core packages free from delivery, infrastructure, IOC, and IO imports.'
+export const family = 'neutral'
+export const defaultEnabled = true
+
+## `core.inner-packages-no-outer-layers-or-io-libraries`
+
+Keep inner core packages free from delivery, infrastructure, IOC, and IO imports.
+
+**Status:** Enabled by default.
+
+### Why this exists
+
+Core behavior should describe application policy without depending on frameworks, adapters, composition code, or network and persistence libraries.
+
+### Failing example
+
+```python
+# src/acme/core/orders/services/pricing.py
+import httpx
+
+class PricingService(BaseEffectService):
+    ...
+```
+
+### Passing example
+
+```python
+# src/acme/core/orders/gateways/tax.py
+class TaxGateway(BaseGateway):
+    """External effect: reads tax rates from a remote provider."""
+    ...
+
+# The httpx implementation belongs under core/orders/infrastructure/httpx/.
+```
+
+### Detection notes
+
+Scans Python files below the recognized inner core packages and flags imports containing delivery, infrastructure, or ioc, plus known I/O library roots such as httpx, redis, and sqlalchemy.

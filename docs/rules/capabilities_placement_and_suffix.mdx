@@ -1,0 +1,34 @@
+export const ruleId = 'capabilities.placement-and-suffix'
+export const summary = 'Keep capability classes in capability packages with capability naming.'
+export const family = 'neutral'
+export const defaultEnabled = true
+
+## `capabilities.placement-and-suffix`
+
+Keep capability classes in capability packages with capability naming.
+
+**Status:** Enabled by default.
+
+### Why this exists
+
+Capabilities are narrow injectable collaborators. Their package and suffix should make that role immediately visible.
+
+### Failing example
+
+```python
+# core/orders/services/hash_helper.py
+class PasswordHelper(BaseCapability):
+    ...
+```
+
+### Passing example
+
+```python
+# core/orders/capabilities/password_hash.py
+class PasswordHashCapability(BaseCapability):
+    ...
+```
+
+### Detection notes
+
+Uses the most specific capability foundation base to infer both the required capabilities package and class suffix. Narrower bases such as BaseClock keep their narrower suffix.

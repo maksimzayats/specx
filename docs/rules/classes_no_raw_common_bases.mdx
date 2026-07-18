@@ -1,0 +1,32 @@
+export const ruleId = 'classes.no-raw-common-bases'
+export const summary = 'Reject raw common framework/base classes outside the foundation layer.'
+export const family = 'neutral'
+export const defaultEnabled = true
+
+## `classes.no-raw-common-bases`
+
+Reject raw common framework/base classes outside the foundation layer.
+
+**Status:** Enabled by default.
+
+### Why this exists
+
+Raw framework and standard-library bases should be wrapped once at the foundation boundary so project conventions remain consistent.
+
+### Failing example
+
+```python
+class OrderStatus(StrEnum):
+    PENDING = "pending"
+```
+
+### Passing example
+
+```python
+class OrderStatus(BaseStrEnum):
+    PENDING = "pending"
+```
+
+### Detection notes
+
+Checks non-foundation classes for direct use of recognized raw bases such as ABC, Enum, StrEnum, BaseModel, BaseSettings, and DeclarativeBase.

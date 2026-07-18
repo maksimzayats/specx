@@ -1,0 +1,36 @@
+export const ruleId = 'gateways.external-effects-and-no-entity-returns'
+export const summary = 'Require gateway ports to document external effects and avoid entity returns.'
+export const family = 'neutral'
+export const defaultEnabled = true
+
+## `gateways.external-effects-and-no-entity-returns`
+
+Require gateway ports to document external effects and avoid entity returns.
+
+**Status:** Enabled by default.
+
+### Why this exists
+
+Callers need to see external effects at the port, and gateway results must not expose owned persistence entities.
+
+### Failing example
+
+```python
+class PaymentGateway(BaseGateway):
+    async def charge(self, amount: Decimal) -> PaymentEntity:
+        ...
+```
+
+### Passing example
+
+```python
+class PaymentGateway(BaseGateway):
+    """External effect: submits a charge to the payment provider."""
+
+    async def charge(self, amount: Decimal) -> PaymentReceiptDTO:
+        ...
+```
+
+### Detection notes
+
+Checks project gateway port docstrings for an External effect marker and method return annotations for names ending in Entity or inheriting BaseEntity.

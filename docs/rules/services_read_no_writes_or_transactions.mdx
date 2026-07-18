@@ -1,0 +1,38 @@
+export const ruleId = 'services.read-no-writes-or-transactions'
+export const summary = 'Keep read services from writing data or owning transactions.'
+export const family = 'neutral'
+export const defaultEnabled = true
+
+## `services.read-no-writes-or-transactions`
+
+Keep read services from writing data or owning transactions.
+
+**Status:** Enabled by default.
+
+### Why this exists
+
+Read services may coordinate reads but must not mutate state or decide transaction lifetime.
+
+### Failing example
+
+```python
+class OrderLookupService(BaseReadService):
+    async def get(self, order_id: UUID) -> Order:
+        async with self.uow_manager as uow:
+            await uow.orders.save(order)
+        return order
+```
+
+### Passing example
+
+```python
+class OrderLookupService(BaseReadService):
+    repository: OrderRepository
+
+    async def get(self, order_id: UUID) -> Order:
+        return await self.repository.get(order_id)
+```
+
+### Detection notes
+
+Recognizes unit-of-work context managers, repository mutator calls, and common effect method names such as commit, publish, send, and charge.

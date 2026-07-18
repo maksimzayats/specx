@@ -1,0 +1,38 @@
+export const ruleId = 'uow.use-cases-no-direct-repositories-or-infrastructure'
+export const summary = 'Require persistence access to flow through use-case-owned UoW scopes.'
+export const family = 'neutral'
+export const defaultEnabled = true
+
+## `uow.use-cases-no-direct-repositories-or-infrastructure`
+
+Require persistence access to flow through use-case-owned UoW scopes.
+
+**Status:** Enabled by default.
+
+### Why this exists
+
+Persistence use cases should reach repositories through the active unit returned by their manager, preserving one owned transaction boundary.
+
+### Failing example
+
+```python
+class CreateOrderUseCase(BaseUseCase):
+    repository: Injected[OrderRepository]
+    session: Injected[AsyncSession]
+```
+
+### Passing example
+
+```python
+class CreateOrderUseCase(BaseUseCase):
+    uow_manager: Injected[OrderUnitOfWorkManager]
+
+    async def execute(self, command: CreateOrderCommand) -> OrderDTO:
+        async with self.uow_manager as uow:
+            await uow.orders.add(order)
+            ...
+```
+
+### Detection notes
+
+Rejects persistence infrastructure imports, repository/session/engine injection, and repository calls outside a recognized manager-owned active UoW.

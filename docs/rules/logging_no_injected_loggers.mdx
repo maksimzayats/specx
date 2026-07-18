@@ -1,0 +1,33 @@
+export const ruleId = 'logging.no-injected-loggers'
+export const summary = 'Keep logger naming local to the class that emits log records.'
+export const family = 'neutral'
+export const defaultEnabled = true
+
+## `logging.no-injected-loggers`
+
+Keep logger naming local to the class that emits log records.
+
+**Status:** Enabled by default.
+
+### Why this exists
+
+Logger names should identify the emitting class, and logging configuration should remain a single infrastructure concern.
+
+### Failing example
+
+```python
+class CheckoutService(BaseEffectService):
+    logger: Injected[logging.Logger]
+```
+
+### Passing example
+
+```python
+class CheckoutService(BaseEffectService):
+    def __post_init__(self) -> None:
+        self._logger = logging.getLogger(f"{__name__}.{type(self).__name__}")
+```
+
+### Detection notes
+
+Rejects injected Logger annotations and DI container registrations of logging.Logger, including common imported aliases.

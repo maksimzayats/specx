@@ -1,0 +1,33 @@
+export const ruleId = 'uow.use-cases-inject-managers'
+export const summary = 'Require persistence use cases to inject managers, not active UoWs or providers.'
+export const family = 'neutral'
+export const defaultEnabled = true
+
+## `uow.use-cases-inject-managers`
+
+Require persistence use cases to inject managers, not active UoWs or providers.
+
+**Status:** Enabled by default.
+
+### Why this exists
+
+The manager creates the active transaction at execution time; injecting an active unit or provider obscures lifetime and ownership.
+
+### Failing example
+
+```python
+class CreateOrderUseCase(BaseUseCase):
+    uow: Injected[OrderUnitOfWork]
+    uow_provider: Injected[Callable[[], OrderUnitOfWork]]
+```
+
+### Passing example
+
+```python
+class CreateOrderUseCase(BaseUseCase):
+    uow_manager: Injected[OrderUnitOfWorkManager]
+```
+
+### Detection notes
+
+Detects persistence use cases from repository/UoW behavior and checks injected fields for an allowed UnitOfWorkManager rather than active UoWs or providers.

@@ -1,0 +1,37 @@
+export const ruleId = 'use-cases.commands-and-queries-live-local'
+export const summary = 'Require command and query classes to be defined in use-case modules.'
+export const family = 'neutral'
+export const defaultEnabled = true
+
+## `use-cases.commands-and-queries-live-local`
+
+Require command and query classes to be defined in use-case modules.
+
+**Status:** Enabled by default.
+
+### Why this exists
+
+Keeping inputs beside their single use case avoids generic command packages and makes each application action self-contained.
+
+### Failing example
+
+```python
+# core/orders/commands/create_order.py
+class CreateOrderCommand(BaseCommand):
+    ...
+```
+
+### Passing example
+
+```python
+# core/orders/use_cases/create_order.py
+class CreateOrderCommand(BaseCommand):
+    ...
+
+class CreateOrderUseCase(BaseUseCase):
+    ...
+```
+
+### Detection notes
+
+Reports BaseCommand and BaseQuery subclasses declared outside a use_cases package.

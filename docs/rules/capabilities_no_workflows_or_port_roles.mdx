@@ -1,0 +1,37 @@
+export const ruleId = 'capabilities.no-workflows-or-port-roles'
+export const summary = 'Prevent capabilities from pretending to be workflows or ports.'
+export const family = 'neutral'
+export const defaultEnabled = true
+
+## `capabilities.no-workflows-or-port-roles`
+
+Prevent capabilities from pretending to be workflows or ports.
+
+**Status:** Enabled by default.
+
+### Why this exists
+
+A capability should not become a disguised service, repository, gateway, manager, helper, or transaction owner.
+
+### Failing example
+
+```python
+class BillingServiceCapability(BaseCapability):
+    unit_of_work: UnitOfWorkManager
+
+    async def run(self):
+        async with self.unit_of_work:
+            ...
+```
+
+### Passing example
+
+```python
+class CurrencyRoundingCapability(BaseCapability):
+    def round(self, amount: Decimal) -> Decimal:
+        ...
+```
+
+### Detection notes
+
+Checks forbidden role suffixes, incompatible foundation ancestry, unit-of-work fields, and context-manager use on those fields.

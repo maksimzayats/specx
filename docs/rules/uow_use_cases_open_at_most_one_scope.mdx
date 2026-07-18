@@ -1,0 +1,35 @@
+export const ruleId = 'uow.use-cases-open-at-most-one-scope'
+export const summary = 'Limit each use-case execution to one unit-of-work manager scope.'
+export const family = 'neutral'
+export const defaultEnabled = true
+
+## `uow.use-cases-open-at-most-one-scope`
+
+Limit each use-case execution to one unit-of-work manager scope.
+
+**Status:** Enabled by default.
+
+### Why this exists
+
+One transaction boundary per execution keeps atomicity and failure behavior understandable.
+
+### Failing example
+
+```python
+async with self.orders_uow as orders:
+    ...
+async with self.audit_uow as audit:
+    ...
+```
+
+### Passing example
+
+```python
+async with self.uow_manager as uow:
+    await uow.orders.save(order)
+    await uow.audit.append(event)
+```
+
+### Detection notes
+
+Counts recognized unit-of-work manager context entries across each use-case execute method and reports counts above one.

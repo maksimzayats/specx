@@ -1,0 +1,35 @@
+export const ruleId = 'services.no-generic-base-service'
+export const summary = 'Reject generic `BaseService` in favor of effect-specific service bases.'
+export const family = 'neutral'
+export const defaultEnabled = true
+
+## `services.no-generic-base-service`
+
+Reject generic `BaseService` in favor of effect-specific service bases.
+
+**Status:** Enabled by default.
+
+### Why this exists
+
+A generic service base erases the most useful architectural distinction: whether behavior is deterministic, read-only, or effecting.
+
+### Failing example
+
+```python
+class BaseService:
+    ...
+
+class PricingService(BaseService):
+    ...
+```
+
+### Passing example
+
+```python
+class PricingService(BasePureService):
+    ...
+```
+
+### Detection notes
+
+Rejects declarations, imports, and base expressions named BaseService across project source.
