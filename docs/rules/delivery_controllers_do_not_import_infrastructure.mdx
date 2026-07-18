@@ -34,4 +34,4 @@ from acme.core.orders.use_cases.create_order import CreateOrderUseCase
 
 ### Detection notes
 
-Controller modules reject all infrastructure imports. Delivery __main__.py, factory.py, and lifecycle.py may use top-level infrastructure resources but still reject scope repositories, models, migrations, and adapters.
+Controller modules reject infrastructure imports plus direct scope repositories, models, migrations, and adapters. Delivery __main__.py, factory.py, and lifecycle.py may use top-level infrastructure resources but still reject those scope-technical imports.

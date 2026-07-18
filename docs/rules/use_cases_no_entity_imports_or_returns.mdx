@@ -22,17 +22,19 @@ Entities are internal state models. Returning them from a use case leaks persist
 from acme.core.orders.entities.order import Order
 
 class GetOrderUseCase(BaseUseCase):
-    async def execute(self, query: GetOrderQuery) -> Order:
-        return await self.repository.get(query.order_id)
+    async def execute(self, *, query: GetOrderQuery) -> Order:
+        async with self.uow_manager as uow:
+            return await uow.orders.get(query.order_id)
 ```
 
 ### Passing example
 
 ```python
 class GetOrderUseCase(BaseUseCase):
-    async def execute(self, query: GetOrderQuery) -> OrderDTO:
-        order = await uow.orders.get(query.order_id)
-        return OrderDTO(id=order.id, status=order.status)
+    async def execute(self, *, query: GetOrderQuery) -> OrderDTO:
+        async with self.uow_manager as uow:
+            order = await uow.orders.get(query.order_id)
+            return OrderDTO(id=order.id, status=order.status)
 ```
 
 ### Detection notes

@@ -31,10 +31,10 @@ def test_checkout(monkeypatch):
 ```python
 def test_checkout(container):
     payment_gateway = AsyncMock(spec=PaymentGateway)
-    container.add_instance(PaymentGateway, payment_gateway)
+    container.add_instance(payment_gateway, provides=PaymentGateway)
     use_case = container.resolve(CheckoutUseCase)
 ```
 
 ### Detection notes
 
-Recognizes unittest.mock patching, monkeypatch string targets, mock specs, and container registrations that name internal UseCase, Service, or Capability classes.
+Recognizes unittest.mock patching, monkeypatch string and object-attribute targets, mock specs, and container registrations that name internal UseCase, Service, or Capability classes.

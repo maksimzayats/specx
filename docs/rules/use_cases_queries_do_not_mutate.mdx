@@ -25,6 +25,7 @@ class GetOrderQuery(BaseQuery):
 class GetOrderUseCase(BaseUseCase):
     async def execute(self, *, query: GetOrderQuery) -> OrderDTO:
         async with self.uow_manager as uow:
+            order = await uow.orders.get(query.order_id)
             await uow.orders.save(order)
             ...
 ```
@@ -44,4 +45,4 @@ class GetOrderUseCase(BaseUseCase):
 
 ### Detection notes
 
-Recognizes a single keyword-only local BaseQuery input and known repository mutator calls rooted in an active UoW or injected repository. Other mutations remain a review concern.
+Recognizes a single keyword-only query whose class transitively inherits BaseQuery, plus known repository mutator calls rooted in an active UoW or injected repository. Other mutations remain a review concern.

@@ -37,4 +37,4 @@ class CreateOrderUseCase(BaseUseCase):
 
 ### Detection notes
 
-Reports BaseCommand and BaseQuery subclasses declared outside a use_cases package.
+Reports classes that transitively inherit BaseCommand or BaseQuery when they are declared outside a use_cases package.

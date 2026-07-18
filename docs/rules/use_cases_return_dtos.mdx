@@ -20,7 +20,7 @@ A stable DTO result keeps the application boundary independent from transport sc
 
 ```python
 class CountOrdersUseCase(BaseUseCase):
-    async def execute(self, query: CountOrdersQuery) -> int:
+    async def execute(self, *, query: CountOrdersQuery) -> int:
         return 3
 ```
 
@@ -28,10 +28,10 @@ class CountOrdersUseCase(BaseUseCase):
 
 ```python
 class CountOrdersUseCase(BaseUseCase):
-    async def execute(self, query: CountOrdersQuery) -> OrderCountDTO:
+    async def execute(self, *, query: CountOrdersQuery) -> OrderCountDTO:
         return OrderCountDTO(count=3)
 ```
 
 ### Detection notes
 
-Checks every discovered `execute` return annotation and requires its rendered type name to contain the case-sensitive substring `DTO`. It does not inspect BaseDTO ancestry.
+Checks `execute` return annotations on BaseUseCase descendants and requires each rendered type name to contain the case-sensitive substring `DTO`. It does not inspect BaseDTO ancestry.

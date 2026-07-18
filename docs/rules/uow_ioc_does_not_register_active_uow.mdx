@@ -35,4 +35,4 @@ container.add(
 
 ### Detection notes
 
-Checks `ioc/container.py` for `Lifetime` imports and `container.add(..., provides=...)` registrations whose provided type ends in `UnitOfWork` rather than `UnitOfWorkManager`.
+Checks `ioc/container.py` for `Lifetime` imports and container registrations whose explicit `provides=` type or inferred positional target ends in `UnitOfWork` rather than `UnitOfWorkManager`. This covers `add`, `add_factory`, and `add_instance` forms.

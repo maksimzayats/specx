@@ -31,7 +31,7 @@ class CheckoutService(BaseEffectService):
 
 ```python
 class CheckoutUseCase(BaseUseCase):
-    async def execute(self, command: CheckoutCommand) -> CheckoutDTO:
+    async def execute(self, *, command: CheckoutCommand) -> CheckoutDTO:
         async with self.uow_manager as uow:
             await self.checkout_service.checkout(uow, command)
             ...

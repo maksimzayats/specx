@@ -33,9 +33,10 @@ router.add_api_route(
     endpoint=create_order,
     methods=["POST"],
 )
+router.add_api_route("/api/v1/customers", list_customers, methods=["GET"])
 router.add_api_route(path="/healthz", endpoint=health, methods=["GET"])
 ```
 
 ### Detection notes
 
-FastAPI opt-in rule. Checks literal `path=` keywords on `add_api_route` calls below delivery controller packages. Positional or dynamic paths are reported; `/healthz` and `/readyz` are allowed exceptions.
+FastAPI opt-in rule. Checks literal `path=` keywords or first positional paths on `add_api_route` calls below delivery controller packages. Dynamic paths are reported; `/healthz` and `/readyz` are allowed exceptions.
