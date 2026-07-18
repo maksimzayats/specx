@@ -32,7 +32,7 @@ class DeliveryControllersDoNotImportInfrastructureRule(ArchitectureRuleBase):
             if path.name == "__init__.py" or path not in context.ast_project.files:
                 continue
             for module in explicit_import_modules(context.tree(path)):
-                if "infrastructure" in module_parts(module):
+                if "infrastructure" in module_parts(module) or is_scope_technical_import(module):
                     violations.append(
                         violation(self.id, path=path, message=f"imports {module}"),
                     )

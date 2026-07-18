@@ -245,6 +245,31 @@ def test_delivery_boundary_rule_rejects_scope_technical_imports_in_app_modules(
     }
 
 
+def test_delivery_boundary_rule_rejects_scope_technical_imports_in_controllers(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path / "src" / "demo_service" / "delivery" / "fastapi" / "controllers" / "tasks.py",
+        "from demo_service.core.tasks.models.task import TaskModel\n"
+        "from demo_service.core.tasks.repositories.task_repository import TaskRepository\n",
+    )
+
+    report = check_specx_architecture(
+        SpecxArchitectureConfig(
+            project_root=tmp_path,
+            package_name="demo_service",
+            disabled_rules=_disable_all_except(
+                SpecxRuleId.DELIVERY_CONTROLLERS_DO_NOT_IMPORT_INFRASTRUCTURE
+            ),
+        )
+    )
+
+    assert {violation.message for violation in report.violations} == {
+        "imports demo_service.core.tasks.models.task",
+        "imports demo_service.core.tasks.repositories.task_repository",
+    }
+
+
 def _disable_all_except(rule_id: SpecxRuleId) -> frozenset[SpecxRuleId]:
     return frozenset(candidate for candidate in SpecxRuleId if candidate != rule_id)
 

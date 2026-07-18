@@ -20,7 +20,8 @@ def test_public_routes_rule_accepts_api_routes_and_operational_probes(
         "        registry.add_api_route(path='/readyz', endpoint=self.readyz, methods=['GET'])\n"
         "        registry.add_api_route(\n"
         "            path='/api/v1/orders', endpoint=self.orders, methods=['GET']\n"
-        "        )\n",
+        "        )\n"
+        "        registry.add_api_route('/api/v1/tasks', self.tasks, methods=['GET'])\n",
     )
 
     report = check_specx_architecture(

@@ -39,7 +39,14 @@ class PublicRoutesUseFullAPIV1PathsRule(ArchitectureRuleBase):
                     (keyword for keyword in node.keywords if keyword.arg == "path"),
                     None,
                 )
-                if path_keyword is None or not isinstance(path_keyword.value, ast.Constant):
+                path_expression = (
+                    path_keyword.value
+                    if path_keyword is not None
+                    else node.args[0]
+                    if node.args
+                    else None
+                )
+                if not isinstance(path_expression, ast.Constant):
                     violations.append(
                         violation(
                             self.id,
@@ -49,14 +56,14 @@ class PublicRoutesUseFullAPIV1PathsRule(ArchitectureRuleBase):
                         )
                     )
                     continue
-                route_path = path_keyword.value.value
+                route_path = path_expression.value
                 if not isinstance(route_path, str):
                     violations.append(
                         violation(
                             self.id,
                             path=path,
                             message=f"uses {route_path!r}",
-                            node=path_keyword.value,
+                            node=path_expression,
                         )
                     )
                     continue
@@ -68,7 +75,7 @@ class PublicRoutesUseFullAPIV1PathsRule(ArchitectureRuleBase):
                             self.id,
                             path=path,
                             message=f"uses {route_path!r}",
-                            node=path_keyword.value,
+                            node=path_expression,
                         )
                     )
         return tuple(violations)

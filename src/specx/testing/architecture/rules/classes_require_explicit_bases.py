@@ -34,6 +34,7 @@ class NonFoundationSourceClassesHaveExplicitBaseClassesRule(ArchitectureRuleBase
                             path=path,
                             message="class has no explicit base",
                             symbol=node.name,
+                            node=node,
                         )
                     )
         return tuple(violations)

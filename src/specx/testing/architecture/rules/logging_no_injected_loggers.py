@@ -36,7 +36,9 @@ class LoggingDoesNotInjectLoggersRule(ArchitectureRuleBase):
             tree = context.tree(path)
             aliases = context.aliases(path)
             imports = context.imports(path)
-            for class_node in [node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)]:
+            for class_node in ast.walk(tree):
+                if not isinstance(class_node, ast.ClassDef):
+                    continue
                 for child in class_node.body:
                     if not isinstance(child, ast.AnnAssign) or not isinstance(
                         child.target,
@@ -54,7 +56,9 @@ class LoggingDoesNotInjectLoggersRule(ArchitectureRuleBase):
                             )
                         )
 
-            for node in [child for child in ast.walk(tree) if isinstance(child, ast.Call)]:
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.Call):
+                    continue
                 if not is_container_registration_call(node):
                     continue
                 provides = next(

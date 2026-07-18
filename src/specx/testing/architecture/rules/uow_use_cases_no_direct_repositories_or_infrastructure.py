@@ -43,7 +43,9 @@ class UseCasesDoNotInjectRepositoriesOrInfrastructureRule(ArchitectureRuleBase):
                 if use_case_imports_persistence_infrastructure(module):
                     violations.append(violation(self.id, path=path, message=f"imports {module}"))
 
-            for class_node in [node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)]:
+            for class_node in ast.walk(tree):
+                if not isinstance(class_node, ast.ClassDef):
+                    continue
                 if not is_use_case_class(class_node, aliases, base_index):
                     continue
 

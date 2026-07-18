@@ -5,7 +5,8 @@ import ast
 from specx.testing.architecture.context import (
     USE_CASE_INPUT_BASE_NAMES,
     ArchitectureContext,
-    class_direct_base_names,
+    class_base_name_index,
+    class_has_any_foundation_base,
 )
 from specx.testing.architecture.models import SpecxArchitectureViolation
 from specx.testing.architecture.rule_id import SpecxRuleId
@@ -26,17 +27,18 @@ class CommandAndQueryClassesLiveWithUseCasesRule(ArchitectureRuleBase):
 
     def check(self, context: ArchitectureContext) -> tuple[SpecxArchitectureViolation, ...]:
         violations: list[SpecxArchitectureViolation] = []
+        base_index = class_base_name_index(context)
         for path in (context.src_root / "core").glob("**/*.py"):
             if path.name == "__init__.py" or path not in context.ast_project.files:
                 continue
             if "use_cases" in path.relative_to(context.src_root).parts:
                 continue
             tree = context.tree(path)
-            aliases = context.aliases(path)
             for node in ast.walk(tree):
-                if (
-                    isinstance(node, ast.ClassDef)
-                    and class_direct_base_names(node, aliases) & USE_CASE_INPUT_BASE_NAMES
+                if isinstance(node, ast.ClassDef) and class_has_any_foundation_base(
+                    node.name,
+                    USE_CASE_INPUT_BASE_NAMES,
+                    base_index,
                 ):
                     violations.append(
                         violation(

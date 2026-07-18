@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import ast
+
 from specx.testing.architecture.context import ArchitectureContext
 from specx.testing.architecture.models import SpecxArchitectureViolation
 from specx.testing.architecture.rule_id import SpecxRuleId
@@ -31,5 +33,19 @@ class FoundationImportsUseScopedPackagesRule(ArchitectureRuleBase):
                     if module == "specx.foundation" or module.startswith("specx.foundation."):
                         violations.append(
                             violation(self.id, path=path, message=f"imports {module}")
+                        )
+                for node in ast.walk(tree):
+                    if (
+                        isinstance(node, ast.ImportFrom)
+                        and node.module == "specx"
+                        and any(alias.name == "foundation" for alias in node.names)
+                    ):
+                        violations.append(
+                            violation(
+                                self.id,
+                                path=path,
+                                message="imports specx.foundation",
+                                node=node,
+                            )
                         )
         return tuple(violations)

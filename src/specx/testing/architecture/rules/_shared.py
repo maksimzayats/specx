@@ -682,8 +682,9 @@ def _patch_call_targets_internal_app_collaborator(
     if _is_patch_object_call_chain(call_chain):
         if not node.args:
             return False
-        return _is_internal_app_collaborator_name(
-            _qualified_expression_name(node.args[0], aliases),
+        return _object_attribute_target_names_internal_app_collaborator(
+            target=node.args[0],
+            attribute=node.args[1] if len(node.args) > 1 else None,
             aliases=aliases,
             imports=imports,
             package_name=package_name,
@@ -711,11 +712,35 @@ def _monkeypatch_call_targets_internal_app_collaborator(
         package_name=package_name,
     ):
         return True
-    return _is_internal_app_collaborator_name(
-        _qualified_expression_name(target, aliases),
+    return _object_attribute_target_names_internal_app_collaborator(
+        target=target,
+        attribute=node.args[1] if len(node.args) > 1 else None,
         aliases=aliases,
         imports=imports,
         package_name=package_name,
+    )
+
+
+def _object_attribute_target_names_internal_app_collaborator(
+    *,
+    target: ast.expr,
+    attribute: ast.expr | None,
+    aliases: dict[str, str],
+    imports: frozenset[str],
+    package_name: str,
+) -> bool:
+    target_name = _qualified_expression_name(target, aliases)
+    candidate_names = [target_name]
+    if isinstance(attribute, ast.Constant) and isinstance(attribute.value, str) and attribute.value:
+        candidate_names.append(f"{target_name}.{attribute.value}")
+    return any(
+        _is_internal_app_collaborator_name(
+            candidate_name,
+            aliases=aliases,
+            imports=imports,
+            package_name=package_name,
+        )
+        for candidate_name in candidate_names
     )
 
 

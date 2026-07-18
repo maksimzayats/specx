@@ -48,6 +48,7 @@ class ClassesUseSuffixFromMostSpecificFoundationCategoryRule(ArchitectureRuleBas
                             path=path,
                             message="has no recognized category",
                             symbol=node.name,
+                            node=node,
                         )
                     )
                     continue
@@ -58,6 +59,7 @@ class ClassesUseSuffixFromMostSpecificFoundationCategoryRule(ArchitectureRuleBas
                             path=path,
                             message=f"expected {sorted(suffixes)}",
                             symbol=node.name,
+                            node=node,
                         )
                     )
         return tuple(violations)

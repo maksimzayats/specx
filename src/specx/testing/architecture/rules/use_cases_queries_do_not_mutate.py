@@ -10,7 +10,7 @@ from specx.testing.architecture.context import (
     call_is_rooted_in_names,
     call_is_rooted_in_self_attributes,
     class_base_name_index,
-    class_direct_base_names,
+    class_has_foundation_base,
     class_injected_repository_field_names,
     execute_methods_with_classes,
     repository_mutator_method_names,
@@ -41,16 +41,11 @@ class QueryUseCasesDoNotCallRepositoryMutatorsRule(ArchitectureRuleBase):
                 continue
             tree = context.tree(path)
             aliases = context.aliases(path)
-            local_input_classes = {
-                node.name: class_direct_base_names(node, aliases)
-                for node in ast.walk(tree)
-                if isinstance(node, ast.ClassDef)
-            }
             for class_node, execute in execute_methods_with_classes(tree):
                 if len(execute.args.kwonlyargs) != 1 or execute.args.kwonlyargs[0].arg != "query":
                     continue
                 query_annotation = annotation_name(execute.args.kwonlyargs[0].annotation, aliases)
-                if "BaseQuery" not in local_input_classes.get(query_annotation, set()):
+                if not class_has_foundation_base(query_annotation, "BaseQuery", base_index):
                     continue
                 repository_fields = class_injected_repository_field_names(
                     class_node,
