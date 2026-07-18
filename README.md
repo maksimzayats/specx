@@ -1,12 +1,10 @@
 <p align="center">
   <a href="https://specx.dev">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/maksimzayats/specx/main/docs/public/logo-storybook-dark.svg">
-      <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/maksimzayats/specx/main/docs/public/logo-storybook.svg">
-      <img alt="specx" src="https://raw.githubusercontent.com/maksimzayats/specx/main/docs/public/logo-storybook.svg" width="225">
-    </picture>
+    <img alt="specx" src="https://raw.githubusercontent.com/maksimzayats/specx/main/docs/public/favicon.svg" width="72">
   </a>
 </p>
+
+<h1 align="center">specx</h1>
 
 <p align="center">
   Agent skills and executable architecture guardrails for Python services.
@@ -26,7 +24,7 @@
   <a href="https://github.com/maksimzayats/specx/issues"><strong>Issues</strong></a>
 </p>
 
-specx gives coding agents a shared architecture for Python backends—and checks
+specx gives coding agents a shared architecture for Python backends and checks
 that the implementation still follows it. It combines composable agent skills,
 typed foundation classes, a project initializer, and rule-based architecture
 checks with stable, documented rule IDs.

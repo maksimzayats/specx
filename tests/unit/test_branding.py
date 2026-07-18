@@ -96,3 +96,15 @@ def test_documentation_omits_retired_product_messaging() -> None:
     ]
 
     assert violations == []
+
+
+def test_human_facing_text_avoids_em_dashes() -> None:
+    em_dash = chr(0x2014)
+
+    violations = [
+        f"{path}: em dash"
+        for path, contents in _human_facing_texts()
+        if not path.name.startswith("THIRD_PARTY_NOTICES") and em_dash in contents
+    ]
+
+    assert violations == []

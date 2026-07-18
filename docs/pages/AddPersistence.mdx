@@ -46,8 +46,8 @@ core/orders/
 ```
 
 The repository models owned persistence. The active `OrderUnitOfWork` exposes repositories. The
-`OrderUnitOfWorkManager` opens active objects. `CreateOrderUseCase` injects the manager—not a
-repository, session, engine, provider, or concrete adapter—and opens at most one scope.
+`OrderUnitOfWorkManager` opens active objects. `CreateOrderUseCase` injects the manager rather than a
+repository, session, engine, provider, or concrete adapter. It opens at most one scope.
 
 ## 3. Verify technical ownership
 
