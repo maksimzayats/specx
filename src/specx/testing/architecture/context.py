@@ -564,6 +564,97 @@ def class_base_name_index(context: ArchitectureContext) -> dict[str, set[str]]:
     return index
 
 
+def class_definition_base_index(
+    context: ArchitectureContext,
+) -> dict[str, tuple[tuple[Path, set[str]], ...]]:
+    mutable_index: dict[str, list[tuple[Path, set[str]]]] = {}
+    for path in context.source_paths():
+        tree = context.tree(path)
+        aliases = context.aliases(path)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef):
+                mutable_index.setdefault(node.name, []).append(
+                    (path, class_direct_base_names(node, aliases))
+                )
+    return {name: tuple(definitions) for name, definitions in mutable_index.items()}
+
+
+def class_has_foundation_base_from_path(
+    class_name: str,
+    base: str,
+    *,
+    source_path: Path,
+    context: ArchitectureContext,
+    definition_index: dict[str, tuple[tuple[Path, set[str]], ...]],
+    visited: set[tuple[Path, str]] | None = None,
+) -> bool:
+    visited = visited or set()
+    candidates = _class_definition_candidates(
+        class_name,
+        source_path=source_path,
+        context=context,
+        definition_index=definition_index,
+    )
+    for candidate_path, base_names in candidates:
+        visit_key = (candidate_path, class_name)
+        if visit_key in visited:
+            continue
+        candidate_visited = {*visited, visit_key}
+        if base in base_names or any(
+            class_has_foundation_base_from_path(
+                found_base,
+                base,
+                source_path=candidate_path,
+                context=context,
+                definition_index=definition_index,
+                visited=candidate_visited,
+            )
+            for found_base in base_names
+        ):
+            return True
+    return False
+
+
+def _class_definition_candidates(
+    class_name: str,
+    *,
+    source_path: Path,
+    context: ArchitectureContext,
+    definition_index: dict[str, tuple[tuple[Path, set[str]], ...]],
+) -> tuple[tuple[Path, set[str]], ...]:
+    candidates = definition_index.get(class_name, ())
+    local_candidates = tuple(candidate for candidate in candidates if candidate[0] == source_path)
+    if local_candidates:
+        return local_candidates
+
+    imports = context.imports(source_path)
+    imported_candidates = tuple(
+        candidate
+        for candidate in candidates
+        if _class_definition_is_imported(
+            class_name,
+            candidate_path=candidate[0],
+            imports=imports,
+            context=context,
+        )
+    )
+    if imported_candidates:
+        return imported_candidates
+    return candidates if len(candidates) == 1 else ()
+
+
+def _class_definition_is_imported(
+    class_name: str,
+    *,
+    candidate_path: Path,
+    imports: frozenset[str],
+    context: ArchitectureContext,
+) -> bool:
+    relative_module = candidate_path.relative_to(context.src_root).with_suffix("")
+    module_name = ".".join((context.config.package_name, *relative_module.parts))
+    return module_name in imports or f"{module_name}.{class_name}" in imports
+
+
 def foundation_base_names_for_class(
     class_name: str,
     class_base_name_index: dict[str, set[str]],

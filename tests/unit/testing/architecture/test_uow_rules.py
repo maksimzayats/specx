@@ -318,9 +318,12 @@ def test_ioc_rule_rejects_active_uow_registration_forms(tmp_path: Path) -> None:
         "    pass\n\n"
         "def make_uow() -> TaskUnitOfWork:\n"
         "    return TaskUnitOfWork()\n\n"
+        "uow = TaskUnitOfWork()\n"
         "container.add(TaskUnitOfWork)\n"
         "container.add_factory(make_uow)\n"
-        "container.add_instance(TaskUnitOfWork())\n",
+        "container.add_instance(TaskUnitOfWork())\n"
+        "container.add_instance(uow)\n"
+        "container.add_instance(TaskUnitOfWork(), provides='infer')\n",
     )
 
     report = check_specx_architecture(
@@ -334,6 +337,8 @@ def test_ioc_rule_rejects_active_uow_registration_forms(tmp_path: Path) -> None:
     )
 
     assert [violation.message for violation in report.violations] == [
+        "registers active TaskUnitOfWork",
+        "registers active TaskUnitOfWork",
         "registers active TaskUnitOfWork",
         "registers active TaskUnitOfWork",
         "registers active TaskUnitOfWork",

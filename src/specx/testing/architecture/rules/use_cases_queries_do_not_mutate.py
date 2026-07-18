@@ -10,7 +10,8 @@ from specx.testing.architecture.context import (
     call_is_rooted_in_names,
     call_is_rooted_in_self_attributes,
     class_base_name_index,
-    class_has_foundation_base,
+    class_definition_base_index,
+    class_has_foundation_base_from_path,
     class_injected_repository_field_names,
     execute_methods_with_classes,
     repository_mutator_method_names,
@@ -36,6 +37,7 @@ class QueryUseCasesDoNotCallRepositoryMutatorsRule(ArchitectureRuleBase):
         mutator_names = repository_mutator_method_names(context)
         violations: list[SpecxArchitectureViolation] = []
         base_index = class_base_name_index(context)
+        definition_index = class_definition_base_index(context)
         for path in (context.src_root / "core").glob("*/use_cases/**/*.py"):
             if path.name == "__init__.py" or path not in context.ast_project.files:
                 continue
@@ -45,7 +47,13 @@ class QueryUseCasesDoNotCallRepositoryMutatorsRule(ArchitectureRuleBase):
                 if len(execute.args.kwonlyargs) != 1 or execute.args.kwonlyargs[0].arg != "query":
                     continue
                 query_annotation = annotation_name(execute.args.kwonlyargs[0].annotation, aliases)
-                if not class_has_foundation_base(query_annotation, "BaseQuery", base_index):
+                if not class_has_foundation_base_from_path(
+                    query_annotation,
+                    "BaseQuery",
+                    source_path=path,
+                    context=context,
+                    definition_index=definition_index,
+                ):
                     continue
                 repository_fields = class_injected_repository_field_names(
                     class_node,

@@ -38,7 +38,13 @@ def test_command_location_rule_follows_transitive_foundation_bases(tmp_path: Pat
     )
     _write(
         tmp_path / "src" / "demo_service" / "core" / "tasks" / "commands" / "create.py",
-        "class CreateTaskCommand(ProjectCommand):\n    pass\n",
+        "from demo_service.foundation.command import ProjectCommand\n\n"
+        "class CreateTaskCommand(ProjectCommand):\n"
+        "    pass\n",
+    )
+    _write(
+        tmp_path / "src" / "demo_service" / "infrastructure" / "unrelated.py",
+        "class ProjectCommand(object):\n    pass\n",
     )
 
     report = check_specx_architecture(
@@ -54,6 +60,35 @@ def test_command_location_rule_follows_transitive_foundation_bases(tmp_path: Pat
     assert [violation.symbol for violation in report.violations] == ["CreateTaskCommand"]
 
 
+def test_command_location_rule_does_not_cross_module_name_collisions(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "src" / "demo_service" / "foundation" / "command.py",
+        "class ProjectCommand(BaseCommand):\n    pass\n",
+    )
+    _write(
+        tmp_path / "src" / "demo_service" / "infrastructure" / "unrelated.py",
+        "class ProjectCommand(object):\n    pass\n",
+    )
+    _write(
+        tmp_path / "src" / "demo_service" / "core" / "tasks" / "models" / "snapshot.py",
+        "from demo_service.infrastructure.unrelated import ProjectCommand\n\n"
+        "class TaskSnapshot(ProjectCommand):\n"
+        "    pass\n",
+    )
+
+    report = check_specx_architecture(
+        SpecxArchitectureConfig(
+            project_root=tmp_path,
+            package_name="demo_service",
+            disabled_rules=_disable_all_except(
+                SpecxRuleId.COMMAND_AND_QUERY_CLASSES_LIVE_WITH_USE_CASES
+            ),
+        )
+    )
+
+    assert report.violations == ()
+
+
 def test_query_mutation_rule_follows_transitive_query_bases(tmp_path: Path) -> None:
     _write(
         tmp_path / "src" / "demo_service" / "foundation" / "query.py",
@@ -65,6 +100,48 @@ def test_query_mutation_rule_follows_transitive_query_bases(tmp_path: Path) -> N
     )
     _write(
         tmp_path / "src" / "demo_service" / "core" / "tasks" / "use_cases" / "get_task.py",
+        "from demo_service.foundation.query import ProjectQuery\n\n"
+        "class GetTaskQuery(ProjectQuery):\n"
+        "    pass\n\n"
+        "class GetTaskUseCase(BaseUseCase):\n"
+        "    async def execute(self, *, query: GetTaskQuery) -> TaskDTO:\n"
+        "        async with self.uow_manager as uow:\n"
+        "            await uow.tasks.save(task)\n",
+    )
+    _write(
+        tmp_path / "src" / "demo_service" / "infrastructure" / "unrelated.py",
+        "class ProjectQuery(object):\n    pass\n",
+    )
+
+    report = check_specx_architecture(
+        SpecxArchitectureConfig(
+            project_root=tmp_path,
+            package_name="demo_service",
+            disabled_rules=_disable_all_except(
+                SpecxRuleId.QUERY_USE_CASES_DO_NOT_CALL_REPOSITORY_MUTATORS
+            ),
+        )
+    )
+
+    assert [violation.symbol for violation in report.violations] == ["GetTaskUseCase"]
+
+
+def test_query_mutation_rule_does_not_cross_module_name_collisions(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "src" / "demo_service" / "foundation" / "query.py",
+        "class ProjectQuery(BaseQuery):\n    pass\n",
+    )
+    _write(
+        tmp_path / "src" / "demo_service" / "infrastructure" / "unrelated.py",
+        "class ProjectQuery(object):\n    pass\n",
+    )
+    _write(
+        tmp_path / "src" / "demo_service" / "core" / "tasks" / "repositories" / "task.py",
+        "class TaskRepository:\n    async def save(self, task):\n        pass\n",
+    )
+    _write(
+        tmp_path / "src" / "demo_service" / "core" / "tasks" / "use_cases" / "get_task.py",
+        "from demo_service.infrastructure.unrelated import ProjectQuery\n\n"
         "class GetTaskQuery(ProjectQuery):\n"
         "    pass\n\n"
         "class GetTaskUseCase(BaseUseCase):\n"
@@ -83,7 +160,7 @@ def test_query_mutation_rule_follows_transitive_query_bases(tmp_path: Path) -> N
         )
     )
 
-    assert [violation.symbol for violation in report.violations] == ["GetTaskUseCase"]
+    assert report.violations == ()
 
 
 def _disable_all_except(rule_id: SpecxRuleId) -> frozenset[SpecxRuleId]:

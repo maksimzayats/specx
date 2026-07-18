@@ -847,6 +847,33 @@ def test_integration_mock_rule_rejects_object_form_patch_targets(tmp_path: Path)
     ]
 
 
+def test_integration_mock_rule_accepts_external_object_patch_with_internal_name_collision(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path / "tests" / "integration" / "delivery" / "fastapi" / "test_tasks.py",
+        "from unittest.mock import patch\n"
+        "from vendor import services as vendor_services\n"
+        "from demo_service.core.tasks.services.title import TitleService\n\n"
+        "def test_vendor_patch() -> None:\n"
+        "    _ = TitleService\n"
+        "    with patch.object(vendor_services, 'TitleService'):\n"
+        "        pass\n",
+    )
+
+    report = check_specx_architecture(
+        SpecxArchitectureConfig(
+            project_root=tmp_path,
+            package_name="demo_service",
+            disabled_rules=_disable_all_except(
+                SpecxRuleId.INTEGRATION_TESTS_DO_NOT_MOCK_INTERNAL_COLLABORATORS
+            ),
+        )
+    )
+
+    assert report.violations == ()
+
+
 def test_integration_mock_rule_accepts_external_vendor_mock(tmp_path: Path) -> None:
     _write(
         tmp_path / "tests" / "integration" / "delivery" / "fastapi" / "test_tasks.py",

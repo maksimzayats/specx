@@ -32,6 +32,7 @@ class IOCContainerDoesNotRegisterActiveUnitOfWorkRule(ArchitectureRuleBase):
         tree = context.tree(path)
         aliases = context.aliases(path)
         factory_return_annotations = local_function_return_annotations(tree, aliases)
+        instance_type_names = _local_instance_type_names(tree, aliases)
         violations: list[SpecxArchitectureViolation] = []
         for node in ast.walk(tree):
             if (
@@ -55,6 +56,7 @@ class IOCContainerDoesNotRegisterActiveUnitOfWorkRule(ArchitectureRuleBase):
                 provides=provides,
                 aliases=aliases,
                 factory_return_annotations=factory_return_annotations,
+                instance_type_names=instance_type_names,
             )
             if registered_name.endswith("UnitOfWork") and not registered_name.endswith(
                 "UnitOfWorkManager"
@@ -76,8 +78,11 @@ def _registered_type_name(
     provides: ast.expr | None,
     aliases: dict[str, str],
     factory_return_annotations: dict[str, str],
+    instance_type_names: dict[str, str],
 ) -> str:
-    if provides is not None:
+    if provides is not None and not (
+        isinstance(provides, ast.Constant) and provides.value == "infer"
+    ):
         return annotation_name(provides, aliases)
     if not node.args:
         return ""
@@ -86,6 +91,11 @@ def _registered_type_name(
     if isinstance(node.func, ast.Attribute) and node.func.attr == "add_instance":
         if isinstance(registered, ast.Call):
             return annotation_name(registered.func, aliases)
+        if isinstance(registered, ast.Name):
+            return instance_type_names.get(
+                registered.id,
+                annotation_name(registered, aliases),
+            )
         return annotation_name(registered, aliases)
     if (
         isinstance(node.func, ast.Attribute)
@@ -97,3 +107,19 @@ def _registered_type_name(
             annotation_name(registered, aliases),
         )
     return annotation_name(registered, aliases)
+
+
+def _local_instance_type_names(
+    tree: ast.Module,
+    aliases: dict[str, str],
+) -> dict[str, str]:
+    instance_type_names: dict[str, str] = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+            instance_type_names[node.target.id] = annotation_name(node.annotation, aliases)
+        elif isinstance(node, ast.Assign) and isinstance(node.value, ast.Call):
+            instance_type_name = annotation_name(node.value.func, aliases)
+            for target in node.targets:
+                if isinstance(target, ast.Name):
+                    instance_type_names[target.id] = instance_type_name
+    return instance_type_names

@@ -730,17 +730,41 @@ def _object_attribute_target_names_internal_app_collaborator(
     package_name: str,
 ) -> bool:
     target_name = _qualified_expression_name(target, aliases)
-    candidate_names = [target_name]
-    if isinstance(attribute, ast.Constant) and isinstance(attribute.value, str) and attribute.value:
-        candidate_names.append(f"{target_name}.{attribute.value}")
-    return any(
-        _is_internal_app_collaborator_name(
-            candidate_name,
+    if _is_internal_app_collaborator_name(
+        target_name,
+        aliases=aliases,
+        imports=imports,
+        package_name=package_name,
+    ):
+        return True
+    return (
+        isinstance(attribute, ast.Constant)
+        and isinstance(attribute.value, str)
+        and _name_looks_like_internal_app_collaborator(attribute.value)
+        and _name_resolves_to_internal_core(
+            target_name,
             aliases=aliases,
             imports=imports,
             package_name=package_name,
         )
-        for candidate_name in candidate_names
+    )
+
+
+def _name_resolves_to_internal_core(
+    name: str,
+    *,
+    aliases: dict[str, str],
+    imports: frozenset[str],
+    package_name: str,
+) -> bool:
+    name_chain = tuple(aliases.get(segment, segment) for segment in name.split("."))
+    qualified_name = ".".join(name_chain)
+    if qualified_name.startswith(f"{package_name}.core."):
+        return True
+    return any(
+        imported.startswith(f"{package_name}.core.")
+        and (imported == qualified_name or imported.endswith(f".{qualified_name}"))
+        for imported in imports
     )
 
 
