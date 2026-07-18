@@ -19,18 +19,33 @@ One transaction boundary per execution keeps atomicity and failure behavior unde
 ### Failing example
 
 ```python
-async with self.orders_uow as orders:
+class ReconcileCommand(BaseCommand):
     ...
-async with self.audit_uow as audit:
-    ...
+
+class ReconcileUseCase(BaseUseCase):
+    orders_uow: Injected[OrderUnitOfWorkManager]
+    audit_uow: Injected[AuditUnitOfWorkManager]
+
+    async def execute(self, *, command: ReconcileCommand) -> ReconcileDTO:
+        async with self.orders_uow as orders:
+            ...
+        async with self.audit_uow as audit:
+            ...
 ```
 
 ### Passing example
 
 ```python
-async with self.uow_manager as uow:
-    await uow.orders.save(order)
-    await uow.audit.append(event)
+class ReconcileCommand(BaseCommand):
+    ...
+
+class ReconcileUseCase(BaseUseCase):
+    uow_manager: Injected[ReconcileUnitOfWorkManager]
+
+    async def execute(self, *, command: ReconcileCommand) -> ReconcileDTO:
+        async with self.uow_manager as uow:
+            await uow.orders.save(order)
+            await uow.audit.append(event)
 ```
 
 ### Detection notes

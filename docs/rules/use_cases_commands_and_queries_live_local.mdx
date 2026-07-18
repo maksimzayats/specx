@@ -32,7 +32,8 @@ class CreateOrderCommand(BaseCommand):
     ...
 
 class CreateOrderUseCase(BaseUseCase):
-    ...
+    async def execute(self, *, command: CreateOrderCommand) -> OrderDTO:
+        ...
 ```
 
 ### Detection notes

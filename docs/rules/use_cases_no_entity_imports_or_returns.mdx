@@ -19,17 +19,24 @@ Entities are internal state models. Returning them from a use case leaks persist
 ### Failing example
 
 ```python
-from acme.core.orders.entities.order import Order
+from acme.core.orders.entities.order import OrderEntity
+
+class GetOrderQuery(BaseQuery):
+    order_id: UUID
 
 class GetOrderUseCase(BaseUseCase):
-    async def execute(self, *, query: GetOrderQuery) -> Order:
+    async def execute(self, *, query: GetOrderQuery) -> OrderDTO:
         async with self.uow_manager as uow:
-            return await uow.orders.get(query.order_id)
+            order: OrderEntity = await uow.orders.get(query.order_id)
+            return OrderDTO(id=order.id, status=order.status)
 ```
 
 ### Passing example
 
 ```python
+class GetOrderQuery(BaseQuery):
+    order_id: UUID
+
 class GetOrderUseCase(BaseUseCase):
     async def execute(self, *, query: GetOrderQuery) -> OrderDTO:
         async with self.uow_manager as uow:

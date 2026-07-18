@@ -19,6 +19,9 @@ A stable DTO result keeps the application boundary independent from transport sc
 ### Failing example
 
 ```python
+class CountOrdersQuery(BaseQuery):
+    ...
+
 class CountOrdersUseCase(BaseUseCase):
     async def execute(self, *, query: CountOrdersQuery) -> int:
         return 3
@@ -27,6 +30,9 @@ class CountOrdersUseCase(BaseUseCase):
 ### Passing example
 
 ```python
+class CountOrdersQuery(BaseQuery):
+    ...
+
 class CountOrdersUseCase(BaseUseCase):
     async def execute(self, *, query: CountOrdersQuery) -> OrderCountDTO:
         return OrderCountDTO(count=3)

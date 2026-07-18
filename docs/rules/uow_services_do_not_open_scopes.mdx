@@ -30,6 +30,9 @@ class CheckoutService(BaseEffectService):
 ### Passing example
 
 ```python
+class CheckoutCommand(BaseCommand):
+    ...
+
 class CheckoutUseCase(BaseUseCase):
     async def execute(self, *, command: CheckoutCommand) -> CheckoutDTO:
         async with self.uow_manager as uow:
