@@ -2,6 +2,9 @@ export const ruleId = 'services.effect-no-owned-transactions-or-delivery'
 export const summary = 'Keep effect services inside use-case-owned transaction boundaries.'
 export const family = 'neutral'
 export const defaultEnabled = true
+export const requiredProjectSurface = null
+
+<span id="services_effect_no_owned_transactions_or_delivery"></span>
 
 ## `services.effect-no-owned-transactions-or-delivery`
 
@@ -19,9 +22,10 @@ Effect services perform focused effects inside a transaction boundary selected b
 from acme.delivery.fastapi.schemas.orders import OrderResponse
 
 class NotificationService(BaseEffectService):
-    async def send(self) -> None:
-        async with self.uow_manager:
-            ...
+    uow_manager: Injected[OrderUnitOfWorkManager]
+
+    async def send(self) -> OrderEntity:
+        await self.uow_manager.commit()
 ```
 
 ### Passing example
@@ -36,4 +40,4 @@ class NotificationService(BaseEffectService):
 
 ### Detection notes
 
-Rejects delivery/framework imports, unit-of-work fields, and context-manager ownership in BaseEffectService descendants.
+Rejects delivery/framework imports, injected UnitOfWorkManager fields, `commit` or `rollback` calls, and method return annotations containing `Entity` in BaseEffectService descendants.

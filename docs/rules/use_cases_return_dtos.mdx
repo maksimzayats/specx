@@ -2,6 +2,9 @@ export const ruleId = 'use-cases.return-dtos'
 export const summary = 'Require use cases to return DTOs instead of entities or raw values.'
 export const family = 'neutral'
 export const defaultEnabled = true
+export const requiredProjectSurface = null
+
+<span id="use_cases_return_dtos"></span>
 
 ## `use-cases.return-dtos`
 
@@ -31,4 +34,4 @@ class CountOrdersUseCase(BaseUseCase):
 
 ### Detection notes
 
-Finds BaseUseCase subclasses and requires execute to declare a return type whose name ends in DTO or inherits BaseDTO.
+Checks every discovered `execute` return annotation and requires its rendered type name to contain the case-sensitive substring `DTO`. It does not inspect BaseDTO ancestry.

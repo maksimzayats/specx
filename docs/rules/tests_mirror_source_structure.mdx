@@ -2,6 +2,9 @@ export const ruleId = 'tests.mirror-source-structure'
 export const summary = 'Require meaningful generated-service tests to mirror source modules.'
 export const family = 'neutral'
 export const defaultEnabled = true
+export const requiredProjectSurface = null
+
+<span id="tests_mirror_source_structure"></span>
 
 ## `tests.mirror-source-structure`
 
@@ -16,19 +19,19 @@ Mirrored flat tests make ownership obvious and prevent bespoke harness layers fr
 ### Failing example
 
 ```python
-tests/unit/core/orders/services/pricing/test_pricing.py
-tests/_support/fakes/fake_order_repository.py
-tests/unit/core/orders/services/pricing_harness.py
+# tests/unit/core/orders/services/pricing/test_pricing.py
+# tests/_support/fakes/fake_order_repository.py
+# tests/unit/core/orders/services/pricing_harness.py
 ```
 
 ### Passing example
 
 ```python
-src/acme/core/orders/services/pricing.py
-tests/unit/core/orders/services/test_pricing.py
+# src/acme/core/orders/services/pricing.py
+# tests/unit/core/orders/services/test_pricing.py
 
-src/acme/core/orders/repositories/order.py
-tests/unit/core/orders/repositories/fake_order.py
+# src/acme/core/orders/repositories/order.py
+# tests/unit/core/orders/repositories/fake_order.py
 ```
 
 ### Detection notes

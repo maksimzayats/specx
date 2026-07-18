@@ -2,6 +2,9 @@ export const ruleId = 'services.read-no-writes-or-transactions'
 export const summary = 'Keep read services from writing data or owning transactions.'
 export const family = 'neutral'
 export const defaultEnabled = true
+export const requiredProjectSurface = null
+
+<span id="services_read_no_writes_or_transactions"></span>
 
 ## `services.read-no-writes-or-transactions`
 
@@ -17,9 +20,10 @@ Read services may coordinate reads but must not mutate state or decide transacti
 
 ```python
 class OrderLookupService(BaseReadService):
-    async def get(self, order_id: UUID) -> Order:
-        async with self.uow_manager as uow:
-            await uow.orders.save(order)
+    uow_manager: Injected[OrderUnitOfWorkManager]
+
+    async def get(self, uow: OrderUnitOfWork, order_id: UUID) -> Order:
+        await uow.orders.save(order)
         return order
 ```
 
@@ -35,4 +39,4 @@ class OrderLookupService(BaseReadService):
 
 ### Detection notes
 
-Recognizes unit-of-work context managers, repository mutator calls, and common effect method names such as commit, publish, send, and charge.
+Rejects injected UnitOfWorkManager fields, known effect calls such as commit, publish, send, and charge, and recognized repository mutators rooted in a UnitOfWork method argument.

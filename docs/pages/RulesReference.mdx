@@ -50,6 +50,51 @@ The catalog follows a Ruff-style rule reference: each stable rule ID has its own
 paired examples, and detection boundary. Run `specx rule explain RULE_ID` for the summary shipped with
 the installed package. Rules are enabled by default unless their page marks them as opt-in.
 
+## Rule index
+
+| Rule | Status | Summary |
+| --- | --- | --- |
+| [`core.inner-packages-no-outer-layers-or-io-libraries`](#core_inner_packages_no_outer_layers_or_io_libraries) | Default | Keep inner core packages free from delivery, infrastructure, IOC, and IO imports. |
+| [`core.scope-infrastructure-does-not-import-delivery`](#core_scope_infrastructure_does_not_import_delivery) | Default | Prevent scope infrastructure adapters from depending on delivery code. |
+| [`delivery.controllers-do-not-import-infrastructure`](#delivery_controllers_do_not_import_infrastructure) | Default | Keep delivery modules from reaching into scope infrastructure. |
+| [`core.no-scope-delivery-packages`](#core_no_scope_delivery_packages) | Default | Reject delivery packages nested under core scopes. |
+| [`foundation.imports-use-scoped-packages`](#foundation_imports_use_scoped_packages) | Default | Reject imports from the removed alpha-stage `specx.foundation` namespace. |
+| [`use-cases.no-entity-imports-or-returns`](#use_cases_no_entity_imports_or_returns) | Default | Prevent use cases from exposing persistence entities as application results. |
+| [`use-cases.return-dtos`](#use_cases_return_dtos) | Default | Require use cases to return DTOs instead of entities or raw values. |
+| [`dtos.result-dtos-live-under-dtos`](#dtos_result_dtos_live_under_dtos) | Default | Require DTO classes to live in the scope `dtos` package. |
+| [`use-cases.inputs-are-local-commands-or-queries`](#use_cases_inputs_are_local_commands_or_queries) | Default | Require every use case to accept one same-file command or query input. |
+| [`use-cases.commands-and-queries-live-local`](#use_cases_commands_and_queries_live_local) | Default | Require command and query classes to be defined in use-case modules. |
+| [`capabilities.placement-and-suffix`](#capabilities_placement_and_suffix) | Default | Keep capability classes in capability packages with capability naming. |
+| [`capabilities.no-workflows-or-port-roles`](#capabilities_no_workflows_or_port_roles) | Default | Prevent capabilities from pretending to be workflows or ports. |
+| [`gateways.ports-and-implementations-placement`](#gateways_ports_and_implementations_placement) | Default | Keep gateway ports and concrete gateway implementations in distinct packages. |
+| [`gateways.external-effects-and-no-entity-returns`](#gateways_external_effects_and_no_entity_returns) | Default | Require gateway ports to document external effects and avoid entity returns. |
+| [`use-cases.queries-do-not-mutate`](#use_cases_queries_do_not_mutate) | Default | Keep query use cases read-only by rejecting repository mutator calls. |
+| [`classes.require-explicit-bases`](#classes_require_explicit_bases) | Default | Require every non-foundation project class to declare an explicit base. |
+| [`classes.require-example-docstrings`](#classes_require_example_docstrings) | Default | Require project classes to explain their scope with a concrete example. |
+| [`services.require-service-suffix`](#services_require_service_suffix) | Default | Require classes in service packages to use the `Service` suffix. |
+| [`services.require-effect-specific-bases`](#services_require_effect_specific_bases) | Default | Require core services to choose pure, read, or effect service bases. |
+| [`services.no-generic-base-service`](#services_no_generic_base_service) | Default | Reject generic `BaseService` in favor of effect-specific service bases. |
+| [`services.pure-no-io-or-runtime-state`](#services_pure_no_io_or_runtime_state) | Default | Keep pure services deterministic and independent from IO or runtime state. |
+| [`services.read-no-writes-or-transactions`](#services_read_no_writes_or_transactions) | Default | Keep read services from writing data or owning transactions. |
+| [`services.effect-no-owned-transactions-or-delivery`](#services_effect_no_owned_transactions_or_delivery) | Default | Keep effect services inside use-case-owned transaction boundaries. |
+| [`classes.suffix-from-foundation-category`](#classes_suffix_from_foundation_category) | Default | Require class names to use the suffix implied by their foundation base. |
+| [`classes.no-raw-common-bases`](#classes_no_raw_common_bases) | Default | Reject raw common framework/base classes outside the foundation layer. |
+| [`diwire.container-import-boundary`](#diwire_container_import_boundary) | Default | Restrict `diwire.Container` imports to composition and tests. |
+| [`logging.no-injected-loggers`](#logging_no_injected_loggers) | Default | Keep logger naming local to the class that emits log records. |
+| [`delivery.routes-use-full-api-v1-paths`](#delivery_routes_use_full_api_v1_paths) | Opt-in `fastapi` | Require public business route registrations to use full `/api/v1/...` paths. |
+| [`sqlalchemy.no-schema-bootstrap-calls`](#sqlalchemy_no_schema_bootstrap_calls) | Default | Reject SQLAlchemy schema bootstrap calls in source and tests. |
+| [`agents-md.documents-commands-and-boundaries`](#agents_md_documents_commands_and_boundaries) | Default | Keep generated-project agent guidance aligned with commands and boundaries. |
+| [`fastapi.agents-md-documents-delivery`](#fastapi_agents_md_documents_delivery) | Opt-in `fastapi` | Require FastAPI projects to document their delivery entrypoint and lifecycle. |
+| [`tests.mirror-source-structure`](#tests_mirror_source_structure) | Default | Require meaningful generated-service tests to mirror source modules. |
+| [`tests.fixtures-do-not-bundle-mocks`](#tests_fixtures_do_not_bundle_mocks) | Default | Reject grouped mock fixtures in generated-service tests. |
+| [`tests.integration-does-not-mock-internal-collaborators`](#tests_integration_does_not_mock_internal_collaborators) | Default | Require integration tests to exercise the real internal application graph. |
+| [`uow.services-do-not-open-scopes`](#uow_services_do_not_open_scopes) | Default | Reject service-owned unit-of-work scopes. |
+| [`uow.use-cases-open-at-most-one-scope`](#uow_use_cases_open_at_most_one_scope) | Default | Limit each use-case execution to one unit-of-work manager scope. |
+| [`uow.use-cases-inject-managers`](#uow_use_cases_inject_managers) | Default | Require persistence use cases to inject managers, not active UoWs or providers. |
+| [`uow.use-cases-no-direct-repositories-or-infrastructure`](#uow_use_cases_no_direct_repositories_or_infrastructure) | Default | Require persistence access to flow through use-case-owned UoW scopes. |
+| [`uow.ioc-does-not-register-active-uow`](#uow_ioc_does_not_register_active_uow) | Default | Reject active unit-of-work registrations in the IOC container. |
+| [`packages.init-files-are-empty`](#packages_init_files_are_empty) | Default | Require package `__init__.py` files to stay empty. |
+
 <Rule01 />
 
 <Rule02 />

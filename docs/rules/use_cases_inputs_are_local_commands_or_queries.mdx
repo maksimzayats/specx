@@ -2,6 +2,9 @@ export const ruleId = 'use-cases.inputs-are-local-commands-or-queries'
 export const summary = 'Require every use case to accept one same-file command or query input.'
 export const family = 'neutral'
 export const defaultEnabled = true
+export const requiredProjectSurface = null
+
+<span id="use_cases_inputs_are_local_commands_or_queries"></span>
 
 ## `use-cases.inputs-are-local-commands-or-queries`
 
@@ -29,10 +32,10 @@ class CreateOrderCommand(BaseCommand):
     total: Decimal
 
 class CreateOrderUseCase(BaseUseCase):
-    async def execute(self, command: CreateOrderCommand) -> OrderDTO:
+    async def execute(self, *, command: CreateOrderCommand) -> OrderDTO:
         ...
 ```
 
 ### Detection notes
 
-Requires one non-self execute parameter named command or query, annotated with a same-file BaseCommand or BaseQuery subclass whose kind matches the parameter name.
+Requires exactly one required keyword-only `execute` parameter named `command` or `query`, annotated with a same-file BaseCommand or BaseQuery subclass whose kind matches the parameter name.

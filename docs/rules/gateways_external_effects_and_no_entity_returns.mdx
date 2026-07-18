@@ -2,6 +2,9 @@ export const ruleId = 'gateways.external-effects-and-no-entity-returns'
 export const summary = 'Require gateway ports to document external effects and avoid entity returns.'
 export const family = 'neutral'
 export const defaultEnabled = true
+export const requiredProjectSurface = null
+
+<span id="gateways_external_effects_and_no_entity_returns"></span>
 
 ## `gateways.external-effects-and-no-entity-returns`
 
@@ -33,4 +36,4 @@ class PaymentGateway(BaseGateway):
 
 ### Detection notes
 
-Checks project gateway port docstrings for an External effect marker and method return annotations for names ending in Entity or inheriting BaseEntity.
+Checks every BaseGateway descendant under core, including concrete adapters, for an `External effect:` docstring marker. Method return annotations are rejected when their rendered name contains `Entity`; ancestry is not inspected.

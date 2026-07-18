@@ -2,6 +2,9 @@ export const ruleId = 'uow.use-cases-inject-managers'
 export const summary = 'Require persistence use cases to inject managers, not active UoWs or providers.'
 export const family = 'neutral'
 export const defaultEnabled = true
+export const requiredProjectSurface = null
+
+<span id="uow_use_cases_inject_managers"></span>
 
 ## `uow.use-cases-inject-managers`
 
@@ -26,8 +29,12 @@ class CreateOrderUseCase(BaseUseCase):
 ```python
 class CreateOrderUseCase(BaseUseCase):
     uow_manager: Injected[OrderUnitOfWorkManager]
+
+    async def execute(self, *, command: CreateOrderCommand) -> OrderDTO:
+        async with self.uow_manager as uow:
+            ...
 ```
 
 ### Detection notes
 
-Detects persistence use cases from repository/UoW behavior and checks injected fields for an allowed UnitOfWorkManager rather than active UoWs or providers.
+Within every BaseUseCase, rejects annotated Provider or active UnitOfWork dependencies, requires UnitOfWorkManager annotations to be injected, and requires an injected manager to be opened by `execute`. A use case with no UoW-like field is not classified as persistence by this rule.

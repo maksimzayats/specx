@@ -2,6 +2,9 @@ export const ruleId = 'agents-md.documents-commands-and-boundaries'
 export const summary = 'Keep generated-project agent guidance aligned with commands and boundaries.'
 export const family = 'neutral'
 export const defaultEnabled = true
+export const requiredProjectSurface = null
+
+<span id="agents_md_documents_commands_and_boundaries"></span>
 
 ## `agents-md.documents-commands-and-boundaries`
 
@@ -17,7 +20,7 @@ Agents and contributors rely on AGENTS.md as an executable project contract, so 
 
 ```python
 # AGENTS.md
-Run `make migration-check`.
+# Run `make migration-check`.
 
 # Makefile has no migration-check target and the project uses Alembic.
 ```
@@ -26,9 +29,10 @@ Run `make migration-check`.
 
 ```python
 # AGENTS.md
-Run `make check`, `make lint`, and `make test`.
-Use cases return DTOs, not entities.
-Do not inject loggers.
+# Package lives under `src/acme`
+# Run `make check`, `make lint`, and `make test`.
+# Use cases return DTOs, not entities.
+# `LoggingConfigurator` configures runtime logging. Do not inject loggers.
 
 # Makefile defines check, lint, and test.
 ```

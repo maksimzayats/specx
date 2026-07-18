@@ -2,12 +2,17 @@ export const ruleId = 'delivery.routes-use-full-api-v1-paths'
 export const summary = 'Require public business route registrations to use full `/api/v1/...` paths.'
 export const family = 'fastapi'
 export const defaultEnabled = false
+export const requiredProjectSurface = 'delivery/fastapi'
+
+<span id="delivery_routes_use_full_api_v1_paths"></span>
 
 ## `delivery.routes-use-full-api-v1-paths`
 
 Require public business route registrations to use full `/api/v1/...` paths.
 
 **Status:** Opt-in `fastapi` rule.
+
+**Required project surface:** `delivery/fastapi`.
 
 ### Why this exists
 
@@ -17,20 +22,20 @@ Full versioned paths keep route ownership visible at registration sites and avoi
 
 ```python
 router = APIRouter(prefix="/api/v1")
-router.add_api_route("/orders", create_order, methods=["POST"])
+router.add_api_route(path="/orders", endpoint=create_order, methods=["POST"])
 ```
 
 ### Passing example
 
 ```python
 router.add_api_route(
-    "/api/v1/orders",
-    create_order,
+    path="/api/v1/orders",
+    endpoint=create_order,
     methods=["POST"],
 )
-router.add_api_route("/healthz", health, methods=["GET"])
+router.add_api_route(path="/healthz", endpoint=health, methods=["GET"])
 ```
 
 ### Detection notes
 
-FastAPI opt-in rule. Checks decorator and add_api_route paths in delivery/fastapi; /healthz and /readyz are allowed operational exceptions.
+FastAPI opt-in rule. Checks literal `path=` keywords on `add_api_route` calls below delivery controller packages. Positional or dynamic paths are reported; `/healthz` and `/readyz` are allowed exceptions.

@@ -2,6 +2,9 @@ export const ruleId = 'sqlalchemy.no-schema-bootstrap-calls'
 export const summary = 'Reject SQLAlchemy schema bootstrap calls in source and tests.'
 export const family = 'neutral'
 export const defaultEnabled = true
+export const requiredProjectSurface = null
+
+<span id="sqlalchemy_no_schema_bootstrap_calls"></span>
 
 ## `sqlalchemy.no-schema-bootstrap-calls`
 
@@ -23,7 +26,7 @@ await connection.run_sync(Base.metadata.create_all)
 
 ```python
 # Apply checked-in Alembic migrations instead.
-make migrate
+# $ make migrate
 ```
 
 ### Detection notes
