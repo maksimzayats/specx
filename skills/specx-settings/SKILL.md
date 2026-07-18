@@ -1,9 +1,9 @@
 ---
 name: specx-settings
-description: Add runtime configuration to Specx Python services with `pydantic-settings`. Use when creating settings classes, environment variables, `.env.example`, injecting settings at delivery, infrastructure, or composition edges, documenting config, mapping configuration into typed core policy collaborators, or removing direct environment reads from core code.
+description: Add runtime configuration to specx Python services with `pydantic-settings`. Use when creating settings classes, environment variables, `.env.example`, injecting settings at delivery, infrastructure, or composition edges, documenting config, mapping configuration into typed core policy collaborators, or removing direct environment reads from core code.
 ---
 
-# Specx Settings
+# specx Settings
 
 Use this skill whenever runtime configuration is needed. Read
 `references/settings.md` before adding settings code.

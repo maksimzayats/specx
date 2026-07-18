@@ -1,7 +1,7 @@
 {
   "name": "specx-docs",
   "private": true,
-  "description": "Storybook documentation for Specx",
+  "description": "Storybook documentation for specx",
   "scripts": {
     "storybook": "storybook dev -p 6006",
     "build-storybook": "node scripts/build-docs.mjs",

@@ -51,7 +51,7 @@ This is framework-neutral process health, not a FastAPI route or external-depend
 ## Tooling
 
 The generated project uses uv-build, strict mypy, strict pytest, Ruff with `select = ["ALL"]`, and
-Specx with `select = ["ALL"]`. Ruff exceptions cover formatter conflicts and deliberate file-category
+specx with `select = ["ALL"]`. Ruff exceptions cover formatter conflicts and deliberate file-category
 conventions, with a plain-language comment beside every ignored code.
 
 The Makefile exposes `check`, `format`, `lint`, and `test`. Validation commands use the lockfile. A
@@ -68,7 +68,7 @@ Project names normalize to lowercase ASCII kebab-case. Import packages replace h
 underscores, prefix a leading digit with `_`, and suffix Python keywords with `_package`. An explicit
 `--package` must already be a lowercase ASCII identifier and not a keyword.
 
-`--python` accepts the syntactic shape `major.minor`; Specx does not maintain a release allowlist.
+`--python` accepts the syntactic shape `major.minor`; specx does not maintain a release allowlist.
 The chosen uv, Ruff, mypy, build backend, and dependencies must still support that version. For
 example, a future-looking value can render successfully but be rejected later by current Ruff.
 

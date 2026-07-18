@@ -13,9 +13,9 @@ from specx.testing.architecture.rules._shared import (
 
 
 class FoundationImportsUseScopedPackagesRule(ArchitectureRuleBase):
-    """Reject imports from the removed alpha-stage `specx.foundation` namespace.
+    """Reject imports from the removed legacy `specx.foundation` namespace.
 
-    Specx foundation bases are scoped by architecture layer. Generated services
+    specx foundation bases are scoped by architecture layer. Generated services
     should import from `specx.core.foundation`, `specx.delivery.foundation`, or
     `specx.infrastructure.foundation`.
     """

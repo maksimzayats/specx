@@ -26,7 +26,7 @@ can still fail before the DTO reaches the caller.
 ## Why use cases own the scope
 
 The application action knows which decisions should succeed or fail together. If a service or
-repository silently opens a transaction, the caller cannot see whether two changes are atomic. Specx
+repository silently opens a transaction, the caller cannot see whether two changes are atomic. specx
 therefore rejects service-owned scopes and direct repository, session, engine, session-factory, or
 concrete-adapter injection into persistence use cases.
 
@@ -40,7 +40,7 @@ A unit of work controls owned persistence. It cannot roll back an email already 
 captured by another provider, or a message accepted by a remote queue. Design ordering, idempotency,
 outbox, retry, or compensation deliberately when one action crosses those boundaries.
 
-Specx's built-in rules check ownership patterns; they do not prove distributed atomicity or enforce an
+specx's built-in rules check ownership patterns; they do not prove distributed atomicity or enforce an
 outbox policy.
 
 ## Composition owns implementations, not active transactions

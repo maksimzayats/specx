@@ -1,9 +1,9 @@
 ---
 name: specx-component-architecture
-description: Design or review Specx core scope boundaries in Python services. Use when deciding where code belongs across packaged scoped foundation bases, optional local foundation extensions, `core/`, capabilities, delivery, infrastructure, `shared/`, and `ioc`; when adding guardrails or splitting use cases, services, DTOs, schemas, ports, and adapters.
+description: Design or review specx core scope boundaries in Python services. Use when deciding where code belongs across packaged scoped foundation bases, optional local foundation extensions, `core/`, capabilities, delivery, infrastructure, `shared/`, and `ioc`; when adding guardrails or splitting use cases, services, DTOs, schemas, ports, and adapters.
 ---
 
-# Specx Scope Architecture
+# specx Scope Architecture
 
 Use this skill before broad structural changes or when a feature crosses more
 than one layer. Read `references/boundaries.md` for the full rules.
@@ -16,7 +16,7 @@ than one layer. Read `references/boundaries.md` for the full rules.
 - `core/<scope>/infrastructure/`: scope-owned external IO adapters such as
   SQLAlchemy repositories, Redis stores, HTTP clients, file storage, and queues.
   Inner core packages must not import it.
-- Scoped Specx foundation packages: packaged base classes under
+- Scoped specx foundation packages: packaged base classes under
   `specx.core.foundation`, `specx.delivery.foundation`, and
   `specx.infrastructure.foundation`. Every non-foundation source class must
   inherit an explicit packaged base directly or through a project-local base;
@@ -53,7 +53,7 @@ than one layer. Read `references/boundaries.md` for the full rules.
   not return entities.
 - Put concrete gateway implementations under
   `core/<scope>/infrastructure/<technology>/`.
-- Use packaged scoped Specx foundation bases before adding project-local bases.
+- Use packaged scoped specx foundation bases before adding project-local bases.
 - Do not create an empty local `foundation/` package.
 - Add a project-local foundation base only when a real project-local base
   category exists or a stateful framework base must own project-local state,

@@ -1,7 +1,7 @@
 [project]
 name = "specx"
 version = "0.1.0"
-description = "Rule-based architecture guardrails for Specx Python services."
+description = "Rule-based architecture guardrails for specx Python services."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
@@ -23,7 +23,6 @@ dependencies = [
     "sqlalchemy>=2.0.0",
 ]
 classifiers = [
-    "Development Status :: 3 - Alpha",
     "Framework :: Pytest",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",

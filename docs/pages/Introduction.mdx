@@ -7,10 +7,10 @@ import { CliIcon, FoundationIcon, GuardrailsIcon, SkillsIcon } from "@storybookC
 
 <Meta title="Overview/Introduction" />
 
-<Title>Specx</Title>
+<Title>specx</Title>
 <Subtitle>Agent skills and executable architecture rules for Python services.</Subtitle>
 
-Specx gives coding agents a concrete way to build and change Python backends without letting
+specx gives coding agents a concrete way to build and change Python backends without letting
 framework, persistence, and application concerns drift together. It combines four surfaces:
 
 - **Agent skills** describe how to structure projects and implement common backend work.
@@ -47,18 +47,18 @@ tests, or framework documentation.
       href="/docs/reference/architecture-rules/"
       icon={<GuardrailsIcon />}
       title="Guardrails"
-      subtitle="See what Specx checks and how to configure it."
+      subtitle="See what specx checks and how to configure it."
     />
   </div>
 </Unstyled>
 
-## Where Specx fits
+## Where specx fits
 
-Use Specx when a Python service needs explicit application boundaries that coding agents can follow
+Use specx when a Python service needs explicit application boundaries that coding agents can follow
 and CI can verify. The catalog covers framework-neutral cores, FastAPI delivery, DIWire composition,
 SQLAlchemy and Alembic, runtime settings, external adapters, and test structure.
 
-Specx is deliberately opinionated. Use cases take one command or query and return DTOs. Transactional
+specx is deliberately opinionated. Use cases take one command or query and return DTOs. Transactional
 work enters through a unit-of-work manager. Delivery and infrastructure stay outside the inner core.
 Project classes inherit a foundation category that states their role.
 
@@ -67,11 +67,8 @@ disabling most of the rule set.
 
 ## Typical ways to use it
 
-- Start a new service with `specx init`, then ask an agent to apply the relevant Specx skill.
+- Start a new service with `specx init`, then ask an agent to apply the relevant specx skill.
 - Install the Python package in an existing `src/`-layout service and introduce guardrails gradually.
 - Use the foundation classes without the skills when humans own the implementation workflow.
 - Install the skills without the package for design guidance, then add executable checks when the
   project is ready.
-
-Specx is alpha software. Review the
-[current limitations and compatibility notes](/docs/reference/limitations/) before adoption.

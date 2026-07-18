@@ -10,7 +10,7 @@ import { NextPrev } from "@storybookComponents/NextPrev"
 
 Choose one application action and write down its input, result, known failures, and whether it reads,
 writes, or calls an external system. Work inside one existing `core/<scope>/` package. Install the
-Specx skills before asking an agent to make the change.
+specx skills before asking an agent to make the change.
 
 ## 1. Describe the application action
 
@@ -45,7 +45,7 @@ The use-case module defines exactly one same-file `QuoteOrderQuery`. `execute` a
 keyword-only query and returns the DTO. The query, DTO, and exception use domain names; no
 FastAPI, Pydantic, SQLAlchemy, or provider SDK type enters the core contract.
 
-Every project class inherits the narrowest suitable Specx foundation base and has a concrete
+Every project class inherits the narrowest suitable specx foundation base and has a concrete
 `Example:` in its docstring. Secret-bearing dataclass fields use `field(repr=False)`.
 
 ## 3. Check whether extraction helps

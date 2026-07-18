@@ -23,7 +23,7 @@ from specx.testing.architecture.registry import SpecxRuleRegistry
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Run the Specx command-line interface and return a process exit code."""
+    """Run the specx command-line interface and return a process exit code."""
 
     parser = _build_parser()
     arguments = parser.parse_args(argv)
@@ -208,7 +208,7 @@ def _format_text(report: SpecxArchitectureReport) -> str:
             f"Found {len(report.violations)} violation(s) and {len(report.warnings)} warning(s)."
         )
     else:
-        lines.append(f"Specx checks passed with {len(report.warnings)} warning(s).")
+        lines.append(f"specx checks passed with {len(report.warnings)} warning(s).")
     return "\n".join(lines)
 
 

@@ -1,4 +1,4 @@
-# Specx Diwire Reference
+# specx Diwire Reference
 
 Use `diwire` to keep object construction in one place and application classes
 free from container access. Generated projects use `diwire` heavily in tests:
@@ -61,9 +61,9 @@ class CreateOrderUseCase(BaseUseCase):
 Python awaits the unit of work's `__aexit__` before completing this return, so
 the DTO reaches the caller only after commit and cleanup succeed.
 
-Use private fields for dependencies and inherit the matching scoped Specx
+Use private fields for dependencies and inherit the matching scoped specx
 foundation base. Prefer concrete project classes unless there is a real
-boundary. Keep this injection constructor-based; Specx application code does
+boundary. Keep this injection constructor-based; specx application code does
 not use `resolver_context.inject` function wrappers. DIWire's mypy plugin only
 refines those wrappers, so constructor-field injection does not require the
 plugin.

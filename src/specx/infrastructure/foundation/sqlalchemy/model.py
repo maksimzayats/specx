@@ -5,7 +5,7 @@ from sqlalchemy.orm import DeclarativeBase
 
 
 class BaseSQLAlchemyModel(DeclarativeBase):
-    """Compatibility SQLAlchemy declarative base with Specx naming conventions.
+    """Compatibility SQLAlchemy declarative base with specx naming conventions.
 
     Generated services should define a project-local SQLAlchemy base so metadata
     is not shared globally.

@@ -6,7 +6,7 @@ import { NextPrev } from "@storybookComponents/NextPrev"
 <Title>Troubleshooting</Title>
 <Subtitle>Common initializer, configuration, and architecture-check failures.</Subtitle>
 
-## Specx cannot discover the package
+## specx cannot discover the package
 
 `specx check` expects `src/` and exactly one importable directory containing Python files. Add the
 package when the repository has more than one candidate:
@@ -55,7 +55,7 @@ imports. Import project classes from their defining modules.
 
 ## A syntax error stops the scan
 
-Specx parses Python files before applying rules. Fix syntax errors or exclude generated source that
+specx parses Python files before applying rules. Fix syntax errors or exclude generated source that
 cannot be parsed. A parse failure is an execution error with status 2, not an architecture violation.
 
 ## `specx init` refuses the target
@@ -74,7 +74,7 @@ uv add --dev mypy pytest ruff
 make check
 ```
 
-If uv was missing before initialization, Specx does not write project files unless `--no-sync` was
+If uv was missing before initialization, specx does not write project files unless `--no-sync` was
 explicitly selected.
 
 ## Ruff rejects the generated Python target

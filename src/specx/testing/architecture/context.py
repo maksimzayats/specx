@@ -137,7 +137,7 @@ MAKE_TARGET_PATTERN = re.compile(r"^([a-zA-Z0-9_.-]+):(?:\s|$)", re.MULTILINE)
 
 @dataclass(frozen=True, kw_only=True, slots=True)
 class ArchitectureContext:
-    """Shared static project model used by all Specx architecture rules."""
+    """Shared static project model used by all specx architecture rules."""
 
     config: SpecxArchitectureConfig
     ast_project: PythonAstProject

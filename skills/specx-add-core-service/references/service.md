@@ -1,4 +1,4 @@
-# Specx Service Reference
+# specx Service Reference
 
 Services own focused reusable core behavior. Delivery-only helpers such as
 auth dependencies, rate limiting, and request-context adapters live under

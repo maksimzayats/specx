@@ -12,7 +12,7 @@ const preview: Preview = {
         // docs/scripts/check-docs.mjs keeps it aligned with docsNavigation.ts.
         order: [
           "Overview",
-          ["Introduction", "How Specx works", "Quickstart", "Choose a workflow"],
+          ["Introduction", "How specx works", "Quickstart", "Choose a workflow"],
           "Tutorial",
           ["Build your first core feature"],
           "Guides",
@@ -25,7 +25,7 @@ const preview: Preview = {
             "Compose dependencies",
             "Configure settings and logging",
             "Test a service",
-            "Adopt Specx in an existing service",
+            "Adopt specx in an existing service",
           ],
           "Concepts",
           [
@@ -45,7 +45,6 @@ const preview: Preview = {
             "Skills catalog",
             "Generated project",
             "Troubleshooting",
-            "Limitations",
             "Glossary",
             "Contributing",
           ],

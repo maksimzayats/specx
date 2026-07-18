@@ -20,7 +20,7 @@ class LoadedSpecxConfig:
 
 
 def load_specx_config(project_root: Path) -> LoadedSpecxConfig:
-    """Load optional Specx settings from the project's required pyproject file."""
+    """Load optional specx settings from the project's required pyproject file."""
 
     root = project_root.expanduser().resolve()
     if not root.is_dir():

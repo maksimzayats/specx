@@ -1,9 +1,9 @@
 ---
 name: specx-foundation
-description: Use Specx foundation bases in Python services, or add a tiny project-local `foundation/` base for missing categories or stateful framework bases.
+description: Use specx foundation bases in Python services, or add a tiny project-local `foundation/` base for missing categories or stateful framework bases.
 ---
 
-# Specx Foundation
+# specx Foundation
 
 Use this skill when a service class needs an explicit base, or when a new class
 category may need a project-local foundation base. Read

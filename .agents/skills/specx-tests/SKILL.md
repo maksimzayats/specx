@@ -1,9 +1,9 @@
 ---
 name: specx-tests
-description: Add or refine tests for Specx Python services. Use when creating unit tests for use cases/services, integration tests for FastAPI controllers or infrastructure adapters, e2e smoke tests, architecture import guardrails, DI override tests, pytest fixtures, or coverage and boundary checks.
+description: Add or refine tests for specx Python services. Use when creating unit tests for use cases/services, integration tests for FastAPI controllers or infrastructure adapters, e2e smoke tests, architecture import guardrails, DI override tests, pytest fixtures, or coverage and boundary checks.
 ---
 
-# Specx Tests
+# specx Tests
 
 Use this skill when behavior, wiring, or architecture boundaries need tests.
 Read `references/testing.md` before creating test files.
@@ -103,7 +103,7 @@ Read `references/testing.md` before creating test files.
   before registration.
 - Keep unit tests free from FastAPI request objects and real external IO.
 - Every test directory must include an empty `__init__.py` file.
-- Use `uv run specx check` as the default guardrail mechanism for Specx
+- Use `uv run specx check` as the default guardrail mechanism for specx
   boundaries such as docstrings, use-case inputs, UoW injection, route paths,
   direct persistence dependency rejection in use cases, container imports,
   and `AGENTS.md` command coverage.

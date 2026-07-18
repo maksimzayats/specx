@@ -20,7 +20,7 @@ class RootAgentsMDDocumentsProjectCommandsAndBoundariesRule(ArchitectureRuleBase
     """Keep generated-project agent guidance aligned with commands and boundaries.
 
     `AGENTS.md` is part of the generated project contract; it must document the
-    runnable commands and core Specx rules without drifting from the Makefile.
+    runnable commands and core specx rules without drifting from the Makefile.
     """
 
     id: SpecxRuleId = SpecxRuleId.ROOT_AGENTS_MD_DOCUMENTS_PROJECT_COMMANDS_AND_BOUNDARIES

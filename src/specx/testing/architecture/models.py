@@ -19,7 +19,7 @@ RuleIdentifier: TypeAlias = SpecxRuleId | StrEnum | str
 
 
 class SpecxConfigurationError(BaseSpecxError):
-    """Raised when a Specx architecture configuration cannot be evaluated."""
+    """Raised when a specx architecture configuration cannot be evaluated."""
 
 
 def empty_disabled_rules() -> frozenset[RuleIdentifier]:
@@ -79,23 +79,23 @@ class SpecxArchitectureReport:
 
     def format(self) -> str:
         if not self.violations and not self.warnings:
-            return "Specx architecture checks passed."
+            return "specx architecture checks passed."
 
         lines: list[str] = []
         if self.warnings:
-            lines.append("Specx architecture warnings:")
+            lines.append("specx architecture warnings:")
             for warning in self.warnings:
                 lines.append(f"- {warning.rule_id}: {warning.message}")
 
         if not self.violations:
-            lines.append("Specx architecture checks passed.")
+            lines.append("specx architecture checks passed.")
             return "\n".join(lines)
 
         grouped: dict[str, list[SpecxArchitectureViolation]] = defaultdict(list)
         for violation in self.violations:
             grouped[str(violation.rule_id)].append(violation)
 
-        lines.append("Specx architecture violations:")
+        lines.append("specx architecture violations:")
         for rule_id in sorted(grouped):
             lines.append(f"- {rule_id}")
             for violation in grouped[rule_id]:
@@ -113,7 +113,7 @@ ArchitectureRuleType: TypeAlias = type[ArchitectureRule]
 
 @dataclass(frozen=True, kw_only=True, slots=True)
 class SpecxArchitectureConfig:
-    """Configuration for checking one Python service against Specx rules."""
+    """Configuration for checking one Python service against specx rules."""
 
     project_root: Path
     package_name: str

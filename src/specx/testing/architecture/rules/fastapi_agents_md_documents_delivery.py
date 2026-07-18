@@ -13,7 +13,7 @@ class FastAPIRootAgentsMDDocumentsDeliveryRule(ArchitectureRuleBase):
     """Require FastAPI projects to document their delivery entrypoint and lifecycle.
 
     Technology-specific delivery guidance is opt-in so framework-neutral
-    projects keep the core Specx architecture contract without fake FastAPI paths.
+    projects keep the core specx architecture contract without fake FastAPI paths.
     """
 
     id: SpecxRuleId = SpecxRuleId.FASTAPI_ROOT_AGENTS_MD_DOCUMENTS_DELIVERY

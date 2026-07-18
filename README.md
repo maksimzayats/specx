@@ -3,7 +3,7 @@
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/maksimzayats/specx/main/docs/public/logo-storybook-dark.svg">
       <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/maksimzayats/specx/main/docs/public/logo-storybook.svg">
-      <img alt="Specx" src="https://raw.githubusercontent.com/maksimzayats/specx/main/docs/public/logo-storybook.svg" width="225">
+      <img alt="specx" src="https://raw.githubusercontent.com/maksimzayats/specx/main/docs/public/logo-storybook.svg" width="225">
     </picture>
   </a>
 </p>
@@ -26,14 +26,10 @@
   <a href="https://github.com/maksimzayats/specx/issues"><strong>Issues</strong></a>
 </p>
 
-Specx gives coding agents a shared architecture for Python backends—and checks
+specx gives coding agents a shared architecture for Python backends—and checks
 that the implementation still follows it. It combines composable agent skills,
 typed foundation classes, a project initializer, and rule-based architecture
 checks with stable, documented rule IDs.
-
-> **Note:** Specx is alpha software. Review the
-> [current limitations](https://specx.dev/docs/reference/limitations/) before
-> adopting it in production.
 
 ## Highlights
 
@@ -78,7 +74,7 @@ $ cd order-service
 $ make check
 ```
 
-For an existing `src/`-layout project, add Specx as a project dependency:
+For an existing `src/`-layout project, add specx as a project dependency:
 
 ```sh
 uv add specx
@@ -100,7 +96,7 @@ for selectors, exclusions, JSON output, and incremental rollout.
 ## Documentation
 
 - [Quickstart](https://specx.dev/docs/overview/quickstart/)
-- [How Specx works](https://specx.dev/docs/overview/how-specx-works/)
+- [How specx works](https://specx.dev/docs/overview/how-specx-works/)
 - [Architecture rules](https://specx.dev/docs/reference/architecture-rules/)
 - [Foundation API](https://specx.dev/docs/reference/foundation-api/)
 - [Skills catalog](https://specx.dev/docs/reference/skills-catalog/)
@@ -114,5 +110,5 @@ for local setup and validation. Run `make check` before opening a pull request.
 
 ## License
 
-Specx is released under the
+specx is released under the
 [MIT License](https://github.com/maksimzayats/specx/blob/main/LICENSE.md).

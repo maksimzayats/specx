@@ -9,7 +9,7 @@ const fontCode =
 
 const light = create({
   base: "light",
-  brandTitle: "Specx",
+  brandTitle: "specx",
   brandImage: "./logo-storybook.svg",
   brandUrl: "https://github.com/maksimzayats/specx",
   brandTarget: "_self",
@@ -28,7 +28,7 @@ const light = create({
 
 const dark = create({
   ...themes.dark,
-  brandTitle: "Specx",
+  brandTitle: "specx",
   brandImage: "./logo-storybook-dark.svg",
   brandUrl: "https://github.com/maksimzayats/specx",
   brandTarget: "_self",

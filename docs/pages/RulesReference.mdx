@@ -58,7 +58,7 @@ the installed package. Rules are enabled by default unless their page marks them
 | [`core.scope-infrastructure-does-not-import-delivery`](#core_scope_infrastructure_does_not_import_delivery) | Default | Prevent scope infrastructure adapters from depending on delivery code. |
 | [`delivery.controllers-do-not-import-infrastructure`](#delivery_controllers_do_not_import_infrastructure) | Default | Keep delivery modules from reaching into scope infrastructure. |
 | [`core.no-scope-delivery-packages`](#core_no_scope_delivery_packages) | Default | Reject delivery packages nested under core scopes. |
-| [`foundation.imports-use-scoped-packages`](#foundation_imports_use_scoped_packages) | Default | Reject imports from the removed alpha-stage `specx.foundation` namespace. |
+| [`foundation.imports-use-scoped-packages`](#foundation_imports_use_scoped_packages) | Default | Reject imports from the removed legacy `specx.foundation` namespace. |
 | [`use-cases.no-entity-imports-or-returns`](#use_cases_no_entity_imports_or_returns) | Default | Prevent use cases from exposing persistence entities as application results. |
 | [`use-cases.return-dtos`](#use_cases_return_dtos) | Default | Require use cases to return DTOs instead of entities or raw values. |
 | [`dtos.result-dtos-live-under-dtos`](#dtos_result_dtos_live_under_dtos) | Default | Require DTO classes to live in the scope `dtos` package. |
@@ -178,7 +178,6 @@ the installed package. Rules are enabled by default unless their page marks them
 ## Enforcement boundary
 
 These checks are AST heuristics, not proofs. Each rule page states the syntax it recognizes; review still
-owns dynamic behavior and effects hidden behind unrecognized names. See
-[Limitations](/docs/reference/limitations/) for the complete enforcement boundary.
+owns dynamic behavior and effects hidden behind unrecognized names.
 
 <NextPrev current="reference-architecture-rules" />

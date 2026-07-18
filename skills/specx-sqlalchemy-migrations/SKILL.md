@@ -1,11 +1,11 @@
 ---
 name: specx-sqlalchemy-migrations
-description: Add or repair Alembic migrations for Specx SQLAlchemy services. Use when adding SQLAlchemy models or repositories, replacing metadata.create_all schema bootstraps, creating async Alembic env.py, adding migration Makefile targets, generating initial revisions, or testing migration drift.
+description: Add or repair Alembic migrations for specx SQLAlchemy services. Use when adding SQLAlchemy models or repositories, replacing metadata.create_all schema bootstraps, creating async Alembic env.py, adding migration Makefile targets, generating initial revisions, or testing migration drift.
 ---
 
-# Specx SQLAlchemy Migrations
+# specx SQLAlchemy Migrations
 
-Use this skill whenever a Specx project has SQLAlchemy models or persistence
+Use this skill whenever a specx project has SQLAlchemy models or persistence
 adapters. Read `references/alembic.md` before editing migration files.
 
 ## Workflow

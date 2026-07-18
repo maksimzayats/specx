@@ -13,7 +13,7 @@ export const docsNavigation = [
     title: "Overview",
     pages: [
       { title: "Introduction", path: "overview-introduction" },
-      { title: "How Specx works", path: "overview-how-specx-works" },
+      { title: "How specx works", path: "overview-how-specx-works" },
       { title: "Quickstart", path: "overview-quickstart" },
       { title: "Choose a workflow", path: "overview-choose-a-workflow" },
     ],
@@ -39,7 +39,7 @@ export const docsNavigation = [
       },
       { title: "Test a service", path: "guides-test-a-service" },
       {
-        title: "Adopt Specx in an existing service",
+        title: "Adopt specx in an existing service",
         path: "guides-adopt-specx-in-an-existing-service",
       },
     ],
@@ -71,7 +71,6 @@ export const docsNavigation = [
       { title: "Skills catalog", path: "reference-skills-catalog" },
       { title: "Generated project", path: "reference-generated-project" },
       { title: "Troubleshooting", path: "reference-troubleshooting" },
-      { title: "Limitations", path: "reference-limitations" },
       { title: "Glossary", path: "reference-glossary" },
       { title: "Contributing", path: "reference-contributing" },
     ],
