@@ -34,4 +34,4 @@ class PasswordHashCapability(BaseCapability):
 
 ### Detection notes
 
-Uses the most specific capability foundation base to infer both the required capabilities package and class suffix. Narrower bases such as BaseClock keep their narrower suffix.
+Places every BaseCapability descendant under a core `capabilities` package or `shared`. Only a direct BaseCapability subclass is required to end in `Capability`; the separate category-suffix rule handles narrower bases such as BaseClock.

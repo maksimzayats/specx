@@ -35,4 +35,4 @@ class PricingService(BasePureService):
 
 ### Detection notes
 
-Rejects declarations, imports, and base expressions named BaseService across project source.
+Rejects class declarations named BaseService and `from ... import BaseService` statements across project source. Qualified base expressions reached through a plain module import are not recognized.

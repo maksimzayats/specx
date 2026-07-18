@@ -38,4 +38,4 @@ class StripePaymentGateway(PaymentGateway):
 
 ### Detection notes
 
-BaseGateway ports must live under gateways; concrete subclasses of project gateway ports must live under core/&lt;scope&gt;/infrastructure/&lt;tech&gt;.
+Direct BaseGateway ports must live under `core/&lt;scope&gt;/gateways`; descendant implementations must live somewhere under `core/&lt;scope&gt;/infrastructure`. This rule does not require a technology subpackage.

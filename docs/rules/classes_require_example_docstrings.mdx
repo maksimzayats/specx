@@ -36,4 +36,4 @@ class OrderPolicyService(BasePureService):
 
 ### Detection notes
 
-Requires each project source class to have a non-placeholder docstring that describes scope and contains a populated Example: section.
+Requires each project source class docstring to contain nonempty text before `Example:` and a nonempty example body other than exactly `...` or `pass`. It does not judge the prose semantically.
