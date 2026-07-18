@@ -24,7 +24,7 @@
   <a href="https://github.com/maksimzayats/specx/issues"><strong>Issues</strong></a>
 </p>
 
-specx gives coding agents a shared architecture for Python backends and checks
+`specx` gives coding agents a shared architecture for Python backends and checks
 that the implementation still follows it. It combines composable agent skills,
 typed foundation classes, a project initializer, and rule-based architecture
 checks with stable, documented rule IDs.
