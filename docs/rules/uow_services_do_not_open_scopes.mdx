@@ -1,0 +1,45 @@
+export const ruleId = 'uow.services-do-not-open-scopes'
+export const summary = 'Reject service-owned unit-of-work scopes.'
+export const family = 'neutral'
+export const defaultEnabled = true
+export const requiredProjectSurface = null
+
+<span id="uow_services_do_not_open_scopes"></span>
+
+## `uow.services-do-not-open-scopes`
+
+Reject service-owned unit-of-work scopes.
+
+**Status:** Enabled by default.
+
+### Why this exists
+
+Transaction ownership belongs to the externally meaningful use case, not reusable service behavior.
+
+### Failing example
+
+```python
+class CheckoutService(BaseEffectService):
+    uow_manager: Injected[OrderUnitOfWorkManager]
+
+    async def checkout(self) -> None:
+        async with self.uow_manager as uow:
+            ...
+```
+
+### Passing example
+
+```python
+class CheckoutCommand(BaseCommand):
+    ...
+
+class CheckoutUseCase(BaseUseCase):
+    async def execute(self, *, command: CheckoutCommand) -> CheckoutDTO:
+        async with self.uow_manager as uow:
+            await self.checkout_service.checkout(uow, command)
+            ...
+```
+
+### Detection notes
+
+Scans core service methods for sync or async context managers rooted in unit-of-work fields.

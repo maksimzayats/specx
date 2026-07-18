@@ -1,0 +1,34 @@
+export const ruleId = 'sqlalchemy.no-schema-bootstrap-calls'
+export const summary = 'Reject SQLAlchemy schema bootstrap calls in source and tests.'
+export const family = 'neutral'
+export const defaultEnabled = true
+export const requiredProjectSurface = null
+
+<span id="sqlalchemy_no_schema_bootstrap_calls"></span>
+
+## `sqlalchemy.no-schema-bootstrap-calls`
+
+Reject SQLAlchemy schema bootstrap calls in source and tests.
+
+**Status:** Enabled by default.
+
+### Why this exists
+
+Runtime schema creation bypasses reviewable migrations and lets environments drift.
+
+### Failing example
+
+```python
+await connection.run_sync(Base.metadata.create_all)
+```
+
+### Passing example
+
+```python
+# Apply checked-in Alembic migrations instead.
+# $ make migrate
+```
+
+### Detection notes
+
+Scans source and tests for call chains ending in metadata.create_all, metadata.drop_all, create_all, or drop_all. Alembic command usage is allowed.

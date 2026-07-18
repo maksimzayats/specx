@@ -1,9 +1,9 @@
 ---
 name: specx-project-tooling
-description: Add strict Python project tooling for a Specx service. Use when creating or updating `pyproject.toml`, `uv` dependency groups and lock checks, Ruff formatting and linting, mypy strict mode, pytest and HTTPX2 test configuration, Makefile commands, root `AGENTS.md` command guidance, or CI-like local guardrails.
+description: Add strict Python project tooling for a specx service. Use when creating or updating `pyproject.toml`, `uv` dependency groups and lock checks, Ruff formatting and linting, mypy strict mode, pytest and HTTPX2 test configuration, Makefile commands, root `AGENTS.md` command guidance, or CI-like local guardrails.
 ---
 
-# Specx Project Tooling
+# specx Project Tooling
 
 Use this skill to make the repository executable and checkable. Read
 `references/tooling.md` before editing tooling files.

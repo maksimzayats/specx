@@ -2,4 +2,4 @@ from __future__ import annotations
 
 
 class BaseSpecxError(Exception):
-    """Base for package errors raised by Specx internals and testing APIs."""
+    """Base for package errors raised by specx internals and testing APIs."""

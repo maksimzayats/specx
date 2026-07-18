@@ -1,9 +1,9 @@
 ---
 name: specx-diwire-composition
-description: Wire dependency injection for a Specx Python service with `diwire`. Use when adding `ioc/container.py`, explicit dependency registrations for capabilities, repositories, gateways, UoW managers, clients, settings, or factories, `Injected[...]` constructor fields, FastAPI app factory/lifecycle composition, test overrides, or rules that keep containers out of core use cases and services.
+description: Wire dependency injection for a specx Python service with `diwire`. Use when adding `ioc/container.py`, explicit dependency registrations for capabilities, repositories, gateways, UoW managers, clients, settings, or factories, `Injected[...]` constructor fields, FastAPI app factory/lifecycle composition, test overrides, or rules that keep containers out of core use cases and services.
 ---
 
-# Specx Diwire Composition
+# specx Diwire Composition
 
 Use this skill whenever object graphs, factories, controllers, adapters, or test
 overrides need `diwire`. Read `references/diwire.md` before writing DI code.

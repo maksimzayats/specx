@@ -1,4 +1,4 @@
-# Specx Testing Reference
+# specx Testing Reference
 
 Tests prove behavior and protect boundaries while `diwire` assembles project
 graphs through native pytest fixtures. Core test bodies receive `container`,

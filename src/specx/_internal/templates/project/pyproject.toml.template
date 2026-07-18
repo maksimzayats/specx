@@ -1,7 +1,7 @@
 [project]
 name = "__SPECX_PROJECT_NAME__"
 version = "0.1.0"
-description = "A framework-neutral Python project initialized with Specx."
+description = "A framework-neutral Python project initialized with specx."
 readme = "README.md"
 requires-python = ">=__SPECX_PYTHON_VERSION__"
 dependencies = []

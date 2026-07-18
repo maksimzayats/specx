@@ -4,7 +4,7 @@ from enum import StrEnum
 
 
 class SpecxRuleId(StrEnum):
-    """Stable identifiers for built-in Specx architecture rules."""
+    """Stable identifiers for built-in specx architecture rules."""
 
     CORE_INNER_PACKAGES_DO_NOT_IMPORT_OUTER_LAYERS_OR_IO_LIBRARIES = (
         "core.inner-packages-no-outer-layers-or-io-libraries"

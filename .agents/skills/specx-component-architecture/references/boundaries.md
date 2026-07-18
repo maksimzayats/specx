@@ -1,7 +1,7 @@
-# Specx Scope Boundary Reference
+# specx Scope Boundary Reference
 
-Specx uses scoped core packages, a top-level delivery layer, and packaged
-foundation bases from scoped Specx foundation packages.
+specx uses scoped core packages, a top-level delivery layer, and packaged
+foundation bases from scoped specx foundation packages.
 
 ## Contents
 
@@ -56,7 +56,7 @@ shared/
 ```
 
 Use only the folders needed by real code. Import bases from the matching scoped
-Specx foundation package by default. Do not create an empty local
+specx foundation package by default. Do not create an empty local
 `foundation/` package. Add `src/<package>/foundation/` only when a real
 project-local base category is missing or a stateful framework base must own
 project-local state, such as SQLAlchemy `MetaData`. Local foundation contains
@@ -67,7 +67,7 @@ rate limiting, request context, or controller-specific policies.
 ## Import Direction
 
 - Project-local foundation modules, if present, may import the standard
-  library, the needed scoped Specx foundation package, and pure base
+  library, the needed scoped specx foundation package, and pure base
   dependencies required by the local base. They must not import `core`,
   `delivery`, `ioc`, or scope infrastructure.
 - Core inner packages may import only same-scope inner packages, `shared`,
@@ -98,7 +98,7 @@ rate limiting, request context, or controller-specific policies.
 ## Foundation Bases
 
 Every project source class must inherit an explicit base class. Prefer packaged
-scoped Specx foundation bases:
+scoped specx foundation bases:
 
 - `BaseDTO`
 - `BaseCommand`
@@ -428,14 +428,14 @@ resources inside one core scope.
 ## Packaged Architecture Guardrails
 
 Use `uv run specx check` as the default guardrail command instead of
-hand-writing local architecture tests for Specx boundaries. The same engine is
+hand-writing local architecture tests for specx boundaries. The same engine is
 available through `specx.testing.architecture` for programmatic checks and
 custom rules. The packaged rule set is exposed through stable `SpecxRuleId`
 values and covers:
 
 - core import direction, including no delivery, ioc, top-level infrastructure,
   FastAPI, SQLAlchemy, Redis, `httpx`, or `httpx2` from core inner packages;
-- scoped Specx foundation imports, including rejection of the removed
+- scoped specx foundation imports, including rejection of the removed
   `specx.foundation` namespace;
 - explicit source-class bases, scoped example docstrings, foundation-category
   suffixes, and avoidance of raw common bases such as `BaseModel`,
@@ -463,7 +463,7 @@ values and covers:
 - core service suffixes and use of `BasePureService`, `BaseReadService`, or
   `BaseEffectService`;
 - pure/read/effect service effect boundaries and UoW lifecycle constraints;
-- framework-neutral root `AGENTS.md` project-command and Specx-boundary
+- framework-neutral root `AGENTS.md` project-command and specx-boundary
   guidance;
 - opt-in FastAPI route and root `AGENTS.md` delivery guidance.
 

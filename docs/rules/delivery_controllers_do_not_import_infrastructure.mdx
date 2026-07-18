@@ -1,0 +1,37 @@
+export const ruleId = 'delivery.controllers-do-not-import-infrastructure'
+export const summary = 'Keep delivery modules from reaching into scope infrastructure.'
+export const family = 'neutral'
+export const defaultEnabled = true
+export const requiredProjectSurface = null
+
+<span id="delivery_controllers_do_not_import_infrastructure"></span>
+
+## `delivery.controllers-do-not-import-infrastructure`
+
+Keep delivery modules from reaching into scope infrastructure.
+
+**Status:** Enabled by default.
+
+### Why this exists
+
+Controllers should translate transport input and invoke use cases; concrete adapters are selected at the composition edge.
+
+### Failing example
+
+```python
+# delivery/fastapi/controllers/orders.py
+from acme.core.orders.infrastructure.sqlalchemy.order_repository import (
+    SQLAlchemyOrderRepository,
+)
+```
+
+### Passing example
+
+```python
+# delivery/fastapi/controllers/orders.py
+from acme.core.orders.use_cases.create_order import CreateOrderUseCase
+```
+
+### Detection notes
+
+Controller modules reject infrastructure imports plus direct scope repositories, models, migrations, and adapters. Delivery __main__.py, factory.py, and lifecycle.py may use top-level infrastructure resources but still reject those scope-technical imports.

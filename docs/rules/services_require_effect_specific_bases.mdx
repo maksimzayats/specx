@@ -1,0 +1,38 @@
+export const ruleId = 'services.require-effect-specific-bases'
+export const summary = 'Require core services to choose pure, read, or effect service bases.'
+export const family = 'neutral'
+export const defaultEnabled = true
+export const requiredProjectSurface = null
+
+<span id="services_require_effect_specific_bases"></span>
+
+## `services.require-effect-specific-bases`
+
+Require core services to choose pure, read, or effect service bases.
+
+**Status:** Enabled by default.
+
+### Why this exists
+
+Pure, read, and effect bases state what collaborators and operations a service may own.
+
+### Failing example
+
+```python
+class PricingService(BaseService):
+    ...
+```
+
+### Passing example
+
+```python
+class PricingService(BasePureService):
+    ...
+
+class OrderLookupService(BaseReadService):
+    ...
+```
+
+### Detection notes
+
+Requires classes under core scope services packages to inherit BasePureService, BaseReadService, or BaseEffectService directly or through project ancestry.

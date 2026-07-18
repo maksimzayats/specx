@@ -1,0 +1,41 @@
+export const ruleId = 'use-cases.inputs-are-local-commands-or-queries'
+export const summary = 'Require every use case to accept one same-file command or query input.'
+export const family = 'neutral'
+export const defaultEnabled = true
+export const requiredProjectSurface = null
+
+<span id="use_cases_inputs_are_local_commands_or_queries"></span>
+
+## `use-cases.inputs-are-local-commands-or-queries`
+
+Require every use case to accept one same-file command or query input.
+
+**Status:** Enabled by default.
+
+### Why this exists
+
+One explicit input object makes use-case calls evolvable and gives state-changing and read-only actions distinct names.
+
+### Failing example
+
+```python
+class CreateOrderUseCase(BaseUseCase):
+    async def execute(self, customer_id: UUID, total: Decimal) -> OrderDTO:
+        ...
+```
+
+### Passing example
+
+```python
+class CreateOrderCommand(BaseCommand):
+    customer_id: UUID
+    total: Decimal
+
+class CreateOrderUseCase(BaseUseCase):
+    async def execute(self, *, command: CreateOrderCommand) -> OrderDTO:
+        ...
+```
+
+### Detection notes
+
+Requires exactly one required keyword-only `execute` parameter named `command` or `query`, annotated with a same-file BaseCommand or BaseQuery subclass whose kind matches the parameter name.

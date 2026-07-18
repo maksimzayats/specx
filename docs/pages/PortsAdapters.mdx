@@ -13,8 +13,8 @@ entities for internal work.
 
 Use a gateway for an outbound capability supplied by another system: payment capture, email delivery,
 shipment booking, or text generation. A gateway uses business language, documents its external
-effects, and returns DTOs, primitives, enums, or explicit result objects—not entities, SDK responses,
-or HTTP objects.
+effects, and returns DTOs, primitives, enums, or explicit result objects instead of entities, SDK
+responses, or HTTP objects.
 
 ```python
 class TaskSummaryGateway(BaseGateway):

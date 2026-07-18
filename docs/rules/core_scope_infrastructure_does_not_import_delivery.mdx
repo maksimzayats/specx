@@ -1,0 +1,36 @@
+export const ruleId = 'core.scope-infrastructure-does-not-import-delivery'
+export const summary = 'Prevent scope infrastructure adapters from depending on delivery code.'
+export const family = 'neutral'
+export const defaultEnabled = true
+export const requiredProjectSurface = null
+
+<span id="core_scope_infrastructure_does_not_import_delivery"></span>
+
+## `core.scope-infrastructure-does-not-import-delivery`
+
+Prevent scope infrastructure adapters from depending on delivery code.
+
+**Status:** Enabled by default.
+
+### Why this exists
+
+Adapters implement core contracts. Depending back on HTTP schemas or controllers reverses that dependency and couples infrastructure to one delivery framework.
+
+### Failing example
+
+```python
+# core/orders/infrastructure/sqlalchemy/repository.py
+from acme.delivery.fastapi.schemas.orders import OrderResponse
+```
+
+### Passing example
+
+```python
+# core/orders/infrastructure/sqlalchemy/repository.py
+from acme.core.orders.entities.order import Order
+from acme.core.orders.repositories.order import OrderRepository
+```
+
+### Detection notes
+
+Scans core/&lt;scope&gt;/infrastructure Python modules and reports any imported module whose dotted path contains delivery.

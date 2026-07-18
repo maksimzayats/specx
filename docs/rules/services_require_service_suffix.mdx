@@ -1,0 +1,37 @@
+export const ruleId = 'services.require-service-suffix'
+export const summary = 'Require classes in service packages to use the `Service` suffix.'
+export const family = 'neutral'
+export const defaultEnabled = true
+export const requiredProjectSurface = null
+
+<span id="services_require_service_suffix"></span>
+
+## `services.require-service-suffix`
+
+Require classes in service packages to use the `Service` suffix.
+
+**Status:** Enabled by default.
+
+### Why this exists
+
+Classes placed in a services package should be unmistakably named as services.
+
+### Failing example
+
+```python
+# core/orders/services/pricing.py
+class Pricing(BasePureService):
+    ...
+```
+
+### Passing example
+
+```python
+# core/orders/services/pricing.py
+class PricingService(BasePureService):
+    ...
+```
+
+### Detection notes
+
+Reports every class declared below a services package whose name does not end in Service.

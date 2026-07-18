@@ -129,7 +129,7 @@ def test_init_creates_neutral_zero_config_project(
     check_exit_code = main(["check", str(target)])
 
     assert check_exit_code == 0
-    assert "Specx checks passed with 0 warning(s)." in capsys.readouterr().out
+    assert "specx checks passed with 0 warning(s)." in capsys.readouterr().out
 
     _assert_generated_ruff_passes(target)
 
@@ -419,7 +419,7 @@ def test_check_uses_zero_config_package_discovery(
 
     output = capsys.readouterr().out
     assert exit_code == 0
-    assert "Specx checks passed with 0 warning(s)." in output
+    assert "specx checks passed with 0 warning(s)." in output
 
 
 def test_check_reports_violation_location_and_exit_one(
@@ -488,7 +488,7 @@ def test_selected_fastapi_family_without_delivery_warns_and_passes(
     output = capsys.readouterr().out
     assert exit_code == 0
     assert "warning fastapi selected rule family requires Python files" in output
-    assert "Specx checks passed with 1 warning(s)." in output
+    assert "specx checks passed with 1 warning(s)." in output
 
 
 @pytest.mark.parametrize(
@@ -550,7 +550,7 @@ def test_check_accepts_explicit_package_override(
     exit_code = main(["check", str(tmp_path)])
 
     assert exit_code == 0
-    assert "Specx checks passed" in capsys.readouterr().out
+    assert "specx checks passed" in capsys.readouterr().out
 
 
 def test_check_honors_excluded_paths(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -566,7 +566,7 @@ def test_check_honors_excluded_paths(tmp_path: Path, capsys: pytest.CaptureFixtu
     exit_code = main(["check", str(tmp_path)])
 
     assert exit_code == 0
-    assert "Specx checks passed" in capsys.readouterr().out
+    assert "specx checks passed" in capsys.readouterr().out
 
 
 def test_rule_list_and_explain_show_metadata(capsys: pytest.CaptureFixture[str]) -> None:

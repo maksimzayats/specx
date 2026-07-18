@@ -1,0 +1,33 @@
+export const ruleId = 'foundation.imports-use-scoped-packages'
+export const summary = 'Reject imports from the removed legacy `specx.foundation` namespace.'
+export const family = 'neutral'
+export const defaultEnabled = true
+export const requiredProjectSurface = null
+
+<span id="foundation_imports_use_scoped_packages"></span>
+
+## `foundation.imports-use-scoped-packages`
+
+Reject imports from the removed legacy `specx.foundation` namespace.
+
+**Status:** Enabled by default.
+
+### Why this exists
+
+The removed legacy namespace did not communicate architectural ownership. Scoped foundation imports make the layer explicit.
+
+### Failing example
+
+```python
+from specx.foundation import BaseUseCase
+```
+
+### Passing example
+
+```python
+from specx.core.foundation.use_case import BaseUseCase
+```
+
+### Detection notes
+
+Scans source and test imports for specx.foundation and all of its submodules, including `from specx import foundation`.

@@ -43,7 +43,7 @@
 - Every project source class inherits an explicit packaged or justified local foundation
   base and includes a scoped docstring with a concrete `Example:` block.
 - Keep every `__init__.py` empty.
-- Specx uses `select = ["ALL"]`; technology rules activate only when their project surface
+- specx uses `select = ["ALL"]`; technology rules activate only when their project surface
   is present.
 - Ruff enables every rule family with `select = ["ALL"]`; keep every ignored rule narrowly
   scoped and comment each ignored code with a plain-language rule description.
@@ -53,7 +53,7 @@
 - Mirror real source behavior under `tests/unit` or `tests/integration` with flat
   `test_<module>.py` files.
 - Add test packages and fixtures only when real tests require them.
-- Use `make lint` for built-in Specx policy; add a programmatic pytest wrapper only
+- Use `make lint` for built-in specx policy; add a programmatic pytest wrapper only
   for project-specific custom rules.
 - Keep one-off test doubles in the test module that uses them and reused unit doubles in
   mirrored capability, gateway, or repository test packages.

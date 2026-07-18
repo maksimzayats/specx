@@ -1,4 +1,4 @@
-# Specx Alembic Reference
+# specx Alembic Reference
 
 Use Alembic as the only schema-management path for SQLAlchemy-backed services.
 Application startup may open and dispose engines, but it must not create or

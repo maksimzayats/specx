@@ -1,9 +1,9 @@
 ---
 name: specx-add-core-service
-description: Add or refactor a Specx core scope service. Use when implementing focused reusable business/application behavior under a core scope services package, extracting logic from a use case, injecting deterministic collaborators, accepting an active unit of work, choosing between Service and Capability, or keeping business decisions away from delivery and infrastructure.
+description: Add or refactor a specx core scope service. Use when implementing focused reusable business/application behavior under a core scope services package, extracting logic from a use case, injecting deterministic collaborators, accepting an active unit of work, choosing between Service and Capability, or keeping business decisions away from delivery and infrastructure.
 ---
 
-# Specx Add Core Service
+# specx Add Core Service
 
 Use this skill for reusable core behavior that is smaller than an application
 action. Read `references/service.md` before writing the service.

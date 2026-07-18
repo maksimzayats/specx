@@ -1,4 +1,4 @@
-# Specx Use Case Reference
+# specx Use Case Reference
 
 Use cases coordinate externally meaningful application actions.
 
@@ -391,6 +391,6 @@ port/capability packages, or double classes in `conftest.py`.
   after overrides are registered.
 - No hand-built use-case graphs in test bodies.
 - No vague names such as `UserManager` or `OrderHandler`.
-- No bare classes; inherit packaged scoped Specx foundation bases or add a
+- No bare classes; inherit packaged scoped specx foundation bases or add a
   project-local foundation base only when a real project-local base category or
   stateful framework base is needed.

@@ -1,9 +1,9 @@
 ---
 name: specx-add-core-use-case
-description: Add or refactor a Specx core scope use case. Use when implementing an externally meaningful application action under a core scope use_cases package, adding same-file command/query inputs, result DTOs, coordinating services, opening a unit-of-work transaction, or moving behavior out of delivery or infrastructure into class-based application code.
+description: Add or refactor a specx core scope use case. Use when implementing an externally meaningful application action under a core scope use_cases package, adding same-file command/query inputs, result DTOs, coordinating services, opening a unit-of-work transaction, or moving behavior out of delivery or infrastructure into class-based application code.
 ---
 
-# Specx Add Core Use Case
+# specx Add Core Use Case
 
 Use this skill for one application action at a time. Read
 `references/use-case.md` before writing the use case.

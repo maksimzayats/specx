@@ -1,6 +1,6 @@
-# Specx Foundation Reference
+# specx Foundation Reference
 
-Specx ships reusable foundation bases in scoped packages. New services should
+specx ships reusable foundation bases in scoped packages. New services should
 import those bases directly instead of generating a large project-local
 foundation tree:
 

@@ -1,0 +1,33 @@
+export const ruleId = 'core.no-scope-delivery-packages'
+export const summary = 'Reject delivery packages nested under core scopes.'
+export const family = 'neutral'
+export const defaultEnabled = true
+export const requiredProjectSurface = null
+
+<span id="core_no_scope_delivery_packages"></span>
+
+## `core.no-scope-delivery-packages`
+
+Reject delivery packages nested under core scopes.
+
+**Status:** Enabled by default.
+
+### Why this exists
+
+Transport-specific translation is a top-level concern and should not be nested inside a business scope.
+
+### Failing example
+
+```python
+# src/acme/core/orders/delivery/fastapi/controller.py
+```
+
+### Passing example
+
+```python
+# src/acme/delivery/fastapi/controllers/orders.py
+```
+
+### Detection notes
+
+Reports any directory matching core/&lt;scope&gt;/delivery, whether or not it contains Python files.

@@ -1,9 +1,9 @@
 ---
 name: specx-add-delivery-controller
-description: Add delivery controllers for Specx services, especially FastAPI HTTP routes. Use when creating top-level `delivery/` request/response schemas, one controller per scoped use-case set, route registration, FastAPI lifecycle managers, HTTP error translation, delivery-only auth/rate-limit/request services, or integration tests that exercise the delivery edge.
+description: Add delivery controllers for specx services, especially FastAPI HTTP routes. Use when creating top-level `delivery/` request/response schemas, one controller per scoped use-case set, route registration, FastAPI lifecycle managers, HTTP error translation, delivery-only auth/rate-limit/request services, or integration tests that exercise the delivery edge.
 ---
 
-# Specx Add Delivery Controller
+# specx Add Delivery Controller
 
 Use this skill at the framework boundary. Read `references/controller.md`
 before adding controller code.

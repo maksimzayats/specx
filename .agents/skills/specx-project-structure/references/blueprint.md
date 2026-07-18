@@ -1,4 +1,4 @@
-# Specx Project Blueprint
+# specx Project Blueprint
 
 Use this reference to create a new FastAPI backend repo from scratch. Packaged
 framework-neutral guardrails run by default; this blueprint additionally
@@ -108,7 +108,7 @@ tests/unit/core/<scope>/
   use_cases/test_<action>.py
 ```
 
-Import default bases from the matching scoped Specx foundation package. Do not
+Import default bases from the matching scoped specx foundation package. Do not
 create an empty local `foundation/` package. Create
 `src/<package>/foundation/` only when current code needs a real project-local
 base category or a stateful framework base that must not be shared globally,
@@ -316,7 +316,7 @@ When SQLAlchemy/Alembic exists, add the migration shape, commands, and rules:
   `make migration-check`.
 ```
 
-The `%(constraint_name)s` naming convention used by the Specx SQLAlchemy base
+The `%(constraint_name)s` naming convention used by the specx SQLAlchemy base
 requires explicit names for `CheckConstraint` objects and schema types that
 emit checks on the target database. Document and enforce that model rule, or
 choose another reviewed convention before the first migration.

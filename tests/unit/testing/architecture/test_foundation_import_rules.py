@@ -60,6 +60,25 @@ def test_foundation_import_rule_rejects_removed_foundation_namespace(
     ]
 
 
+def test_foundation_import_rule_rejects_removed_foundation_alias(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "src" / "demo_service" / "core" / "tasks" / "task.py",
+        "from specx import foundation\n",
+    )
+
+    report = check_specx_architecture(
+        SpecxArchitectureConfig(
+            project_root=tmp_path,
+            package_name="demo_service",
+            disabled_rules=_disable_all_except(SpecxRuleId.FOUNDATION_IMPORTS_USE_SCOPED_PACKAGES),
+        )
+    )
+
+    assert [
+        (violation.message, violation.line, violation.column) for violation in report.violations
+    ] == [("imports specx.foundation", 1, 1)]
+
+
 def _disable_all_except(rule_id: SpecxRuleId) -> frozenset[SpecxRuleId]:
     return frozenset(candidate for candidate in SpecxRuleId if candidate != rule_id)
 

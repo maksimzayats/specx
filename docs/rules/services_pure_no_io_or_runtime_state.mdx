@@ -1,0 +1,40 @@
+export const ruleId = 'services.pure-no-io-or-runtime-state'
+export const summary = 'Keep pure services deterministic and independent from IO or runtime state.'
+export const family = 'neutral'
+export const defaultEnabled = true
+export const requiredProjectSurface = null
+
+<span id="services_pure_no_io_or_runtime_state"></span>
+
+## `services.pure-no-io-or-runtime-state`
+
+Keep pure services deterministic and independent from IO or runtime state.
+
+**Status:** Enabled by default.
+
+### Why this exists
+
+Pure services should return the same result for the same inputs and stay easy to test without infrastructure.
+
+### Failing example
+
+```python
+class TokenService(BasePureService):
+    clock: Clock
+    repository: TokenRepository
+
+    def issue(self) -> Token:
+        return Token(created_at=self.clock.now())
+```
+
+### Passing example
+
+```python
+class DiscountService(BasePureService):
+    def apply(self, subtotal: Decimal, rate: Decimal) -> Decimal:
+        return subtotal * (Decimal("1") - rate)
+```
+
+### Detection notes
+
+Checks known I/O imports and dependency-name fragments including repositories, gateways, clients, settings, clocks, random, UUID, and units of work.

@@ -1,4 +1,4 @@
-# Specx Settings Reference
+# specx Settings Reference
 
 Use `pydantic-settings` for runtime configuration.
 

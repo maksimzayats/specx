@@ -61,12 +61,12 @@ _EMPTY_PACKAGE_DIRECTORIES = (
 
 
 class SpecxInitializationError(BaseSpecxError):
-    """Raised when a new Specx project cannot be initialized safely."""
+    """Raised when a new specx project cannot be initialized safely."""
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)
 class InitializedProject:
-    """Resolved details for a newly initialized Specx project."""
+    """Resolved details for a newly initialized specx project."""
 
     root: Path
     project_name: str
@@ -83,7 +83,7 @@ def initialize_project(
     python_version: str = _DEFAULT_PYTHON_VERSION,
     synchronize: bool = True,
 ) -> InitializedProject:
-    """Create one fresh, framework-neutral Specx project."""
+    """Create one fresh, framework-neutral specx project."""
 
     root = _validate_target(target)
     resolved_project_name = normalize_project_name(project_name or root.name)

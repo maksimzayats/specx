@@ -1,0 +1,48 @@
+export const ruleId = 'use-cases.queries-do-not-mutate'
+export const summary = 'Keep query use cases read-only by rejecting repository mutator calls.'
+export const family = 'neutral'
+export const defaultEnabled = true
+export const requiredProjectSurface = null
+
+<span id="use_cases_queries_do_not_mutate"></span>
+
+## `use-cases.queries-do-not-mutate`
+
+Keep query use cases read-only by rejecting repository mutator calls.
+
+**Status:** Enabled by default.
+
+### Why this exists
+
+A query promises read-only behavior. Repository mutation from that path makes the command/query distinction unreliable.
+
+### Failing example
+
+```python
+class GetOrderQuery(BaseQuery):
+    order_id: UUID
+
+class GetOrderUseCase(BaseUseCase):
+    async def execute(self, *, query: GetOrderQuery) -> OrderDTO:
+        async with self.uow_manager as uow:
+            order = await uow.orders.get(query.order_id)
+            await uow.orders.save(order)
+            ...
+```
+
+### Passing example
+
+```python
+class GetOrderQuery(BaseQuery):
+    order_id: UUID
+
+class GetOrderUseCase(BaseUseCase):
+    async def execute(self, *, query: GetOrderQuery) -> OrderDTO:
+        async with self.uow_manager as uow:
+            order = await uow.orders.get(query.order_id)
+            ...
+```
+
+### Detection notes
+
+Recognizes a single keyword-only query whose class transitively inherits BaseQuery, plus known repository mutator calls rooted in an active UoW or injected repository. Other mutations remain a review concern.

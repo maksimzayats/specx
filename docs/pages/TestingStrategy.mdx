@@ -8,7 +8,7 @@ import { NextPrev } from "@storybookComponents/NextPrev"
 
 ## Unit tests use the real composition root
 
-Specx unit tests resolve the target from a fresh application container. This catches constructor and
+specx unit tests resolve the target from a fresh application container. This catches constructor and
 binding drift without turning the test into a container smoke test. The test replaces only the
 external or nondeterministic collaborator needed for its scenario, then asserts behavior.
 

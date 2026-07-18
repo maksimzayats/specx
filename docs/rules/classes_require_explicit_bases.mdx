@@ -1,0 +1,35 @@
+export const ruleId = 'classes.require-explicit-bases'
+export const summary = 'Require every non-foundation project class to declare an explicit base.'
+export const family = 'neutral'
+export const defaultEnabled = true
+export const requiredProjectSurface = null
+
+<span id="classes_require_explicit_bases"></span>
+
+## `classes.require-explicit-bases`
+
+Require every non-foundation project class to declare an explicit base.
+
+**Status:** Enabled by default.
+
+### Why this exists
+
+Every project class should declare its architectural category through a packaged foundation base or a justified local extension.
+
+### Failing example
+
+```python
+class OrderPolicy:
+    ...
+```
+
+### Passing example
+
+```python
+class OrderPolicyService(BasePureService):
+    ...
+```
+
+### Detection notes
+
+Scans non-foundation project source classes and reports classes with no base expressions. It does not decide whether a declared custom base is the correct category.

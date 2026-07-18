@@ -1,4 +1,4 @@
-# Specx Infrastructure Adapter Reference
+# specx Infrastructure Adapter Reference
 
 Infrastructure adapters perform technical IO for core repository and gateway
 contracts.

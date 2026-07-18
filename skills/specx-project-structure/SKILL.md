@@ -1,9 +1,9 @@
 ---
 name: specx-project-structure
-description: Create or reshape a Python FastAPI service repo into the Specx clean core/delivery architecture using packaged scoped foundation bases. Use when starting an API backend, adding the first src package, or establishing `AGENTS.md`, `core/`, optional local `foundation/`, `delivery/`, infrastructure, `ioc/`, migrations, and tests.
+description: Create or reshape a Python FastAPI service repo into the specx clean core/delivery architecture using packaged scoped foundation bases. Use when starting an API backend, adding the first src package, or establishing `AGENTS.md`, `core/`, optional local `foundation/`, `delivery/`, infrastructure, `ioc/`, migrations, and tests.
 ---
 
-# Specx Project Structure
+# specx Project Structure
 
 Use this skill to create the repo shell and first runnable vertical slice. For
 details, read `references/blueprint.md`.
@@ -49,7 +49,7 @@ details, read `references/blueprint.md`.
    keep simple liveness at delivery, and use `core/health` for `/readyz` when
    readiness checks a required dependency or policy is shared across deliveries.
 13. Create root `AGENTS.md` for every new repo. Include runnable project
-   commands from `$specx-project-tooling` and Specx boundaries from
+   commands from `$specx-project-tooling` and specx boundaries from
    `$specx-component-architecture`.
 14. Do not create an empty local `foundation/` package. Create
    `src/<package>/foundation/` only for a real project-local base category or a
@@ -92,7 +92,7 @@ details, read `references/blueprint.md`.
 - Keep root `AGENTS.md` commands aligned with the Makefile and include only
   guidance that matches files and features present in the project.
 - This skill targets FastAPI and must enable the opt-in `fastapi` rule family
-  in `[tool.specx]`. Framework-neutral Specx rules remain the default for
+  in `[tool.specx]`. Framework-neutral specx rules remain the default for
   workers, CLIs, and other delivery technologies.
 
 ## References

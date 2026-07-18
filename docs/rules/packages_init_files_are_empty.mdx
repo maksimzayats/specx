@@ -1,0 +1,34 @@
+export const ruleId = 'packages.init-files-are-empty'
+export const summary = 'Require package `__init__.py` files to stay empty.'
+export const family = 'neutral'
+export const defaultEnabled = true
+export const requiredProjectSurface = null
+
+<span id="packages_init_files_are_empty"></span>
+
+## `packages.init-files-are-empty`
+
+Require package `__init__.py` files to stay empty.
+
+**Status:** Enabled by default.
+
+### Why this exists
+
+Empty package initializers prevent re-export APIs, import-time side effects, and ambiguous module ownership.
+
+### Failing example
+
+```python
+# core/orders/__init__.py
+from .entities.order import Order
+```
+
+### Passing example
+
+```python
+# core/orders/__init__.py is a zero-byte file.
+```
+
+### Detection notes
+
+Enumerates Python package directories under source and tests and requires every __init__.py to exist and contain zero bytes, including no comments or whitespace.

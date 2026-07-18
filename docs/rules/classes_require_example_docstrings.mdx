@@ -1,0 +1,39 @@
+export const ruleId = 'classes.require-example-docstrings'
+export const summary = 'Require project classes to explain their scope with a concrete example.'
+export const family = 'neutral'
+export const defaultEnabled = true
+export const requiredProjectSurface = null
+
+<span id="classes_require_example_docstrings"></span>
+
+## `classes.require-example-docstrings`
+
+Require project classes to explain their scope with a concrete example.
+
+**Status:** Enabled by default.
+
+### Why this exists
+
+A scoped example records how a class is intended to be used and gives maintainers enough context to preserve its boundary.
+
+### Failing example
+
+```python
+class OrderPolicyService(BasePureService):
+    """Apply order policy."""
+```
+
+### Passing example
+
+```python
+class OrderPolicyService(BasePureService):
+    """Apply pricing policy inside the orders scope.
+
+    Example:
+        total = service.total(lines)
+    """
+```
+
+### Detection notes
+
+Requires each project source class docstring to contain nonempty text before `Example:` and a nonempty example body other than exactly `...` or `pass`. It does not judge the prose semantically.

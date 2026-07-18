@@ -1,6 +1,6 @@
 # Contributing
 
-Specx is an agent skill catalog plus a typed Python guardrail package. Changes
+specx is an agent skill catalog plus a typed Python guardrail package. Changes
 usually touch the package and the skills together so future agents learn the
 same architecture that the guardrails enforce.
 
@@ -87,7 +87,7 @@ When changing a rule:
 
 Generated services should preserve these boundaries:
 
-- Scoped Specx foundation packages define the default reusable base classes for
+- Scoped specx foundation packages define the default reusable base classes for
   generated services: `specx.core.foundation`, `specx.delivery.foundation`,
   and `specx.infrastructure.foundation`.
 - `foundation/`, when present in a generated service, contains only

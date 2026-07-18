@@ -1,6 +1,6 @@
 # __SPECX_PROJECT_NAME__
 
-A framework-neutral Python project initialized with Specx. It starts with a
+A framework-neutral Python project initialized with specx. It starts with a
 small `core/health` use case and service composed through `ioc/container.py`.
 No delivery framework is selected.
 

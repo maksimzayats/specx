@@ -4,6 +4,7 @@ import ast
 import re
 from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
 
 from specx._internal.python_ast.scanner import PythonAstProject
 from specx.testing.architecture.models import SpecxArchitectureConfig
@@ -136,7 +137,7 @@ MAKE_TARGET_PATTERN = re.compile(r"^([a-zA-Z0-9_.-]+):(?:\s|$)", re.MULTILINE)
 
 @dataclass(frozen=True, kw_only=True, slots=True)
 class ArchitectureContext:
-    """Shared static project model used by all Specx architecture rules."""
+    """Shared static project model used by all specx architecture rules."""
 
     config: SpecxArchitectureConfig
     ast_project: PythonAstProject
@@ -562,6 +563,167 @@ def class_base_name_index(context: ArchitectureContext) -> dict[str, set[str]]:
             if isinstance(node, ast.ClassDef):
                 index[node.name] = class_direct_base_names(node, aliases)
     return index
+
+
+def class_definition_base_index(
+    context: ArchitectureContext,
+) -> dict[str, tuple[tuple[Path, set[str]], ...]]:
+    mutable_index: dict[str, list[tuple[Path, set[str]]]] = {}
+    for path in context.source_paths():
+        tree = context.tree(path)
+        module_name = _source_module_name(path, context)
+        _index_class_definitions(
+            tree.body,
+            bindings={},
+            path=path,
+            module_name=module_name,
+            mutable_index=mutable_index,
+        )
+    return {name: tuple(definitions) for name, definitions in mutable_index.items()}
+
+
+def class_has_foundation_base_from_path(
+    class_name: str,
+    base: str,
+    *,
+    source_path: Path,
+    context: ArchitectureContext,
+    definition_index: dict[str, tuple[tuple[Path, set[str]], ...]],
+    visited: set[tuple[Path, str]] | None = None,
+) -> bool:
+    visited = visited or set()
+    candidates = _class_definition_candidates(
+        class_name,
+        source_path=source_path,
+        context=context,
+        definition_index=definition_index,
+    )
+    for candidate_path, base_names in candidates:
+        visit_key = (candidate_path, class_name)
+        if visit_key in visited:
+            continue
+        candidate_visited = {*visited, visit_key}
+        if any(found_base == base or found_base.endswith(f".{base}") for found_base in base_names):
+            return True
+        if any(
+            class_has_foundation_base_from_path(
+                found_base,
+                base,
+                source_path=candidate_path,
+                context=context,
+                definition_index=definition_index,
+                visited=candidate_visited,
+            )
+            for found_base in base_names
+        ):
+            return True
+    return False
+
+
+def _class_definition_candidates(
+    class_name: str,
+    *,
+    source_path: Path,
+    context: ArchitectureContext,
+    definition_index: dict[str, tuple[tuple[Path, set[str]], ...]],
+) -> tuple[tuple[Path, set[str]], ...]:
+    unqualified_class_name = class_name.rsplit(".", maxsplit=1)[-1]
+    candidates = definition_index.get(unqualified_class_name, ())
+    if "." in class_name:
+        return tuple(
+            candidate
+            for candidate in candidates
+            if f"{_source_module_name(candidate[0], context)}.{unqualified_class_name}"
+            == class_name
+        )
+    local_candidates = tuple(candidate for candidate in candidates if candidate[0] == source_path)
+    if local_candidates:
+        return local_candidates
+    return candidates if len(candidates) == 1 else ()
+
+
+def _source_module_name(path: Path, context: ArchitectureContext) -> str:
+    relative_module = path.relative_to(context.src_root).with_suffix("")
+    return ".".join((context.config.package_name, *relative_module.parts))
+
+
+def _index_class_definitions(
+    statements: list[ast.stmt],
+    *,
+    bindings: dict[str, str],
+    path: Path,
+    module_name: str,
+    mutable_index: dict[str, list[tuple[Path, set[str]]]],
+) -> None:
+    for node in statements:
+        _update_import_bindings(node, bindings, module_name=module_name)
+        if isinstance(node, ast.ClassDef):
+            mutable_index.setdefault(node.name, []).append(
+                (
+                    path,
+                    {_resolved_class_reference(base, bindings) for base in node.bases},
+                )
+            )
+            _index_class_definitions(
+                node.body,
+                bindings=bindings.copy(),
+                path=path,
+                module_name=module_name,
+                mutable_index=mutable_index,
+            )
+            bindings[node.name] = f"{module_name}.{node.name}"
+            continue
+        for _, value in ast.iter_fields(node):
+            raw_value = cast(object, value)
+            if not isinstance(raw_value, list):
+                continue
+            items = cast(list[object], raw_value)
+            nested_statements = [child for child in items if isinstance(child, ast.stmt)]
+            if not nested_statements or len(nested_statements) != len(items):
+                continue
+            _index_class_definitions(
+                nested_statements,
+                bindings=bindings.copy(),
+                path=path,
+                module_name=module_name,
+                mutable_index=mutable_index,
+            )
+
+
+def _update_import_bindings(
+    node: ast.stmt,
+    bindings: dict[str, str],
+    *,
+    module_name: str,
+) -> None:
+    if isinstance(node, ast.Import):
+        for alias in node.names:
+            local_name = alias.asname or alias.name.split(".")[0]
+            bindings[local_name] = alias.name if alias.asname else local_name
+    elif isinstance(node, ast.ImportFrom):
+        imported_module = _imported_module_name(node, module_name=module_name)
+        for alias in node.names:
+            if alias.name == "*":
+                continue
+            local_name = alias.asname or alias.name
+            bindings[local_name] = f"{imported_module}.{alias.name}"
+
+
+def _imported_module_name(node: ast.ImportFrom, *, module_name: str) -> str:
+    if node.level == 0:
+        return node.module or ""
+    package_parts = module_name.split(".")[:-1]
+    parent_parts = package_parts[: len(package_parts) - (node.level - 1)]
+    imported_parts = tuple(part for part in (node.module or "").split(".") if part)
+    return ".".join((*parent_parts, *imported_parts))
+
+
+def _resolved_class_reference(base: ast.expr, bindings: dict[str, str]) -> str:
+    expression = base.value if isinstance(base, ast.Subscript) else base
+    chain = attribute_chain(expression)
+    if not chain:
+        return ast.unparse(expression)
+    return ".".join((bindings.get(chain[0], chain[0]), *chain[1:]))
 
 
 def foundation_base_names_for_class(

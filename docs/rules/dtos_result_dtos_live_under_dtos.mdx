@@ -1,0 +1,37 @@
+export const ruleId = 'dtos.result-dtos-live-under-dtos'
+export const summary = 'Require DTO classes to live in the scope `dtos` package.'
+export const family = 'neutral'
+export const defaultEnabled = true
+export const requiredProjectSurface = null
+
+<span id="dtos_result_dtos_live_under_dtos"></span>
+
+## `dtos.result-dtos-live-under-dtos`
+
+Require DTO classes to live in the scope `dtos` package.
+
+**Status:** Enabled by default.
+
+### Why this exists
+
+Result contracts are easier to discover when DTO classes have one predictable package rather than living beside controllers or use cases.
+
+### Failing example
+
+```python
+# core/orders/use_cases/get_order.py
+class OrderDTO(BaseDTO):
+    ...
+```
+
+### Passing example
+
+```python
+# core/orders/dtos/order.py
+class OrderDTO(BaseDTO):
+    ...
+```
+
+### Detection notes
+
+Scans project source classes that inherit BaseDTO and requires their path to include core/&lt;scope&gt;/dtos.

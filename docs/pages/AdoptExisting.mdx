@@ -1,15 +1,15 @@
 import { Meta, Subtitle, Title } from "@storybook/blocks"
 import { NextPrev } from "@storybookComponents/NextPrev"
 
-<Meta title="Guides/Adopt Specx in an existing service" />
+<Meta title="Guides/Adopt specx in an existing service" />
 
-<Title>Adopt Specx in an existing service</Title>
+<Title>Adopt specx in an existing service</Title>
 <Subtitle>Introduce checks and boundaries without replacing a working application in one pass.</Subtitle>
 
 ## 1. Map the current service
 
 Identify the source package and map application actions, external IO, transaction ownership, schema
-migration ownership, delivery entrypoints, and composition to Specx's `core`, scope infrastructure,
+migration ownership, delivery entrypoints, and composition to specx's `core`, scope infrastructure,
 `delivery`, top-level `infrastructure`, and `ioc` boundaries. Identify the corresponding test layers
 before moving files.
 
@@ -19,7 +19,7 @@ before moving files.
 uv add specx
 ```
 
-Specx requires a `src/` layout for CLI discovery. If more than one importable package exists below
+specx requires a `src/` layout for CLI discovery. If more than one importable package exists below
 `src/`, set the package explicitly:
 
 ```toml

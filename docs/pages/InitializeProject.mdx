@@ -60,7 +60,7 @@ make check
 
 ## Target safety
 
-The target must be new, empty, or contain only a `.git` directory. Specx rejects files, symlink
+The target must be new, empty, or contain only a `.git` directory. specx rejects files, symlink
 targets, and partially populated projects instead of merging a template over them. If dependency
 installation fails after rendering, the files remain in place and the error names the command to
 rerun.

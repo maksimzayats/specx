@@ -1,0 +1,41 @@
+export const ruleId = 'gateways.ports-and-implementations-placement'
+export const summary = 'Keep gateway ports and concrete gateway implementations in distinct packages.'
+export const family = 'neutral'
+export const defaultEnabled = true
+export const requiredProjectSurface = null
+
+<span id="gateways_ports_and_implementations_placement"></span>
+
+## `gateways.ports-and-implementations-placement`
+
+Keep gateway ports and concrete gateway implementations in distinct packages.
+
+**Status:** Enabled by default.
+
+### Why this exists
+
+The port belongs to core business language; the technical implementation belongs at the scope infrastructure edge.
+
+### Failing example
+
+```python
+# core/orders/gateways/stripe.py
+class StripePaymentGateway(PaymentGateway):
+    ...
+```
+
+### Passing example
+
+```python
+# core/orders/gateways/payment.py
+class PaymentGateway(BaseGateway):
+    ...
+
+# core/orders/infrastructure/stripe/payment.py
+class StripePaymentGateway(PaymentGateway):
+    ...
+```
+
+### Detection notes
+
+Direct BaseGateway ports must live under `core/&lt;scope&gt;/gateways`; descendant implementations must live somewhere under `core/&lt;scope&gt;/infrastructure`. This rule does not require a technology subpackage.

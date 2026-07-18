@@ -1,0 +1,49 @@
+export const ruleId = 'use-cases.no-entity-imports-or-returns'
+export const summary = 'Prevent use cases from exposing persistence entities as application results.'
+export const family = 'neutral'
+export const defaultEnabled = true
+export const requiredProjectSurface = null
+
+<span id="use_cases_no_entity_imports_or_returns"></span>
+
+## `use-cases.no-entity-imports-or-returns`
+
+Prevent use cases from exposing persistence entities as application results.
+
+**Status:** Enabled by default.
+
+### Why this exists
+
+Entities are internal state models. Returning them from a use case leaks persistence-oriented representation into delivery.
+
+### Failing example
+
+```python
+from acme.core.orders.entities.order import OrderEntity
+
+class GetOrderQuery(BaseQuery):
+    order_id: UUID
+
+class GetOrderUseCase(BaseUseCase):
+    async def execute(self, *, query: GetOrderQuery) -> OrderDTO:
+        async with self.uow_manager as uow:
+            order: OrderEntity = await uow.orders.get(query.order_id)
+            return OrderDTO(id=order.id, status=order.status)
+```
+
+### Passing example
+
+```python
+class GetOrderQuery(BaseQuery):
+    order_id: UUID
+
+class GetOrderUseCase(BaseUseCase):
+    async def execute(self, *, query: GetOrderQuery) -> OrderDTO:
+        async with self.uow_manager as uow:
+            order = await uow.orders.get(query.order_id)
+            return OrderDTO(id=order.id, status=order.status)
+```
+
+### Detection notes
+
+Checks use-case imports, return annotations, and direct returns of variables recognized as repository results. Indirect or dynamically typed entity leaks still need review.

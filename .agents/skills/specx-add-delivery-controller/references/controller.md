@@ -1,4 +1,4 @@
-# Specx Delivery Controller Reference
+# specx Delivery Controller Reference
 
 Delivery controllers adapt framework requests to core use cases. Keep them under
 top-level `delivery/`, not under `core/<scope>/`.

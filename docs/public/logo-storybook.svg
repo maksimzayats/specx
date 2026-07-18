@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 32" role="img" aria-labelledby="title">
-  <title id="title">Specx</title>
+  <title id="title">specx</title>
   <rect width="32" height="32" rx="8" fill="#171717"/>
   <path d="M22 9h-9a4 4 0 0 0 0 8h6a3 3 0 0 1 0 6h-9" fill="none" stroke="#fff" stroke-linecap="round" stroke-width="3"/>
-  <text x="42" y="22" fill="#171717" font-family="ui-sans-serif, system-ui, sans-serif" font-size="18" font-weight="650">Specx</text>
+  <text x="42" y="22" fill="#171717" font-family="ui-sans-serif, system-ui, sans-serif" font-size="18" font-weight="650">specx</text>
 </svg>

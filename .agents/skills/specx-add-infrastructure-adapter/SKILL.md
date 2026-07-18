@@ -1,9 +1,9 @@
 ---
 name: specx-add-infrastructure-adapter
-description: Add technical infrastructure adapters for Specx core scopes. Use when implementing SQLAlchemy repositories and Alembic-backed persistence, Redis stores, HTTP/network clients, file or queue adapters, unit-of-work implementations, gateway implementations for external APIs or SDKs such as OpenAI, or explicit `diwire` bindings for core scope repository and gateway ports.
+description: Add technical infrastructure adapters for specx core scopes. Use when implementing SQLAlchemy repositories and Alembic-backed persistence, Redis stores, HTTP/network clients, file or queue adapters, unit-of-work implementations, gateway implementations for external APIs or SDKs such as OpenAI, or explicit `diwire` bindings for core scope repository and gateway ports.
 ---
 
-# Specx Add Infrastructure Adapter
+# specx Add Infrastructure Adapter
 
 Use this skill whenever code talks to external systems. Read
 `references/adapter.md` before writing adapters.

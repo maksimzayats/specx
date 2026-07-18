@@ -2,7 +2,7 @@
 
 ## Repository Purpose
 
-This repo is the Specx skill catalog and Python guardrail package. It publishes
+This repo is the specx skill catalog and Python guardrail package. It publishes
 reusable agent skills and a typed `specx` package for creating Python backend
 services with packaged scoped foundation bases, rule-based architecture tests,
 and clean `core` / `delivery` / `infrastructure` / `ioc` boundaries.
@@ -61,7 +61,7 @@ and clean `core` / `delivery` / `infrastructure` / `ioc` boundaries.
 - When changing generated-project commands or architecture, update the relevant
   skill references and the generated-project `AGENTS.md` guidance together.
 
-## Specx Service Rules To Preserve
+## specx Service Rules To Preserve
 
 - Every project class inherits an explicit packaged scoped foundation base or a
   justified project-local foundation extension.

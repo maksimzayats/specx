@@ -26,6 +26,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
+      - name: Set up uv
+        uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff # v6
+
+      - name: Check architecture rule documentation drift
+        working-directory: .
+        run: >-
+          uv run pytest
+          tests/unit/testing/architecture/test_registry.py
+          tests/unit/testing/architecture/test_rule_documentation.py
+
       - name: Set up Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:

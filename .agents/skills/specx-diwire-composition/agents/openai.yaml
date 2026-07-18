@@ -1,4 +1,4 @@
 interface:
-  display_name: "Specx Diwire Composition"
+  display_name: "specx Diwire Composition"
   short_description: "Wire diwire dependency injection"
   default_prompt: "Use $specx-diwire-composition to wire diwire composition and test overrides."

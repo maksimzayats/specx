@@ -31,7 +31,7 @@ def test_specx_architecture() -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Render the Specx architecture guardrail pytest module.",
+        description="Render the specx architecture guardrail pytest module.",
     )
     parser.add_argument(
         "--package",

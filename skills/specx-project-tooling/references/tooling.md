@@ -1,4 +1,4 @@
-# Specx Tooling Reference
+# specx Tooling Reference
 
 Use this for a new Python 3.14 service. Preserve existing versions in existing
 repos unless the user asks to change them. The example floors below were
@@ -16,7 +16,7 @@ FastAPI delivery app is created.
 Python 3.14 is the initializer default, not a support ceiling. `--python`
 accepts any syntactically valid `major.minor` value and renders matching uv,
 mypy, and Ruff metadata, allowing future Python releases without changing a
-Specx allowlist.
+specx allowlist.
 
 ## Contents
 
@@ -142,7 +142,7 @@ Ruff's `ALL` selector adopts newly released rules on upgrade. Keep that
 intentional strictness, run the complete check after dependency updates, and
 keep a plain-language description of the rule beside every ignored code. The global
 ignores cover file-level module docstrings and Ruff formatter compatibility;
-the per-file ignores preserve Specx's empty-initializer rule, pytest's
+the per-file ignores preserve specx's empty-initializer rule, pytest's
 assertion model, and DIWire's runtime annotation resolution.
 
 `uv` installs packaged projects editable during sync, so tests should import the
@@ -156,14 +156,14 @@ Add feature-specific runtime dependencies only when used. For example,
 ## DIWire Mypy Plugin
 
 The `diwire.integrations.mypy_plugin` plugin refines signatures created by
-`resolver_context.inject`. Standard Specx classes use constructor fields typed
+`resolver_context.inject`. Standard specx classes use constructor fields typed
 with `Injected[...]` and do not need it. Add the plugin only when preserving an
 existing, intentional function-injection integration.
 
 ## Minimal Makefile
 
 The neutral initializer emits `check`, `format`, `lint`, and `test`. The
-`lint` target includes Specx architecture guardrails. Add `dev` only with a
+`lint` target includes specx architecture guardrails. Add `dev` only with a
 real runnable delivery app. The FastAPI form is shown below; replace
 `order_service.delivery.fastapi.__main__:app`.
 

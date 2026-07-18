@@ -1,0 +1,39 @@
+export const ruleId = 'tests.mirror-source-structure'
+export const summary = 'Require meaningful generated-service tests to mirror source modules.'
+export const family = 'neutral'
+export const defaultEnabled = true
+export const requiredProjectSurface = null
+
+<span id="tests_mirror_source_structure"></span>
+
+## `tests.mirror-source-structure`
+
+Require meaningful generated-service tests to mirror source modules.
+
+**Status:** Enabled by default.
+
+### Why this exists
+
+Mirrored flat tests make ownership obvious and prevent bespoke harness layers from hiding how behavior is exercised.
+
+### Failing example
+
+```python
+# tests/unit/core/orders/services/pricing/test_pricing.py
+# tests/_support/fakes/fake_order_repository.py
+# tests/unit/core/orders/services/pricing_harness.py
+```
+
+### Passing example
+
+```python
+# src/acme/core/orders/services/pricing.py
+# tests/unit/core/orders/services/test_pricing.py
+
+# src/acme/core/orders/repositories/order.py
+# tests/unit/core/orders/repositories/fake_order.py
+```
+
+### Detection notes
+
+Checks source/test path mirroring, required behavior tests, persistence integration tests, and prohibited harness, scenario, support-fake, target-folder, and misplaced fake patterns.

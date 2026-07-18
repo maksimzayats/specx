@@ -15,7 +15,7 @@ from specx.testing.architecture.registry import SpecxRuleRegistry
 
 
 def check_specx_architecture(config: SpecxArchitectureConfig) -> SpecxArchitectureReport:
-    """Run enabled Specx architecture rules and return a grouped report."""
+    """Run enabled specx architecture rules and return a grouped report."""
 
     registry = SpecxRuleRegistry.build(extra_rules=config.extra_rules)
     enabled_rules = registry.enabled_rules(
@@ -83,7 +83,7 @@ def _is_explicit_surface_selection(
 
 
 def assert_specx_architecture(config: SpecxArchitectureConfig) -> None:
-    """Assert that a project satisfies every enabled Specx architecture rule."""
+    """Assert that a project satisfies every enabled specx architecture rule."""
 
     report = check_specx_architecture(config)
     if report.has_violations:

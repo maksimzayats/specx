@@ -311,6 +311,72 @@ def test_use_cases_do_not_inject_repositories_or_infrastructure_rule_rejects_non
     ]
 
 
+def test_ioc_rule_rejects_active_uow_registration_forms(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "src" / "demo_service" / "ioc" / "container.py",
+        "class TaskUnitOfWork:\n"
+        "    pass\n\n"
+        "def make_uow() -> TaskUnitOfWork:\n"
+        "    return TaskUnitOfWork()\n\n"
+        "uow = TaskUnitOfWork()\n"
+        "container.add(TaskUnitOfWork)\n"
+        "container.add_factory(make_uow)\n"
+        "container.add_instance(TaskUnitOfWork())\n"
+        "container.add_instance(uow)\n"
+        "container.add_instance(TaskUnitOfWork(), provides='infer')\n",
+    )
+
+    report = check_specx_architecture(
+        SpecxArchitectureConfig(
+            project_root=tmp_path,
+            package_name="demo_service",
+            disabled_rules=_disable_all_except(
+                SpecxRuleId.IOC_CONTAINER_DOES_NOT_REGISTER_ACTIVE_UNIT_OF_WORK
+            ),
+        )
+    )
+
+    assert [violation.message for violation in report.violations] == [
+        "registers active TaskUnitOfWork",
+        "registers active TaskUnitOfWork",
+        "registers active TaskUnitOfWork",
+        "registers active TaskUnitOfWork",
+        "registers active TaskUnitOfWork",
+    ]
+
+
+def test_uow_scope_rule_ignores_non_use_case_execute_methods(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "src" / "demo_service" / "core" / "tasks" / "use_cases" / "task.py",
+        "class Runner:\n"
+        "    uow_manager: Injected[TaskUnitOfWorkManager]\n\n"
+        "    async def execute(self):\n"
+        "        async with self.uow_manager:\n"
+        "            pass\n"
+        "        async with self.uow_manager:\n"
+        "            pass\n\n"
+        "class TaskUseCase(BaseUseCase):\n"
+        "    uow_manager: Injected[TaskUnitOfWorkManager]\n\n"
+        "    async def execute(self):\n"
+        "        async with self.uow_manager:\n"
+        "            pass\n"
+        "        async with self.uow_manager:\n"
+        "            pass\n",
+    )
+
+    report = check_specx_architecture(
+        SpecxArchitectureConfig(
+            project_root=tmp_path,
+            package_name="demo_service",
+            disabled_rules=_disable_all_except(
+                SpecxRuleId.USE_CASES_OPEN_AT_MOST_ONE_UNIT_OF_WORK_SCOPE
+            ),
+        )
+    )
+
+    assert [violation.symbol for violation in report.violations] == ["TaskUseCase"]
+
+
 def _write_repository_contract(project_root: Path) -> None:
     _write(
         project_root

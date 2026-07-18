@@ -21,7 +21,7 @@ from specx.core.foundation.use_case import BaseUseCase
 
 @dataclass(frozen=True, kw_only=True, slots=True)
 class ExampleDTO(BaseDTO):
-    """DTO fixture used to verify the public Specx core foundation base."""
+    """DTO fixture used to verify the public specx core foundation base."""
 
     name: str
 
