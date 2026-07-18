@@ -12,7 +12,7 @@ from specx.testing.architecture.models import SpecxArchitectureViolation
 from specx.testing.architecture.rule_id import SpecxRuleId
 from specx.testing.architecture.rules._shared import (
     ArchitectureRuleBase,
-    _violation,
+    violation,
 )
 
 
@@ -43,7 +43,7 @@ class ClassesUseSuffixFromMostSpecificFoundationCategoryRule(ArchitectureRuleBas
                 }
                 if not suffixes:
                     violations.append(
-                        _violation(
+                        violation(
                             self.id,
                             path=path,
                             message="has no recognized category",
@@ -53,7 +53,7 @@ class ClassesUseSuffixFromMostSpecificFoundationCategoryRule(ArchitectureRuleBas
                     continue
                 if not any(node.name.endswith(suffix) for suffix in suffixes):
                     violations.append(
-                        _violation(
+                        violation(
                             self.id,
                             path=path,
                             message=f"expected {sorted(suffixes)}",

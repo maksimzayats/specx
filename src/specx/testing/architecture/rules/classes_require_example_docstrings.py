@@ -10,7 +10,7 @@ from specx.testing.architecture.models import SpecxArchitectureViolation
 from specx.testing.architecture.rule_id import SpecxRuleId
 from specx.testing.architecture.rules._shared import (
     ArchitectureRuleBase,
-    _violation,
+    violation,
 )
 
 
@@ -30,7 +30,7 @@ class ClassesRequireExampleDocstringsRule(ArchitectureRuleBase):
             for node in ast.walk(tree):
                 if isinstance(node, ast.ClassDef) and not has_scoped_example_docstring(node):
                     violations.append(
-                        _violation(
+                        violation(
                             self.id,
                             path=path,
                             message="missing scoped Example docstring",

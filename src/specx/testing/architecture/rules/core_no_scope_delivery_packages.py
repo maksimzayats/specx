@@ -5,7 +5,7 @@ from specx.testing.architecture.models import SpecxArchitectureViolation
 from specx.testing.architecture.rule_id import SpecxRuleId
 from specx.testing.architecture.rules._shared import (
     ArchitectureRuleBase,
-    _violation,
+    violation,
 )
 
 
@@ -20,6 +20,6 @@ class CoreDoesNotContainDeliveryPackagesRule(ArchitectureRuleBase):
 
     def check(self, context: ArchitectureContext) -> tuple[SpecxArchitectureViolation, ...]:
         return tuple(
-            _violation(self.id, path=path, message="core scope contains delivery package")
+            violation(self.id, path=path, message="core scope contains delivery package")
             for path in (context.src_root / "core").glob("*/delivery")
         )

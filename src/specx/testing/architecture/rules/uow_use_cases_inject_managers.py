@@ -16,7 +16,7 @@ from specx.testing.architecture.models import SpecxArchitectureViolation
 from specx.testing.architecture.rule_id import SpecxRuleId
 from specx.testing.architecture.rules._shared import (
     ArchitectureRuleBase,
-    _violation,
+    violation,
 )
 
 
@@ -80,7 +80,7 @@ class UseCasesInjectUnitOfWorkManagersRule(ArchitectureRuleBase):
                             bad_dependency_fields.append("injects UoW manager but does not open it")
                 if bad_dependency_fields:
                     violations.append(
-                        _violation(
+                        violation(
                             self.id,
                             path=path,
                             message=str(bad_dependency_fields),

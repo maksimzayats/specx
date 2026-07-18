@@ -17,7 +17,7 @@ from specx.testing.architecture.models import SpecxArchitectureViolation
 from specx.testing.architecture.rule_id import SpecxRuleId
 from specx.testing.architecture.rules._shared import (
     ArchitectureRuleBase,
-    _violation,
+    violation,
 )
 
 
@@ -50,7 +50,7 @@ class PureServicesDoNotDependOnIOOrRuntimeStateRule(ArchitectureRuleBase):
                     roots=PURE_SERVICE_FORBIDDEN_IMPORT_ROOTS,
                     parts=PURE_SERVICE_FORBIDDEN_IMPORT_PARTS,
                 ):
-                    violations.append(_violation(self.id, path=path, message=f"imports {module}"))
+                    violations.append(violation(self.id, path=path, message=f"imports {module}"))
             for class_node in pure_services:
                 for dependency_name in class_dependency_annotations(class_node, aliases):
                     fragments = forbidden_dependency_fragments(
@@ -59,7 +59,7 @@ class PureServicesDoNotDependOnIOOrRuntimeStateRule(ArchitectureRuleBase):
                     )
                     if fragments:
                         violations.append(
-                            _violation(
+                            violation(
                                 self.id,
                                 path=path,
                                 message=f"uses {dependency_name}",

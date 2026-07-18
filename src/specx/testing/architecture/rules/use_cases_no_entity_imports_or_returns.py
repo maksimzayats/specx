@@ -17,7 +17,7 @@ from specx.testing.architecture.models import SpecxArchitectureViolation
 from specx.testing.architecture.rule_id import SpecxRuleId
 from specx.testing.architecture.rules._shared import (
     ArchitectureRuleBase,
-    _violation,
+    violation,
 )
 
 
@@ -43,7 +43,7 @@ class UseCasesDoNotImportOrReturnEntitiesRule(ArchitectureRuleBase):
                     for alias in node.names:
                         if "entities" in alias.name.split("."):
                             violations.append(
-                                _violation(self.id, path=path, message=f"imports {alias.name}"),
+                                violation(self.id, path=path, message=f"imports {alias.name}"),
                             )
                 elif isinstance(node, ast.ImportFrom):
                     module = node.module or ""
@@ -51,7 +51,7 @@ class UseCasesDoNotImportOrReturnEntitiesRule(ArchitectureRuleBase):
                     imports_entity_name = any(alias.name.endswith("Entity") for alias in node.names)
                     if imports_entity_module or (node.level > 0 and imports_entity_name):
                         violations.append(
-                            _violation(self.id, path=path, message=f"imports {module}"),
+                            violation(self.id, path=path, message=f"imports {module}"),
                         )
 
             for class_node, execute in execute_methods_with_classes(tree):
@@ -63,7 +63,7 @@ class UseCasesDoNotImportOrReturnEntitiesRule(ArchitectureRuleBase):
                 return_annotation = annotation_name(execute.returns, aliases)
                 if "Entity" in return_annotation:
                     violations.append(
-                        _violation(
+                        violation(
                             self.id,
                             path=path,
                             message=f"execute returns {return_annotation}",
@@ -82,7 +82,7 @@ class UseCasesDoNotImportOrReturnEntitiesRule(ArchitectureRuleBase):
                         and return_node.value.id in repository_results
                     ):
                         violations.append(
-                            _violation(
+                            violation(
                                 self.id,
                                 path=path,
                                 message="returns repository result directly",
@@ -91,7 +91,7 @@ class UseCasesDoNotImportOrReturnEntitiesRule(ArchitectureRuleBase):
                         )
                     if expression_is_rooted_in_names(return_node.value, repository_results):
                         violations.append(
-                            _violation(
+                            violation(
                                 self.id,
                                 path=path,
                                 message="returns repository result expression",
@@ -103,7 +103,7 @@ class UseCasesDoNotImportOrReturnEntitiesRule(ArchitectureRuleBase):
                         call, repository_fields
                     ):
                         violations.append(
-                            _violation(
+                            violation(
                                 self.id,
                                 path=path,
                                 message="returns repository call directly",

@@ -7,23 +7,23 @@ from specx.testing.architecture.models import SpecxArchitectureViolation
 from specx.testing.architecture.rule_id import SpecxRuleId
 from specx.testing.architecture.rules._shared import (
     ArchitectureRuleBase,
-    _fixture_returns_use_closure,
-    _flat_test_path_for_source_path,
-    _is_allowed_mirrored_fake_module_path,
-    _is_core_behavior_target_test_path,
-    _is_core_behavior_test_path,
-    _is_fake_module_path,
-    _is_non_source_integration_test,
-    _is_pytest_fixture,
-    _is_target_specific_test_factory_or_harness,
-    _is_test_double_class_name,
-    _mirrored_test_paths,
-    _required_integration_test_source_paths,
-    _required_unit_test_source_paths,
-    _source_paths_for_test_path,
-    _support_fakes_package_exists,
-    _target_folder_test_exists,
-    _violation,
+    fixture_returns_use_closure,
+    flat_test_path_for_source_path,
+    is_allowed_mirrored_fake_module_path,
+    is_core_behavior_target_test_path,
+    is_core_behavior_test_path,
+    is_fake_module_path,
+    is_non_source_integration_test,
+    is_pytest_fixture,
+    is_target_specific_test_factory_or_harness,
+    is_test_double_class_name,
+    mirrored_test_paths,
+    required_integration_test_source_paths,
+    required_unit_test_source_paths,
+    source_paths_for_test_path,
+    support_fakes_package_exists,
+    target_folder_test_exists,
+    violation,
 )
 
 
@@ -53,17 +53,17 @@ class TestsMirrorSourceStructureRule(ArchitectureRuleBase):
             test_root = context.project_root / "tests" / test_root_name
             if not test_root.exists():
                 continue
-            for path in _mirrored_test_paths(context, test_root=test_root):
-                if _is_non_source_integration_test(path, test_root=test_root):
+            for path in mirrored_test_paths(context, test_root=test_root):
+                if is_non_source_integration_test(path, test_root=test_root):
                     continue
                 relative = path.relative_to(test_root)
-                if _is_core_behavior_test_path(relative):
-                    if path.name.startswith("test_") and _is_core_behavior_target_test_path(
+                if is_core_behavior_test_path(relative):
+                    if path.name.startswith("test_") and is_core_behavior_target_test_path(
                         relative
                     ):
                         expected_path = test_root / relative.parent.parent / relative.name
                         violations.append(
-                            _violation(
+                            violation(
                                 self.id,
                                 path=path,
                                 message=(
@@ -73,7 +73,7 @@ class TestsMirrorSourceStructureRule(ArchitectureRuleBase):
                             )
                         )
                         continue
-                    source_paths = _source_paths_for_test_path(
+                    source_paths = source_paths_for_test_path(
                         path,
                         test_root=test_root,
                         src_root=context.src_root,
@@ -82,7 +82,7 @@ class TestsMirrorSourceStructureRule(ArchitectureRuleBase):
                         source_path in context.ast_project.files for source_path in source_paths
                     ):
                         violations.append(
-                            _violation(
+                            violation(
                                 self.id,
                                 path=path,
                                 message=(
@@ -92,7 +92,7 @@ class TestsMirrorSourceStructureRule(ArchitectureRuleBase):
                             )
                         )
                     continue
-                source_paths = _source_paths_for_test_path(
+                source_paths = source_paths_for_test_path(
                     path,
                     test_root=test_root,
                     src_root=context.src_root,
@@ -101,7 +101,7 @@ class TestsMirrorSourceStructureRule(ArchitectureRuleBase):
                     source_path in context.ast_project.files for source_path in source_paths
                 ):
                     violations.append(
-                        _violation(
+                        violation(
                             self.id,
                             path=path,
                             message=(
@@ -120,9 +120,9 @@ class TestsMirrorSourceStructureRule(ArchitectureRuleBase):
         test_root = context.project_root / "tests"
         support_root = test_root / "_support"
         support_fakes_root = support_root / "fakes"
-        if _support_fakes_package_exists(support_fakes_root):
+        if support_fakes_package_exists(support_fakes_root):
             violations.append(
-                _violation(
+                violation(
                     self.id,
                     path=support_fakes_root,
                     message=(
@@ -139,7 +139,7 @@ class TestsMirrorSourceStructureRule(ArchitectureRuleBase):
             aliases = context.aliases(path)
             if path.name == "harness.py":
                 violations.append(
-                    _violation(
+                    violation(
                         self.id,
                         path=path,
                         message=(
@@ -150,7 +150,7 @@ class TestsMirrorSourceStructureRule(ArchitectureRuleBase):
                 )
             if path.name == "_fakes.py":
                 violations.append(
-                    _violation(
+                    violation(
                         self.id,
                         path=path,
                         message=(
@@ -159,12 +159,12 @@ class TestsMirrorSourceStructureRule(ArchitectureRuleBase):
                         ),
                     )
                 )
-            if _is_fake_module_path(path) and not _is_allowed_mirrored_fake_module_path(
+            if is_fake_module_path(path) and not is_allowed_mirrored_fake_module_path(
                 path,
                 test_root=test_root,
             ):
                 violations.append(
-                    _violation(
+                    violation(
                         self.id,
                         path=path,
                         message=(
@@ -178,10 +178,10 @@ class TestsMirrorSourceStructureRule(ArchitectureRuleBase):
                 for class_node in [
                     node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)
                 ]:
-                    if not _is_test_double_class_name(class_node.name):
+                    if not is_test_double_class_name(class_node.name):
                         continue
                     violations.append(
-                        _violation(
+                        violation(
                             self.id,
                             path=path,
                             symbol=class_node.name,
@@ -193,7 +193,7 @@ class TestsMirrorSourceStructureRule(ArchitectureRuleBase):
                     )
             if path.name == "_scenarios.py":
                 violations.append(
-                    _violation(
+                    violation(
                         self.id,
                         path=path,
                         message=(
@@ -205,11 +205,11 @@ class TestsMirrorSourceStructureRule(ArchitectureRuleBase):
             for node in ast.walk(tree):
                 if not isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef)):
                     continue
-                if not _is_pytest_fixture(node, aliases):
+                if not is_pytest_fixture(node, aliases):
                     continue
-                if _fixture_returns_use_closure(node):
+                if fixture_returns_use_closure(node):
                     violations.append(
-                        _violation(
+                        violation(
                             self.id,
                             path=path,
                             symbol=node.name,
@@ -222,10 +222,10 @@ class TestsMirrorSourceStructureRule(ArchitectureRuleBase):
             if not path.is_relative_to(support_root):
                 continue
             for class_node in [node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)]:
-                if not _is_target_specific_test_factory_or_harness(class_node.name):
+                if not is_target_specific_test_factory_or_harness(class_node.name):
                     continue
                 violations.append(
-                    _violation(
+                    violation(
                         self.id,
                         path=path,
                         symbol=class_node.name,
@@ -242,37 +242,37 @@ class TestsMirrorSourceStructureRule(ArchitectureRuleBase):
         context: ArchitectureContext,
     ) -> tuple[SpecxArchitectureViolation, ...]:
         violations: list[SpecxArchitectureViolation] = []
-        for source_path in _required_unit_test_source_paths(context):
-            flat_path = _flat_test_path_for_source_path(
+        for source_path in required_unit_test_source_paths(context):
+            flat_path = flat_test_path_for_source_path(
                 source_path,
                 test_root=context.project_root / "tests" / "unit",
                 src_root=context.src_root,
             )
-            if flat_path in context.ast_project.files or _target_folder_test_exists(
+            if flat_path in context.ast_project.files or target_folder_test_exists(
                 flat_path,
                 context=context,
             ):
                 continue
             violations.append(
-                _violation(
+                violation(
                     self.id,
                     path=source_path,
                     message=f"missing unit test {flat_path.relative_to(context.project_root)}",
                 )
             )
-        for source_path in _required_integration_test_source_paths(context):
-            expected_path = _flat_test_path_for_source_path(
+        for source_path in required_integration_test_source_paths(context):
+            expected_path = flat_test_path_for_source_path(
                 source_path,
                 test_root=context.project_root / "tests" / "integration",
                 src_root=context.src_root,
             )
-            if expected_path in context.ast_project.files or _target_folder_test_exists(
+            if expected_path in context.ast_project.files or target_folder_test_exists(
                 expected_path,
                 context=context,
             ):
                 continue
             violations.append(
-                _violation(
+                violation(
                     self.id,
                     path=source_path,
                     message=(

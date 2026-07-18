@@ -19,7 +19,7 @@ from specx.testing.architecture.models import SpecxArchitectureViolation
 from specx.testing.architecture.rule_id import SpecxRuleId
 from specx.testing.architecture.rules._shared import (
     ArchitectureRuleBase,
-    _violation,
+    violation,
 )
 
 
@@ -51,7 +51,7 @@ class ReadServicesDoNotPerformWritesOrOwnTransactionsRule(ArchitectureRuleBase):
                 )
                 if manager_fields:
                     violations.append(
-                        _violation(
+                        violation(
                             self.id,
                             path=path,
                             message=f"injects {sorted(manager_fields)}",
@@ -73,7 +73,7 @@ class ReadServicesDoNotPerformWritesOrOwnTransactionsRule(ArchitectureRuleBase):
                             READ_SERVICE_FORBIDDEN_CALL_PREFIXES,
                         ):
                             violations.append(
-                                _violation(
+                                violation(
                                     self.id,
                                     path=path,
                                     message=f"calls {call_method}",
@@ -86,7 +86,7 @@ class ReadServicesDoNotPerformWritesOrOwnTransactionsRule(ArchitectureRuleBase):
                             and call_is_rooted_in_names(call, repository_roots)
                         ):
                             violations.append(
-                                _violation(
+                                violation(
                                     self.id,
                                     path=path,
                                     message=f"calls repository mutator {call.func.attr}",

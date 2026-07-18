@@ -12,11 +12,11 @@ from specx.testing.architecture.models import SpecxArchitectureViolation
 from specx.testing.architecture.rule_id import SpecxRuleId
 from specx.testing.architecture.rules._shared import (
     ArchitectureRuleBase,
-    _forbidden_use_case_persistence_dependency_fields,
-    _is_use_case_class,
-    _repository_calls_outside_manager_owned_uow,
-    _use_case_imports_persistence_infrastructure,
-    _violation,
+    forbidden_use_case_persistence_dependency_fields,
+    is_use_case_class,
+    repository_calls_outside_manager_owned_uow,
+    use_case_imports_persistence_infrastructure,
+    violation,
 )
 
 
@@ -40,15 +40,15 @@ class UseCasesDoNotInjectRepositoriesOrInfrastructureRule(ArchitectureRuleBase):
             tree = context.tree(path)
             aliases = context.aliases(path)
             for module in sorted(context.imports(path)):
-                if _use_case_imports_persistence_infrastructure(module):
-                    violations.append(_violation(self.id, path=path, message=f"imports {module}"))
+                if use_case_imports_persistence_infrastructure(module):
+                    violations.append(violation(self.id, path=path, message=f"imports {module}"))
 
             for class_node in [node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)]:
-                if not _is_use_case_class(class_node, aliases, base_index):
+                if not is_use_case_class(class_node, aliases, base_index):
                     continue
 
                 messages: list[str] = []
-                forbidden_fields = _forbidden_use_case_persistence_dependency_fields(
+                forbidden_fields = forbidden_use_case_persistence_dependency_fields(
                     class_node,
                     aliases,
                     base_index,
@@ -70,7 +70,7 @@ class UseCasesDoNotInjectRepositoriesOrInfrastructureRule(ArchitectureRuleBase):
                         isinstance(child, (ast.AsyncFunctionDef, ast.FunctionDef))
                         and child.name == "execute"
                     ):
-                        bad_calls = _repository_calls_outside_manager_owned_uow(
+                        bad_calls = repository_calls_outside_manager_owned_uow(
                             child,
                             manager_fields=manager_fields,
                             repository_fields=repository_fields,
@@ -82,7 +82,7 @@ class UseCasesDoNotInjectRepositoriesOrInfrastructureRule(ArchitectureRuleBase):
 
                 if messages:
                     violations.append(
-                        _violation(
+                        violation(
                             self.id,
                             path=path,
                             message="; ".join(messages),

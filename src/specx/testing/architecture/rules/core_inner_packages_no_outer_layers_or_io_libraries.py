@@ -9,7 +9,7 @@ from specx.testing.architecture.models import SpecxArchitectureViolation
 from specx.testing.architecture.rule_id import SpecxRuleId
 from specx.testing.architecture.rules._shared import (
     ArchitectureRuleBase,
-    _violation,
+    violation,
 )
 
 
@@ -34,14 +34,14 @@ class CoreInnerPackagesDoNotImportOuterLayersOrIOLibrariesRule(ArchitectureRuleB
                 parts = module_parts(module)
                 if "delivery" in parts or "infrastructure" in parts:
                     violations.append(
-                        _violation(self.id, path=path, message=f"imports {module}"),
+                        violation(self.id, path=path, message=f"imports {module}"),
                     )
                 if "ioc" in parts:
                     violations.append(
-                        _violation(self.id, path=path, message=f"imports {module}"),
+                        violation(self.id, path=path, message=f"imports {module}"),
                     )
                 if parts and parts[0] in {"fastapi", "httpx", "httpx2", "redis", "sqlalchemy"}:
                     violations.append(
-                        _violation(self.id, path=path, message=f"imports {module}"),
+                        violation(self.id, path=path, message=f"imports {module}"),
                     )
         return tuple(violations)

@@ -10,7 +10,7 @@ from specx.testing.architecture.models import SpecxArchitectureViolation
 from specx.testing.architecture.rule_id import SpecxRuleId
 from specx.testing.architecture.rules._shared import (
     ArchitectureRuleBase,
-    _violation,
+    violation,
 )
 
 
@@ -38,7 +38,7 @@ class UseCasesOpenAtMostOneUnitOfWorkScopeRule(ArchitectureRuleBase):
                 count = uow_manager_context_count(execute, manager_fields)
                 if count > 1:
                     violations.append(
-                        _violation(
+                        violation(
                             self.id,
                             path=path,
                             message=f"opens {count} UoWs",

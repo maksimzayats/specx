@@ -43,7 +43,7 @@ USE_CASE_FORBIDDEN_INFRASTRUCTURE_DEPENDENCY_NAMES = frozenset(
 CORE_BEHAVIOR_TEST_PACKAGE_NAMES = frozenset({"capabilities", "services", "use_cases"})
 
 
-def _violation(
+def violation(
     rule_id: RuleIdentifier,
     *,
     message: str,
@@ -64,7 +64,7 @@ def _violation(
 ALLOWED_UNVERSIONED_OPERATIONAL_ROUTE_PATHS = frozenset({"/healthz", "/readyz"})
 
 
-def _target_folder_test_exists(
+def target_folder_test_exists(
     flat_path: Path,
     *,
     context: ArchitectureContext,
@@ -75,7 +75,7 @@ def _target_folder_test_exists(
     return target_folder_path in context.ast_project.files
 
 
-def _python_package_directories(
+def python_package_directories(
     context: ArchitectureContext,
     *,
     root: Path,
@@ -93,7 +93,7 @@ def _python_package_directories(
     return tuple(sorted(directories))
 
 
-def _is_use_case_class(
+def is_use_case_class(
     class_node: ast.ClassDef,
     aliases: dict[str, str],
     class_base_name_index: dict[str, set[str]],
@@ -106,12 +106,12 @@ def _is_use_case_class(
     )
 
 
-def _use_case_imports_persistence_infrastructure(module: str) -> bool:
+def use_case_imports_persistence_infrastructure(module: str) -> bool:
     parts = module_parts(module)
     return "infrastructure" in parts or bool(parts and parts[0] == "sqlalchemy")
 
 
-def _is_scope_technical_import(module: str) -> bool:
+def is_scope_technical_import(module: str) -> bool:
     parts = module_parts(module)
     if "core" not in parts:
         return False
@@ -124,7 +124,7 @@ def _is_scope_technical_import(module: str) -> bool:
     )
 
 
-def _forbidden_use_case_persistence_dependency_fields(
+def forbidden_use_case_persistence_dependency_fields(
     class_node: ast.ClassDef,
     aliases: dict[str, str],
     class_base_name_index: dict[str, set[str]],
@@ -164,7 +164,7 @@ def _is_forbidden_use_case_persistence_dependency(
     )
 
 
-def _repository_calls_outside_manager_owned_uow(
+def repository_calls_outside_manager_owned_uow(
     function: ast.AsyncFunctionDef | ast.FunctionDef,
     *,
     manager_fields: set[str],
@@ -239,7 +239,7 @@ def _name_looks_like_unit_of_work(name: str) -> bool:
     return normalized in {"unit_of_work", "uow"} or normalized.endswith("_unit_of_work")
 
 
-def _is_injected_logger_annotation(
+def is_injected_logger_annotation(
     annotation: ast.expr | None,
     aliases: dict[str, str],
     imports: frozenset[str],
@@ -251,7 +251,7 @@ def _is_injected_logger_annotation(
     if not annotation_name(annotation.value, aliases).endswith("Injected"):
         return False
 
-    return _is_logging_logger_expression(annotation.slice, aliases, imports)
+    return is_logging_logger_expression(annotation.slice, aliases, imports)
 
 
 def _is_injected_container_annotation(
@@ -268,7 +268,7 @@ def _is_injected_container_annotation(
     return _is_diwire_container_expression(annotation.slice, aliases)
 
 
-def _class_injects_diwire_container(
+def class_injects_diwire_container(
     class_node: ast.ClassDef,
     aliases: dict[str, str],
 ) -> bool:
@@ -292,7 +292,7 @@ def _class_injects_diwire_container(
     return False
 
 
-def _class_can_inject_container(
+def class_can_inject_container(
     relative: Path,
     class_node: ast.ClassDef,
     class_base_name_index: dict[str, set[str]],
@@ -306,7 +306,7 @@ def _class_can_inject_container(
     )
 
 
-def _is_delivery_composition_module(relative: Path) -> bool:
+def is_delivery_composition_module(relative: Path) -> bool:
     return (
         len(relative.parts) == 3
         and relative.parts[0] == "delivery"
@@ -330,7 +330,7 @@ def _is_diwire_container_expression(
     return False
 
 
-def _is_logging_logger_expression(
+def is_logging_logger_expression(
     expression: ast.expr,
     aliases: dict[str, str],
     imports: frozenset[str],
@@ -347,7 +347,7 @@ def _is_logging_logger_expression(
     return False
 
 
-def _is_container_registration_call(node: ast.Call) -> bool:
+def is_container_registration_call(node: ast.Call) -> bool:
     return isinstance(node.func, ast.Attribute) and node.func.attr in {
         "add",
         "add_context_manager",
@@ -360,13 +360,13 @@ def _is_container_registration_call(node: ast.Call) -> bool:
     }
 
 
-def _project_uses_alembic(context: ArchitectureContext) -> bool:
+def project_uses_alembic(context: ArchitectureContext) -> bool:
     return (context.project_root / "alembic.ini").exists() or (
         context.project_root / "migrations"
     ).exists()
 
 
-def _project_uses_foundation_base(
+def project_uses_foundation_base(
     class_base_names: dict[str, set[str]],
     foundation_base: str,
 ) -> bool:
@@ -376,7 +376,7 @@ def _project_uses_foundation_base(
     )
 
 
-def _mirrored_test_paths(
+def mirrored_test_paths(
     context: ArchitectureContext,
     *,
     test_root: Path,
@@ -390,7 +390,7 @@ def _mirrored_test_paths(
     )
 
 
-def _source_paths_for_test_path(
+def source_paths_for_test_path(
     path: Path,
     *,
     test_root: Path,
@@ -403,11 +403,11 @@ def _source_paths_for_test_path(
     return (direct_mirror_path,)
 
 
-def _is_fake_module_path(path: Path) -> bool:
+def is_fake_module_path(path: Path) -> bool:
     return path.name.startswith("fake_") and path.name.endswith(".py")
 
 
-def _is_allowed_mirrored_fake_module_path(path: Path, *, test_root: Path) -> bool:
+def is_allowed_mirrored_fake_module_path(path: Path, *, test_root: Path) -> bool:
     allowed_fake_package_names = {"capabilities", "gateways", "repositories"}
     unit_core_root = test_root / "unit" / "core"
     if not path.is_relative_to(unit_core_root):
@@ -417,18 +417,18 @@ def _is_allowed_mirrored_fake_module_path(path: Path, *, test_root: Path) -> boo
     return len(relative.parts) >= 3 and relative.parts[1] in allowed_fake_package_names
 
 
-def _is_core_behavior_test_path(relative: Path) -> bool:
+def is_core_behavior_test_path(relative: Path) -> bool:
     parts = relative.parts
     return len(parts) >= 4 and parts[0] == "core" and parts[2] in CORE_BEHAVIOR_TEST_PACKAGE_NAMES
 
 
-def _is_core_behavior_target_test_path(relative: Path) -> bool:
+def is_core_behavior_target_test_path(relative: Path) -> bool:
     source_file_name = relative.name.removeprefix("test_")
     source_stem = Path(source_file_name).stem
     return len(relative.parts) >= 5 and relative.parent.name == source_stem
 
 
-def _flat_test_path_for_source_path(
+def flat_test_path_for_source_path(
     path: Path,
     *,
     test_root: Path,
@@ -438,7 +438,7 @@ def _flat_test_path_for_source_path(
     return test_root / relative.parent / f"test_{relative.name}"
 
 
-def _is_target_specific_test_factory_or_harness(class_name: str) -> bool:
+def is_target_specific_test_factory_or_harness(class_name: str) -> bool:
     return class_name.endswith(
         (
             "CapabilityFactory",
@@ -453,7 +453,7 @@ def _is_target_specific_test_factory_or_harness(class_name: str) -> bool:
     )
 
 
-def _is_test_double_class_name(class_name: str) -> bool:
+def is_test_double_class_name(class_name: str) -> bool:
     normalized = class_name.lower()
     return (
         normalized.startswith(
@@ -477,16 +477,16 @@ def _is_test_double_class_name(class_name: str) -> bool:
     )
 
 
-def _support_fakes_package_exists(path: Path) -> bool:
+def support_fakes_package_exists(path: Path) -> bool:
     return path.exists()
 
 
-def _is_non_source_integration_test(path: Path, *, test_root: Path) -> bool:
+def is_non_source_integration_test(path: Path, *, test_root: Path) -> bool:
     relative = path.relative_to(test_root)
     return relative.parts[:1] == ("migrations",)
 
 
-def _required_unit_test_source_paths(context: ArchitectureContext) -> tuple[Path, ...]:
+def required_unit_test_source_paths(context: ArchitectureContext) -> tuple[Path, ...]:
     core_root = context.src_root / "core"
     required_package_names = {"capabilities", "services", "use_cases"}
     return tuple(
@@ -499,7 +499,7 @@ def _required_unit_test_source_paths(context: ArchitectureContext) -> tuple[Path
     )
 
 
-def _required_integration_test_source_paths(context: ArchitectureContext) -> tuple[Path, ...]:
+def required_integration_test_source_paths(context: ArchitectureContext) -> tuple[Path, ...]:
     base_index = class_base_name_index(context)
     core_root = context.src_root / "core"
     return tuple(
@@ -521,14 +521,14 @@ def _module_has_persistence_use_case(
     tree = context.tree(path)
     aliases = context.aliases(path)
     return any(
-        _is_use_case_class(class_node, aliases, base_index)
+        is_use_case_class(class_node, aliases, base_index)
         and bool(class_injected_unit_of_work_manager_field_names(class_node, aliases))
         for class_node in ast.walk(tree)
         if isinstance(class_node, ast.ClassDef)
     )
 
 
-def _is_pytest_fixture(
+def is_pytest_fixture(
     node: ast.AsyncFunctionDef | ast.FunctionDef,
     aliases: dict[str, str],
 ) -> bool:
@@ -539,7 +539,7 @@ def _is_pytest_fixture(
     return False
 
 
-def _fixture_returns_use_closure(node: ast.AsyncFunctionDef | ast.FunctionDef) -> bool:
+def fixture_returns_use_closure(node: ast.AsyncFunctionDef | ast.FunctionDef) -> bool:
     inner_use_functions = {
         child.name
         for child in node.body
@@ -556,7 +556,7 @@ def _fixture_returns_use_closure(node: ast.AsyncFunctionDef | ast.FunctionDef) -
     )
 
 
-def _function_mocks_internal_app_collaborator(
+def function_mocks_internal_app_collaborator(
     node: ast.AsyncFunctionDef | ast.FunctionDef,
     aliases: dict[str, str],
     imports: frozenset[str],
@@ -770,7 +770,7 @@ def _is_patch_object_call_chain(call_chain: tuple[str, ...]) -> bool:
     return call_chain[-2:] == ("patch", "object")
 
 
-def _local_function_return_annotations(
+def local_function_return_annotations(
     tree: ast.Module,
     aliases: dict[str, str],
 ) -> dict[str, str]:
@@ -791,7 +791,7 @@ def _qualified_expression_name(
     return annotation_name(expression, aliases)
 
 
-def _explicit_import_modules(tree: ast.Module) -> tuple[str, ...]:
+def explicit_import_modules(tree: ast.Module) -> tuple[str, ...]:
     modules: list[str] = []
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
@@ -801,7 +801,7 @@ def _explicit_import_modules(tree: ast.Module) -> tuple[str, ...]:
     return tuple(modules)
 
 
-def _fixture_bundles_mocks(
+def fixture_bundles_mocks(
     node: ast.AsyncFunctionDef | ast.FunctionDef,
     aliases: dict[str, str],
 ) -> bool:

@@ -12,7 +12,7 @@ from specx.testing.architecture.models import SpecxArchitectureViolation
 from specx.testing.architecture.rule_id import SpecxRuleId
 from specx.testing.architecture.rules._shared import (
     ArchitectureRuleBase,
-    _violation,
+    violation,
 )
 
 
@@ -37,7 +37,7 @@ class CoreServicesUseEffectSpecificServiceBasesRule(ArchitectureRuleBase):
                     base_index,
                 ):
                     violations.append(
-                        _violation(
+                        violation(
                             self.id,
                             path=path,
                             message="core service lacks effect-specific base",

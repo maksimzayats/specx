@@ -13,7 +13,7 @@ from specx.testing.architecture.models import SpecxArchitectureViolation
 from specx.testing.architecture.rule_id import SpecxRuleId
 from specx.testing.architecture.rules._shared import (
     ArchitectureRuleBase,
-    _violation,
+    violation,
 )
 
 
@@ -39,7 +39,7 @@ class GatewaysDeclareExternalEffectsAndDoNotReturnEntitiesRule(ArchitectureRuleB
                     continue
                 if not declares_external_effect(node):
                     violations.append(
-                        _violation(
+                        violation(
                             self.id, path=path, message="missing external effect", symbol=node.name
                         )
                     )
@@ -49,7 +49,7 @@ class GatewaysDeclareExternalEffectsAndDoNotReturnEntitiesRule(ArchitectureRuleB
                     return_annotation = annotation_name(child.returns, aliases)
                     if "Entity" in return_annotation:
                         violations.append(
-                            _violation(
+                            violation(
                                 self.id,
                                 path=path,
                                 message=f"{child.name} returns {return_annotation}",

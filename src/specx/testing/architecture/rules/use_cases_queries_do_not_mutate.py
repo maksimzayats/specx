@@ -19,7 +19,7 @@ from specx.testing.architecture.models import SpecxArchitectureViolation
 from specx.testing.architecture.rule_id import SpecxRuleId
 from specx.testing.architecture.rules._shared import (
     ArchitectureRuleBase,
-    _violation,
+    violation,
 )
 
 
@@ -74,7 +74,7 @@ class QueryUseCasesDoNotCallRepositoryMutatorsRule(ArchitectureRuleBase):
                 ]
                 if mutator_calls:
                     violations.append(
-                        _violation(
+                        violation(
                             self.id,
                             path=path,
                             message=f"calls {sorted(set(mutator_calls))}",

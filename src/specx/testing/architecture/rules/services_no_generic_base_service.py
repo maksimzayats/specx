@@ -7,7 +7,7 @@ from specx.testing.architecture.models import SpecxArchitectureViolation
 from specx.testing.architecture.rule_id import SpecxRuleId
 from specx.testing.architecture.rules._shared import (
     ArchitectureRuleBase,
-    _violation,
+    violation,
 )
 
 
@@ -27,7 +27,7 @@ class GenericBaseServiceIsNotUsedRule(ArchitectureRuleBase):
             for node in ast.walk(tree):
                 if isinstance(node, ast.ClassDef) and node.name == "BaseService":
                     violations.append(
-                        _violation(
+                        violation(
                             self.id, path=path, message="defines BaseService", symbol=node.name
                         )
                     )
@@ -35,6 +35,6 @@ class GenericBaseServiceIsNotUsedRule(ArchitectureRuleBase):
                     imported_names = {alias.name for alias in node.names}
                     if "BaseService" in imported_names:
                         violations.append(
-                            _violation(self.id, path=path, message="imports BaseService")
+                            violation(self.id, path=path, message="imports BaseService")
                         )
         return tuple(violations)

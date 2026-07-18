@@ -10,7 +10,7 @@ from specx.testing.architecture.models import SpecxArchitectureViolation
 from specx.testing.architecture.rule_id import SpecxRuleId
 from specx.testing.architecture.rules._shared import (
     ArchitectureRuleBase,
-    _violation,
+    violation,
 )
 
 
@@ -39,7 +39,7 @@ class IOCContainerDoesNotRegisterActiveUnitOfWorkRule(ArchitectureRuleBase):
                     for alias in node.names
                 )
             ):
-                violations.append(_violation(self.id, path=path, message="imports Lifetime"))
+                violations.append(violation(self.id, path=path, message="imports Lifetime"))
             if not isinstance(node, ast.Call):
                 continue
             if not isinstance(node.func, ast.Attribute) or node.func.attr != "add":
@@ -52,6 +52,6 @@ class IOCContainerDoesNotRegisterActiveUnitOfWorkRule(ArchitectureRuleBase):
                 "UnitOfWorkManager"
             ):
                 violations.append(
-                    _violation(self.id, path=path, message=f"registers active {provides_name}")
+                    violation(self.id, path=path, message=f"registers active {provides_name}")
                 )
         return tuple(violations)

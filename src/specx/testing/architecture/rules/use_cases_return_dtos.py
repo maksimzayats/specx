@@ -9,7 +9,7 @@ from specx.testing.architecture.models import SpecxArchitectureViolation
 from specx.testing.architecture.rule_id import SpecxRuleId
 from specx.testing.architecture.rules._shared import (
     ArchitectureRuleBase,
-    _violation,
+    violation,
 )
 
 
@@ -33,7 +33,7 @@ class UseCasesReturnDTOsRule(ArchitectureRuleBase):
                 return_annotation = annotation_name(execute.returns, aliases)
                 if "DTO" not in return_annotation:
                     violations.append(
-                        _violation(
+                        violation(
                             self.id,
                             path=path,
                             message=f"execute returns {return_annotation}",

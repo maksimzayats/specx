@@ -9,10 +9,10 @@ from specx.testing.architecture.models import SpecxArchitectureViolation
 from specx.testing.architecture.rule_id import SpecxRuleId
 from specx.testing.architecture.rules._shared import (
     ArchitectureRuleBase,
-    _project_uses_alembic,
-    _project_uses_foundation_base,
-    _required_integration_test_source_paths,
-    _violation,
+    project_uses_alembic,
+    project_uses_foundation_base,
+    required_integration_test_source_paths,
+    violation,
 )
 
 
@@ -28,7 +28,7 @@ class RootAgentsMDDocumentsProjectCommandsAndBoundariesRule(ArchitectureRuleBase
     def check(self, context: ArchitectureContext) -> tuple[SpecxArchitectureViolation, ...]:
         path = context.project_root / "AGENTS.md"
         if not path.exists():
-            return (_violation(self.id, path=path, message="AGENTS.md is missing"),)
+            return (violation(self.id, path=path, message="AGENTS.md is missing"),)
         text = path.read_text(encoding="utf-8")
         normalized_text = " ".join(text.split())
         required_fragments = {
@@ -50,13 +50,13 @@ class RootAgentsMDDocumentsProjectCommandsAndBoundariesRule(ArchitectureRuleBase
         required_fragments.update(
             fragment
             for base, fragment in optional_base_fragments.items()
-            if _project_uses_foundation_base(base_index, base)
+            if project_uses_foundation_base(base_index, base)
         )
-        if _project_uses_foundation_base(base_index, "BaseUseCase"):
+        if project_uses_foundation_base(base_index, "BaseUseCase"):
             required_fragments.add("Use cases return DTOs, not entities")
-        if _project_uses_foundation_base(base_index, "BaseQuery"):
+        if project_uses_foundation_base(base_index, "BaseQuery"):
             required_fragments.add("Query use cases must not call repository mutators")
-        if _required_integration_test_source_paths(context):
+        if required_integration_test_source_paths(context):
             required_fragments.update(
                 {
                     "Use cases that touch persistence inject `UnitOfWorkManager`",
@@ -64,7 +64,7 @@ class RootAgentsMDDocumentsProjectCommandsAndBoundariesRule(ArchitectureRuleBase
                     "SQLAlchemy sessions/engines/session factories",
                 }
             )
-        if _project_uses_alembic(context):
+        if project_uses_alembic(context):
             required_fragments.update(
                 {
                     "make migration-check",
@@ -80,12 +80,12 @@ class RootAgentsMDDocumentsProjectCommandsAndBoundariesRule(ArchitectureRuleBase
         )
         if missing_fragments:
             violations.append(
-                _violation(self.id, path=path, message=f"missing fragments {missing_fragments}")
+                violation(self.id, path=path, message=f"missing fragments {missing_fragments}")
             )
         missing_make_targets = sorted(documented_make_targets(text) - context.makefile_targets())
         if missing_make_targets:
             violations.append(
-                _violation(
+                violation(
                     self.id,
                     path=path,
                     message=f"documents missing make targets {missing_make_targets}",

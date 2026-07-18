@@ -7,9 +7,9 @@ from specx.testing.architecture.models import SpecxArchitectureViolation
 from specx.testing.architecture.rule_id import SpecxRuleId
 from specx.testing.architecture.rules._shared import (
     ArchitectureRuleBase,
-    _fixture_bundles_mocks,
-    _is_pytest_fixture,
-    _violation,
+    fixture_bundles_mocks,
+    is_pytest_fixture,
+    violation,
 )
 
 
@@ -34,11 +34,11 @@ class TestFixturesDoNotBundleMocksRule(ArchitectureRuleBase):
             for node in ast.walk(tree):
                 if not isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef)):
                     continue
-                if not _is_pytest_fixture(node, aliases):
+                if not is_pytest_fixture(node, aliases):
                     continue
-                if _fixture_bundles_mocks(node, aliases):
+                if fixture_bundles_mocks(node, aliases):
                     violations.append(
-                        _violation(
+                        violation(
                             self.id,
                             path=path,
                             symbol=node.name,

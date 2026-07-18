@@ -12,7 +12,7 @@ from specx.testing.architecture.models import SpecxArchitectureViolation
 from specx.testing.architecture.rule_id import SpecxRuleId
 from specx.testing.architecture.rules._shared import (
     ArchitectureRuleBase,
-    _violation,
+    violation,
 )
 
 
@@ -44,7 +44,7 @@ class CapabilitiesLiveInExpectedPackagesAndUseExpectedSuffixesRule(ArchitectureR
                     inner_package = relative_parts[2] if len(relative_parts) > 2 else ""
                     if inner_package != "capabilities":
                         violations.append(
-                            _violation(
+                            violation(
                                 self.id,
                                 path=path,
                                 message="capability outside capabilities",
@@ -53,7 +53,7 @@ class CapabilitiesLiveInExpectedPackagesAndUseExpectedSuffixesRule(ArchitectureR
                         )
                 elif relative_layer != "shared":
                     violations.append(
-                        _violation(
+                        violation(
                             self.id,
                             path=path,
                             message="capability outside core/shared",
@@ -64,7 +64,7 @@ class CapabilitiesLiveInExpectedPackagesAndUseExpectedSuffixesRule(ArchitectureR
                     node, aliases
                 ) and not node.name.endswith("Capability"):
                     violations.append(
-                        _violation(
+                        violation(
                             self.id,
                             path=path,
                             message="direct BaseCapability subclass must end with Capability",

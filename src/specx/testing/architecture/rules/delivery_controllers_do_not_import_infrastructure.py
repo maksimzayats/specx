@@ -8,9 +8,9 @@ from specx.testing.architecture.models import SpecxArchitectureViolation
 from specx.testing.architecture.rule_id import SpecxRuleId
 from specx.testing.architecture.rules._shared import (
     ArchitectureRuleBase,
-    _explicit_import_modules,
-    _is_scope_technical_import,
-    _violation,
+    explicit_import_modules,
+    is_scope_technical_import,
+    violation,
 )
 
 
@@ -31,19 +31,19 @@ class DeliveryControllersDoNotImportInfrastructureRule(ArchitectureRuleBase):
         for path in (context.src_root / "delivery").glob("**/controllers/**/*.py"):
             if path.name == "__init__.py" or path not in context.ast_project.files:
                 continue
-            for module in _explicit_import_modules(context.tree(path)):
+            for module in explicit_import_modules(context.tree(path)):
                 if "infrastructure" in module_parts(module):
                     violations.append(
-                        _violation(self.id, path=path, message=f"imports {module}"),
+                        violation(self.id, path=path, message=f"imports {module}"),
                     )
         delivery_root = context.src_root / "delivery"
         for filename in ("__main__.py", "factory.py", "lifecycle.py"):
             for path in delivery_root.glob(f"*/{filename}"):
                 if path not in context.ast_project.files:
                     continue
-                for module in _explicit_import_modules(context.tree(path)):
-                    if _is_scope_technical_import(module):
+                for module in explicit_import_modules(context.tree(path)):
+                    if is_scope_technical_import(module):
                         violations.append(
-                            _violation(self.id, path=path, message=f"imports {module}"),
+                            violation(self.id, path=path, message=f"imports {module}"),
                         )
         return tuple(violations)

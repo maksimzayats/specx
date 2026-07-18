@@ -14,7 +14,7 @@ from specx.testing.architecture.models import SpecxArchitectureViolation
 from specx.testing.architecture.rule_id import SpecxRuleId
 from specx.testing.architecture.rules._shared import (
     ArchitectureRuleBase,
-    _violation,
+    violation,
 )
 
 
@@ -49,7 +49,7 @@ class CapabilitiesDoNotOwnWorkflowsOrOtherPortRolesRule(ArchitectureRuleBase):
                 )
                 if forbidden_suffix is not None:
                     violations.append(
-                        _violation(
+                        violation(
                             self.id,
                             path=path,
                             message=f"uses {forbidden_suffix} role name",
@@ -59,7 +59,7 @@ class CapabilitiesDoNotOwnWorkflowsOrOtherPortRolesRule(ArchitectureRuleBase):
                 for incompatible_base in ("BaseRepository", "BaseGateway", "BaseUseCase"):
                     if class_has_foundation_base(class_node.name, incompatible_base, base_index):
                         violations.append(
-                            _violation(
+                            violation(
                                 self.id,
                                 path=path,
                                 message=f"also inherits {incompatible_base}",
@@ -69,7 +69,7 @@ class CapabilitiesDoNotOwnWorkflowsOrOtherPortRolesRule(ArchitectureRuleBase):
                 uow_fields = class_unit_of_work_field_names(class_node, aliases)
                 if uow_fields:
                     violations.append(
-                        _violation(
+                        violation(
                             self.id,
                             path=path,
                             message=f"depends on {sorted(uow_fields)}",
@@ -82,7 +82,7 @@ class CapabilitiesDoNotOwnWorkflowsOrOtherPortRolesRule(ArchitectureRuleBase):
                     context_fields = context_self_fields(child, uow_fields)
                     if context_fields:
                         violations.append(
-                            _violation(
+                            violation(
                                 self.id,
                                 path=path,
                                 message=f"opens {sorted(context_fields)}",

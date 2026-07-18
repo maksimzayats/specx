@@ -10,7 +10,7 @@ from specx.testing.architecture.models import SpecxArchitectureViolation
 from specx.testing.architecture.rule_id import SpecxRuleId
 from specx.testing.architecture.rules._shared import (
     ArchitectureRuleBase,
-    _violation,
+    violation,
 )
 
 
@@ -48,7 +48,7 @@ class NonFoundationClassesDoNotUseRawCommonBasesRule(ArchitectureRuleBase):
                 raw_bases = {base_name(base, aliases) for base in node.bases} & raw_base_names
                 if raw_bases:
                     violations.append(
-                        _violation(
+                        violation(
                             self.id,
                             path=path,
                             message=f"uses {sorted(raw_bases)}",

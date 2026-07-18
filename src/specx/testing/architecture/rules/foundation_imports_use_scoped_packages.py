@@ -5,8 +5,8 @@ from specx.testing.architecture.models import SpecxArchitectureViolation
 from specx.testing.architecture.rule_id import SpecxRuleId
 from specx.testing.architecture.rules._shared import (
     ArchitectureRuleBase,
-    _explicit_import_modules,
-    _violation,
+    explicit_import_modules,
+    violation,
 )
 
 
@@ -27,9 +27,9 @@ class FoundationImportsUseScopedPackagesRule(ArchitectureRuleBase):
                 if path.name == "__init__.py" or path not in context.ast_project.files:
                     continue
                 tree = context.tree(path)
-                for module in _explicit_import_modules(tree):
+                for module in explicit_import_modules(tree):
                     if module == "specx.foundation" or module.startswith("specx.foundation."):
                         violations.append(
-                            _violation(self.id, path=path, message=f"imports {module}")
+                            violation(self.id, path=path, message=f"imports {module}")
                         )
         return tuple(violations)

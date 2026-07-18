@@ -5,7 +5,7 @@ from specx.testing.architecture.models import SpecxArchitectureViolation
 from specx.testing.architecture.rule_id import SpecxRuleId
 from specx.testing.architecture.rules._shared import (
     ArchitectureRuleBase,
-    _violation,
+    violation,
 )
 
 
@@ -24,7 +24,7 @@ class FastAPIRootAgentsMDDocumentsDeliveryRule(ArchitectureRuleBase):
     def check(self, context: ArchitectureContext) -> tuple[SpecxArchitectureViolation, ...]:
         path = context.project_root / "AGENTS.md"
         if not path.exists():
-            return (_violation(self.id, path=path, message="AGENTS.md is missing"),)
+            return (violation(self.id, path=path, message="AGENTS.md is missing"),)
 
         normalized_text = " ".join(path.read_text(encoding="utf-8").split())
         required_fragments = {
@@ -40,4 +40,4 @@ class FastAPIRootAgentsMDDocumentsDeliveryRule(ArchitectureRuleBase):
         if not missing_fragments:
             return ()
 
-        return (_violation(self.id, path=path, message=f"missing fragments {missing_fragments}"),)
+        return (violation(self.id, path=path, message=f"missing fragments {missing_fragments}"),)

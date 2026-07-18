@@ -7,7 +7,7 @@ from specx.testing.architecture.models import SpecxArchitectureViolation
 from specx.testing.architecture.rule_id import SpecxRuleId
 from specx.testing.architecture.rules._shared import (
     ArchitectureRuleBase,
-    _violation,
+    violation,
 )
 
 
@@ -29,7 +29,7 @@ class NonFoundationSourceClassesHaveExplicitBaseClassesRule(ArchitectureRuleBase
             for node in ast.walk(tree):
                 if isinstance(node, ast.ClassDef) and not node.bases:
                     violations.append(
-                        _violation(
+                        violation(
                             self.id,
                             path=path,
                             message="class has no explicit base",

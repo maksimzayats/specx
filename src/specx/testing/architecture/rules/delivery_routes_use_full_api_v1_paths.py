@@ -8,7 +8,7 @@ from specx.testing.architecture.rule_id import SpecxRuleId
 from specx.testing.architecture.rules._shared import (
     ALLOWED_UNVERSIONED_OPERATIONAL_ROUTE_PATHS,
     ArchitectureRuleBase,
-    _violation,
+    violation,
 )
 
 
@@ -41,7 +41,7 @@ class PublicRoutesUseFullAPIV1PathsRule(ArchitectureRuleBase):
                 )
                 if path_keyword is None or not isinstance(path_keyword.value, ast.Constant):
                     violations.append(
-                        _violation(
+                        violation(
                             self.id,
                             path=path,
                             message="has dynamic route path",
@@ -52,7 +52,7 @@ class PublicRoutesUseFullAPIV1PathsRule(ArchitectureRuleBase):
                 route_path = path_keyword.value.value
                 if not isinstance(route_path, str):
                     violations.append(
-                        _violation(
+                        violation(
                             self.id,
                             path=path,
                             message=f"uses {route_path!r}",
@@ -64,7 +64,7 @@ class PublicRoutesUseFullAPIV1PathsRule(ArchitectureRuleBase):
                     continue
                 if not route_path.startswith("/api/v1/"):
                     violations.append(
-                        _violation(
+                        violation(
                             self.id,
                             path=path,
                             message=f"uses {route_path!r}",

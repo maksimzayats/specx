@@ -7,9 +7,9 @@ from specx.testing.architecture.models import SpecxArchitectureViolation
 from specx.testing.architecture.rule_id import SpecxRuleId
 from specx.testing.architecture.rules._shared import (
     ArchitectureRuleBase,
-    _function_mocks_internal_app_collaborator,
-    _local_function_return_annotations,
-    _violation,
+    function_mocks_internal_app_collaborator,
+    local_function_return_annotations,
+    violation,
 )
 
 
@@ -32,11 +32,11 @@ class IntegrationTestsDoNotMockInternalCollaboratorsRule(ArchitectureRuleBase):
             tree = context.tree(path)
             aliases = context.aliases(path)
             imports = context.imports(path)
-            factory_return_annotations = _local_function_return_annotations(tree, aliases)
+            factory_return_annotations = local_function_return_annotations(tree, aliases)
             for node in ast.walk(tree):
                 if not isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef)):
                     continue
-                if _function_mocks_internal_app_collaborator(
+                if function_mocks_internal_app_collaborator(
                     node,
                     aliases,
                     imports,
@@ -44,7 +44,7 @@ class IntegrationTestsDoNotMockInternalCollaboratorsRule(ArchitectureRuleBase):
                     factory_return_annotations,
                 ):
                     violations.append(
-                        _violation(
+                        violation(
                             self.id,
                             path=path,
                             symbol=node.name,

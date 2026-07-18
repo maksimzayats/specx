@@ -16,7 +16,7 @@ from specx.testing.architecture.models import SpecxArchitectureViolation
 from specx.testing.architecture.rule_id import SpecxRuleId
 from specx.testing.architecture.rules._shared import (
     ArchitectureRuleBase,
-    _violation,
+    violation,
 )
 
 
@@ -49,14 +49,14 @@ class EffectServicesDoNotOwnTransactionsOrImportDeliveryRule(ArchitectureRuleBas
                     roots=EFFECT_SERVICE_FORBIDDEN_IMPORT_ROOTS,
                     parts=EFFECT_SERVICE_FORBIDDEN_IMPORT_PARTS,
                 ):
-                    violations.append(_violation(self.id, path=path, message=f"imports {module}"))
+                    violations.append(violation(self.id, path=path, message=f"imports {module}"))
             for class_node in effect_services:
                 manager_fields = class_injected_unit_of_work_manager_field_names(
                     class_node, aliases
                 )
                 if manager_fields:
                     violations.append(
-                        _violation(
+                        violation(
                             self.id,
                             path=path,
                             message=f"injects {sorted(manager_fields)}",
@@ -69,7 +69,7 @@ class EffectServicesDoNotOwnTransactionsOrImportDeliveryRule(ArchitectureRuleBas
                     return_annotation = annotation_name(child.returns, aliases)
                     if "Entity" in return_annotation:
                         violations.append(
-                            _violation(
+                            violation(
                                 self.id,
                                 path=path,
                                 message=f"returns {return_annotation}",
@@ -82,7 +82,7 @@ class EffectServicesDoNotOwnTransactionsOrImportDeliveryRule(ArchitectureRuleBas
                             "rollback",
                         }:
                             violations.append(
-                                _violation(
+                                violation(
                                     self.id,
                                     path=path,
                                     message=f"calls {call.func.attr}",

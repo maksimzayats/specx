@@ -15,7 +15,7 @@ from specx.testing.architecture.models import SpecxArchitectureViolation
 from specx.testing.architecture.rule_id import SpecxRuleId
 from specx.testing.architecture.rules._shared import (
     ArchitectureRuleBase,
-    _violation,
+    violation,
 )
 
 
@@ -69,7 +69,7 @@ class UseCaseInputsAreLocalCommandsOrQueriesRule(ArchitectureRuleBase):
                 ]
                 if len(execute_methods) != 1:
                     violations.append(
-                        _violation(
+                        violation(
                             self.id,
                             path=path,
                             message="missing one execute method",
@@ -88,7 +88,7 @@ class UseCaseInputsAreLocalCommandsOrQueriesRule(ArchitectureRuleBase):
                     or args.kw_defaults != [None]
                 ):
                     violations.append(
-                        _violation(
+                        violation(
                             self.id,
                             path=path,
                             message="execute must accept one keyword-only input",
@@ -102,7 +102,7 @@ class UseCaseInputsAreLocalCommandsOrQueriesRule(ArchitectureRuleBase):
                 input_base = local_inputs.get(input_annotation)
                 if input_name not in USE_CASE_INPUT_ARGUMENTS or input_base is None:
                     violations.append(
-                        _violation(
+                        violation(
                             self.id,
                             path=path,
                             message="execute input is not a local command/query",
@@ -113,7 +113,7 @@ class UseCaseInputsAreLocalCommandsOrQueriesRule(ArchitectureRuleBase):
                 consumed_inputs.add(input_annotation)
                 if input_name == "command" and input_base != "BaseCommand":
                     violations.append(
-                        _violation(
+                        violation(
                             self.id,
                             path=path,
                             message="command input does not inherit BaseCommand",
@@ -122,7 +122,7 @@ class UseCaseInputsAreLocalCommandsOrQueriesRule(ArchitectureRuleBase):
                     )
                 if input_name == "query" and input_base != "BaseQuery":
                     violations.append(
-                        _violation(
+                        violation(
                             self.id,
                             path=path,
                             message="query input does not inherit BaseQuery",
@@ -132,7 +132,7 @@ class UseCaseInputsAreLocalCommandsOrQueriesRule(ArchitectureRuleBase):
 
             for input_class_name in sorted(set(local_inputs) - consumed_inputs):
                 violations.append(
-                    _violation(
+                    violation(
                         self.id, path=path, message="local input is unused", symbol=input_class_name
                     )
                 )

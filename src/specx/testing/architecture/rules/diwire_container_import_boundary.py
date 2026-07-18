@@ -12,10 +12,10 @@ from specx.testing.architecture.models import SpecxArchitectureViolation
 from specx.testing.architecture.rule_id import SpecxRuleId
 from specx.testing.architecture.rules._shared import (
     ArchitectureRuleBase,
-    _class_can_inject_container,
-    _class_injects_diwire_container,
-    _is_delivery_composition_module,
-    _violation,
+    class_can_inject_container,
+    class_injects_diwire_container,
+    is_delivery_composition_module,
+    violation,
 )
 
 
@@ -36,12 +36,12 @@ class OnlyIOCDeliveryAppAndTestsImportContainerRule(ArchitectureRuleBase):
             if not uses_diwire_container(context.tree(path)):
                 continue
             relative = path.relative_to(context.src_root)
-            allowed = relative == Path("ioc/container.py") or _is_delivery_composition_module(
+            allowed = relative == Path("ioc/container.py") or is_delivery_composition_module(
                 relative
             )
             if not allowed:
                 violations.append(
-                    _violation(
+                    violation(
                         self.id,
                         path=path,
                         message="imports diwire.Container outside allowed composition modules",
@@ -52,16 +52,16 @@ class OnlyIOCDeliveryAppAndTestsImportContainerRule(ArchitectureRuleBase):
             for class_node in [
                 node for node in ast.walk(context.tree(path)) if isinstance(node, ast.ClassDef)
             ]:
-                if _class_injects_diwire_container(
+                if class_injects_diwire_container(
                     class_node,
                     aliases,
-                ) and not _class_can_inject_container(
+                ) and not class_can_inject_container(
                     relative,
                     class_node,
                     base_index,
                 ):
                     violations.append(
-                        _violation(
+                        violation(
                             self.id,
                             path=path,
                             message="injects diwire.Container outside delivery lifecycle",

@@ -10,10 +10,10 @@ from specx.testing.architecture.models import SpecxArchitectureViolation
 from specx.testing.architecture.rule_id import SpecxRuleId
 from specx.testing.architecture.rules._shared import (
     ArchitectureRuleBase,
-    _is_container_registration_call,
-    _is_injected_logger_annotation,
-    _is_logging_logger_expression,
-    _violation,
+    is_container_registration_call,
+    is_injected_logger_annotation,
+    is_logging_logger_expression,
+    violation,
 )
 
 
@@ -43,10 +43,10 @@ class LoggingDoesNotInjectLoggersRule(ArchitectureRuleBase):
                         ast.Name,
                     ):
                         continue
-                    if _is_injected_logger_annotation(child.annotation, aliases, imports):
+                    if is_injected_logger_annotation(child.annotation, aliases, imports):
                         annotation = annotation_name(child.annotation, aliases)
                         violations.append(
-                            _violation(
+                            violation(
                                 self.id,
                                 path=path,
                                 message=(f"injects logger field {child.target.id}:{annotation}"),
@@ -55,19 +55,19 @@ class LoggingDoesNotInjectLoggersRule(ArchitectureRuleBase):
                         )
 
             for node in [child for child in ast.walk(tree) if isinstance(child, ast.Call)]:
-                if not _is_container_registration_call(node):
+                if not is_container_registration_call(node):
                     continue
                 provides = next(
                     (keyword.value for keyword in node.keywords if keyword.arg == "provides"),
                     None,
                 )
-                if provides is not None and _is_logging_logger_expression(
+                if provides is not None and is_logging_logger_expression(
                     provides,
                     aliases,
                     imports,
                 ):
                     violations.append(
-                        _violation(
+                        violation(
                             self.id,
                             path=path,
                             message="registers logging.Logger in the DI container",
