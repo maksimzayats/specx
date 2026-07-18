@@ -100,6 +100,7 @@ def test_query_mutation_rule_follows_transitive_query_bases(tmp_path: Path) -> N
     )
     _write(
         tmp_path / "src" / "demo_service" / "core" / "tasks" / "use_cases" / "get_task.py",
+        "from demo_service.infrastructure.unrelated import ProjectQuery\n"
         "from demo_service.foundation.query import ProjectQuery\n\n"
         "class GetTaskQuery(ProjectQuery):\n"
         "    pass\n\n"
@@ -141,6 +142,7 @@ def test_query_mutation_rule_does_not_cross_module_name_collisions(tmp_path: Pat
     )
     _write(
         tmp_path / "src" / "demo_service" / "core" / "tasks" / "use_cases" / "get_task.py",
+        "from demo_service.foundation.query import ProjectQuery\n"
         "from demo_service.infrastructure.unrelated import ProjectQuery\n\n"
         "class GetTaskQuery(ProjectQuery):\n"
         "    pass\n\n"
